@@ -3,7 +3,7 @@
  * Manages persistent user preferences in localStorage
  */
 
-export type LyricTheme = 'modern' | 'classic' | 'neon' | 'dark';
+export type LyricTheme = 'modern' | 'classic' | 'neon' | 'retro';
 
 export interface UserSettings {
     theme: LyricTheme;

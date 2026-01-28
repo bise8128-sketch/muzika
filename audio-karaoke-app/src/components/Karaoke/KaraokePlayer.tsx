@@ -52,11 +52,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); // Vocals
         playback.setVolume(iVol, 1); // Instrumental
-        const iVol = Math.min(1, (1 - balance) * 2);
-        playback.setVolume(vVol, 0);
-        playback.setVolume(iVol, 1);
-        saveSettings({ defaultVolumeBalance: balance });
-    };
+    }, [playback]);
 
     // Keyboard Shortcuts
     useEffect(() => {
