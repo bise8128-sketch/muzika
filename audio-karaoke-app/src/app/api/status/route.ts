@@ -25,6 +25,8 @@ export async function GET() {
         uptime: Math.floor((Date.now() - startTime) / 1000),
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
+        nodeVersion: process.version,
+        memoryUsage: process.memoryUsage(),
         services: {
             modelRepository: githubStatus
         },

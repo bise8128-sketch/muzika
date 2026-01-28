@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { AVAILABLE_MODELS } from '@/utils/constants';
+import { useModels } from '@/hooks/useModels';
 import { getAllModels } from '@/utils/storage/modelStorage';
 import { ModelCard } from './ModelCard';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
 import { ModelInfo } from '@/types/model';
 
 export const ModelManager: React.FC = () => {
+    const { models: AVAILABLE_MODELS } = useModels();
     const [downloadedModels, setDownloadedModels] = useState<string[]>([]);
     const [stats, setStats] = useState<StorageStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);

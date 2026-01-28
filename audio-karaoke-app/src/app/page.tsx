@@ -42,8 +42,9 @@ const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManage
 
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
 
-import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
+import { DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
+import { useModels } from '@/hooks/useModels';
 
 // Backend Status Component
 function BackendStatus() {
@@ -84,6 +85,7 @@ function BackendStatus() {
 // ... existing dynamic imports ...
 
 export default function Home() {
+  const { models: AVAILABLE_MODELS } = useModels();
   const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

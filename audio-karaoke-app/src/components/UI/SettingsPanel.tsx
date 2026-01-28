@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AVAILABLE_MODELS } from '@/utils/constants';
+import { useModels } from '@/hooks/useModels';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
 
 interface SettingsPanelProps {
@@ -10,6 +10,7 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, selectedModelId, onModelChange }) => {
+    const { models: AVAILABLE_MODELS } = useModels();
     const [stats, setStats] = useState<StorageStats | null>(null);
 
     useEffect(() => {

@@ -10,13 +10,28 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: translate('Missing url parameter') }, { status: 400 });
     }
 
-    // Security check: only allow GitHub release URLs
-    if (!url.startsWith('https://github.com/') && !url.includes('githubusercontent.com')) {
-        return NextResponse.json({ error: translate('Invalid URL. Only GitHub URLs are allowed.') }, { status: 400 });
+    const ALLOWED_DOMAINS = [
+        'github.com',
+        'githubusercontent.com',
+        'huggingface.co',
+        'cdn-lfs.huggingface.co'
+    ];
+
+    try {
+        const parsedUrl = new URL(url);
+        if (!ALLOWED_DOMAINS.some(domain => parsedUrl.hostname.endsWith(domain))) {
+            return NextResponse.json({ error: translate('Invalid URL. Domain not allowed.') }, { status: 400 });
+        }
+    } catch (e) {
+        return NextResponse.json({ error: translate('Invalid URL format') }, { status: 400 });
     }
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Muzika-Audio-App'
+            }
+        });
 
         if (!response.ok) {
             return NextResponse.json(
