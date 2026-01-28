@@ -72,8 +72,17 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                    }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Select audio files"
                 className={`
-          group relative overflow-hidden rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer
+          group relative overflow-hidden rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer outline-none focus-visible:border-primary
           ${isDragging
                         ? 'border-primary bg-primary/5 scale-[1.02] shadow-[0_0_40px_-10px_rgba(147,51,234,0.3)]'
                         : 'border-white/10 bg-white/5 hover:border-primary/40 hover:bg-white/10 hover:shadow-xl'

@@ -239,6 +239,10 @@ export default function Home() {
   };
 
   const handleTryKaraoke = () => {
+    const activeResult = separationResult || restoredResult;
+    if (activeResult && controller) {
+      controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
+    }
     setState('karaoke');
   };
 
@@ -459,9 +463,10 @@ export default function Home() {
         onModelChange={setSelectedModelId}
       />
 
-      <Onboarding key={showHelp ? 'manual-help' : 'auto-onboarding'} />
-
-      {/* Footer / Credits */}
+      <Onboarding
+        key={showHelp ? 'manual-help' : 'auto-onboarding'}
+        forceShow={showHelp}
+        onClose={() => setShowHelp(false)}
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
         <p>© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.</p>
       </footer>

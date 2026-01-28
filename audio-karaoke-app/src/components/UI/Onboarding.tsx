@@ -27,16 +27,26 @@ const STEPS: Step[] = [
     }
 ];
 
-export const Onboarding: React.FC = () => {
+interface OnboardingProps {
+    forceShow?: boolean;
+    onClose?: () => void;
+}
+
+export const Onboarding: React.FC<OnboardingProps> = ({ forceShow = false, onClose }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
 
     useEffect(() => {
+        if (forceShow) {
+            setIsVisible(true);
+            return;
+        }
+
         const completed = localStorage.getItem('muzika_onboarding_completed');
         if (!completed) {
             setIsVisible(true);
         }
-    }, []);
+    }, [forceShow]);
 
     const handleNext = () => {
         if (currentStep < STEPS.length - 1) {
@@ -49,6 +59,7 @@ export const Onboarding: React.FC = () => {
     const complete = () => {
         setIsVisible(false);
         localStorage.setItem('muzika_onboarding_completed', 'true');
+        if (onClose) onClose();
     };
 
     if (!isVisible) return null;
