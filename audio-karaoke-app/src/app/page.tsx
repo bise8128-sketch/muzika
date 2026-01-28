@@ -341,7 +341,7 @@ export default function Home() {
             >
               How it works
             </button>
-            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</a>
+            <button onClick={() => setState('models')} className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</button>
             <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Privacy</a>
 
             <BackendStatus />
