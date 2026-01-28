@@ -6,10 +6,16 @@ interface EffectsPanelProps {
     tempo: number;
     reverb: number;
     echo: number;
+    bass: number;
+    mid: number;
+    treble: number;
     onPitchChange: (value: number) => void;
     onTempoChange: (value: number) => void;
     onReverbChange: (value: number) => void;
     onEchoChange: (value: number) => void;
+    onBassChange: (value: number) => void;
+    onMidChange: (value: number) => void;
+    onTrebleChange: (value: number) => void;
     onReset: () => void;
 }
 
@@ -57,8 +63,8 @@ const ControlSlider: React.FC<{
 );
 
 export const EffectsPanel: React.FC<EffectsPanelProps> = ({
-    pitch, tempo, reverb, echo,
-    onPitchChange, onTempoChange, onReverbChange, onEchoChange, onReset
+    pitch, tempo, reverb, echo, bass, mid, treble,
+    onPitchChange, onTempoChange, onReverbChange, onEchoChange, onBassChange, onMidChange, onTrebleChange, onReset
 }) => {
     return (
         <div className="glass-card rounded-3xl p-8 backdrop-blur-3xl">
@@ -137,6 +143,51 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
                     icon={
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3" />
+                        </svg>
+                    }
+                />
+
+                <ControlSlider
+                    label="Bass Boost"
+                    value={bass}
+                    min={-10}
+                    max={10}
+                    step={1}
+                    onChange={onBassChange}
+                    displayValue={`${bass > 0 ? '+' : ''}${bass} dB`}
+                    icon={
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                    }
+                />
+
+                <ControlSlider
+                    label="Midrange"
+                    value={mid}
+                    min={-10}
+                    max={10}
+                    step={1}
+                    onChange={onMidChange}
+                    displayValue={`${mid > 0 ? '+' : ''}${mid} dB`}
+                    icon={
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                    }
+                />
+
+                <ControlSlider
+                    label="Treble Boost"
+                    value={treble}
+                    min={-10}
+                    max={10}
+                    step={1}
+                    onChange={onTrebleChange}
+                    displayValue={`${treble > 0 ? '+' : ''}${treble} dB`}
+                    icon={
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                     }
                 />
