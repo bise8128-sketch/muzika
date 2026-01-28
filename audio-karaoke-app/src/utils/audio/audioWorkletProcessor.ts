@@ -248,4 +248,3 @@ export class GenericAudioProcessor {
 }
 
 // Register the processor
-registerProcessor('generic-audio-processor', GenericAudioProcessor);
