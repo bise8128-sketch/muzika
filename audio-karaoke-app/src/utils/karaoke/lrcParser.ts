@@ -54,7 +54,7 @@ export function parseLRC(content: string): LRCData {
         }
 
         if (lineTimestamps.length > 0) {
-            const text = trimmedLine.substring(lastTimestampEnd).trim();
+            const text = trimmedLine.replace(timeRegex, '').trim();
             for (const startTime of lineTimestamps) {
                 parsedLines.push({
                     startTime,
