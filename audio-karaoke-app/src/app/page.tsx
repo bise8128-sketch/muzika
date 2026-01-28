@@ -39,6 +39,42 @@ type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
 
+// Backend Status Component
+function BackendStatus() {
+  const [status, setStatus] = useState<'online' | 'error' | 'loading'>('loading');
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          setStatus(data.services.modelRepository === 'connected' ? 'online' : 'error');
+        } else {
+          setStatus('error');
+        }
+      } catch (e) {
+        setStatus('error');
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold uppercase tracking-widest">
+      <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+          status === 'error' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
+            'bg-amber-500 animate-pulse'
+        }`} />
+      <span className={status === 'error' ? 'text-rose-400' : 'text-muted-foreground'}>
+        Backend: {status}
+      </span>
+    </div>
+  );
+}
+
 // ... existing dynamic imports ...
 
 export default function Home() {
@@ -286,6 +322,9 @@ export default function Home() {
             </button>
             <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</a>
             <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Privacy</a>
+
+            <BackendStatus />
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5"

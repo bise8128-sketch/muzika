@@ -1,6 +1,5 @@
-import * as ort from 'onnxruntime-web';
-import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
-import { getModel, modelExists } from '@/utils/storage/modelStorage';
+import type { ModelInfo, ModelDownloadProgress, ModelType } from '@/types/model';
+import { getModel, modelExists, getAllModels } from '@/utils/storage/modelStorage';
 import { downloadModel } from './modelDownloader';
 import { setupONNX } from './onnxSetup';
 
@@ -85,4 +84,26 @@ export function unloadModel(modelId: string): void {
  */
 export function isModelLoaded(modelId: string): boolean {
     return sessionCache.has(modelId);
+}
+
+/**
+ * Checks all models in storage and returns their current status.
+ */
+export async function checkModelAvailability() {
+    const storedModels = await getAllModels();
+    const storage = await import('@/utils/storage/modelStorage');
+    const stats = await storage.getStorageStats();
+
+    return {
+        models: storedModels.map(m => ({
+            id: m.id,
+            name: m.name,
+            version: m.version,
+            size: m.size,
+            downloadedAt: m.downloadedAt,
+            isLoaded: isModelLoaded(m.id)
+        })),
+        diskUsage: stats.totalSize,
+        quota: stats.quota
+    };
 }
