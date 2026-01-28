@@ -81,7 +81,10 @@ export default function Home() {
     }
   }, [separationStatus, separationResult, separationMessage]);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    const file = files[0];
+
     const modelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
     if (!modelInfo) {
       alert('Selected model not found!');
