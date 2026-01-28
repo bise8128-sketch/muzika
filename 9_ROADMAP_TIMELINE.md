@@ -143,7 +143,7 @@ Week 6:
 ### Estimated Hours: 60-70h
 ---
 
-## Faza 4: Karaoke Features (Tjedni 7-8)
+## Faza 4: Karaoke Features (Tjedni 7-8) ✅
 
 ### Cilj
 Karaoke playback i rendering
