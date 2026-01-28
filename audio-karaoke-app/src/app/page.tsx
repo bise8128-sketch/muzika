@@ -39,7 +39,7 @@ const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManage
   ssr: false
 });
 
-type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models';
+type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
 
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
@@ -104,6 +104,16 @@ export default function Home() {
     reset: resetSeparation
   } = useSeparation();
 
+  // Batch Hook
+  const batch = useBatchSeparation();
+
+  const handleBatchDownload = async (item: QueueItem) => {
+    if (!item.result) return;
+    const baseName = item.file.name.replace(/\.[^/.]+$/, "");
+    await exportAudio(item.result.vocals, 'mp3', `${baseName}_vocals.mp3`);
+    await exportAudio(item.result.instrumentals, 'mp3', `${baseName}_instrumental.mp3`);
+  };
+
   // History state
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
 
@@ -143,6 +153,14 @@ export default function Home() {
 
   const handleUpload = async (files: File[]) => {
     if (files.length === 0) return;
+
+    // Batch Mode Handling
+    if (files.length > 1) {
+      batch.addToQueue(files);
+      setState('batch');
+      return;
+    }
+
     const file = files[0];
 
     const modelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
@@ -212,7 +230,43 @@ export default function Home() {
   const handleTryKaraoke = () => {
     setState('karaoke');
   };
+batch':
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
+      <div className="flex justify-between items-center mb-6">
+        <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
+          <span>←</span> Back
+        </button>
+        <div className="space-x-4">
+          <button
+            onClick={batch.clearQueue}
+            disabled={batch.isProcessing}
+            className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
+          >
+            Clear All
+          </button>
+          <button
+            onClick={() => {
+              const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
+              if (model) batch.startBatch(model);
+            }}
+            disabled={batch.isProcessing || batch.queue.length === 0}
+            className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
+          >
+            {batch.isProcessing ? 'Processing...' : 'Start Batch'}
+          </button>
+        </div>
+      </div>
 
+      <BatchQueue
+        queue={batch.queue}
+        onRemove={batch.removeFromQueue}
+        onDownload={handleBatchDownload}
+      />
+    </div>
+  );
+
+      case '
   const clearHistory = async () => {
     await dbClearHistory();
     setHistoryItems([]);
