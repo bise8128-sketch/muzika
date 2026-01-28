@@ -10,7 +10,7 @@ export interface SeparationOptions {
 
 /**
  * Separate audio into vocals and instrumentals
- * 
+ *
  * @param file - Audio file to process
  * @param options - Separation options including model info and callbacks
  * @returns Separation result with vocals and instrumentals AudioBuffers
@@ -33,7 +33,7 @@ export async function separateAudio(
             const audioBuffer = await decodeAudioFile(file);
 
             // Prepare data for worker
-            // We need to pass raw data. 
+            // We need to pass raw data.
             // Current model works in Mono (based on segmentAudio impl).
             // But we should pass Stereo just in case we upgrade later.
             const channel1 = audioBuffer.getChannelData(0);
@@ -95,9 +95,9 @@ export async function separateAudio(
             // Ensure absolute URL for worker
             const absoluteModelInfo = {
                 ...modelInfo,
-                url: modelInfo.url.startsWith('http')
+                url: modelInfo.url ? (modelInfo.url.startsWith('http')
                     ? modelInfo.url
-                    : `${window.location.origin}${modelInfo.url}`
+                    : `${window.location.origin}${modelInfo.url}`) : ''
             };
 
             worker.postMessage({
