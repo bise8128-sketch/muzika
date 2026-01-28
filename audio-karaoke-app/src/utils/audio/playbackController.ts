@@ -26,8 +26,10 @@ export class PlaybackController {
 
     // Track state
     private audioBuffers: AudioBuffer[] = [];
+    private voiceBuffer: AudioBuffer | null = null;
     private gainNodes: GainNode[] = []; // Not used for direct connection anymore, but keeping for volume state
     private trackVolumes: number[] = [];
+    private voiceVolume: number = 1.0;
 
     // Playback state
     private isPlaying: boolean = false;
@@ -139,6 +141,20 @@ export class PlaybackController {
      */
     setEchoLevel(level: number): void {
         this.echoGain.gain.value = Math.max(0, Math.min(1, level));
+    }
+
+    /**
+     * Set Voice Buffer (recorded audio)
+     */
+    setVoiceBuffer(buffer: AudioBuffer | null): void {
+        this.voiceBuffer = buffer;
+    }
+
+    /**
+     * Set Voice Volume
+     */
+    setVoiceVolume(volume: number): void {
+        this.voiceVolume = Math.max(0, Math.min(1, volume));
     }
 
     /**
@@ -314,6 +330,23 @@ export class PlaybackController {
                                 inputL[s] += chL[idx] * vol;
                                 inputR[s] += chR[idx] * vol;
                             }
+                        }
+                    }
+                }
+            }
+
+            // Mix Voice Track
+            if (this.voiceBuffer && this.voiceVolume > 0) {
+                const chL = this.voiceBuffer.getChannelData(0);
+                const chR = this.voiceBuffer.numberOfChannels > 1 ? this.voiceBuffer.getChannelData(1) : chL;
+
+                if (this.playHead < this.voiceBuffer.length) {
+                    activeTracks++;
+                    for (let s = 0; s < feedSize; s++) {
+                        const idx = this.playHead + s;
+                        if (idx < this.voiceBuffer.length) {
+                            inputL[s] += chL[idx] * this.voiceVolume;
+                            inputR[s] += chR[idx] * this.voiceVolume;
                         }
                     }
                 }
