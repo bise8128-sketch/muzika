@@ -32,7 +32,9 @@ export class InferenceEngine {
     }
 
     async init() {
+        console.log('[inference] Initializing strategy...');
         await this.strategy.initialize(this.session);
+        console.log('[inference] Strategy initialized successfully');
     }
 
     async processChunk(inputData: Float32Array, channels: number, sampleRate: number): Promise<InferenceOutput> {
