@@ -144,11 +144,12 @@ export async function resumeAudioContext(): Promise<void> {
 }
 
 /**
- * Close AudioContext and release resources
+ * Close AudioContext and release all resources
+ * This includes cleaning up the AudioWorkletManager and its resources
  */
 export async function closeAudioContext(): Promise<void> {
     if (audioContext) {
-        // Clean up AudioWorklet
+        // Clean up AudioWorkletManager and its resources
         if (workletManager) {
             workletManager.destroy();
             workletManager = null;
