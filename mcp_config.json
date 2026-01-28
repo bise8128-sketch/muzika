@@ -1,6 +1,6 @@
 {
     "mcpServers": {
-        "context7": {
+        "github.com/upstash/context7-mcp": {
             "command": "npx",
             "args": [
                 "-y",
