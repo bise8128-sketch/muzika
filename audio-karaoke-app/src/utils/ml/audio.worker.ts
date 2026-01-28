@@ -37,9 +37,11 @@ const sendProgress = (progress: ProcessingProgress) => {
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
+    console.log('[audio.worker] Worker message received:', type);
 
     if (type === 'START_SEPARATION') {
         const { file, decodedData, sampleRate, modelInfo, skipCache } = e.data.payload;
+        console.log('[audio.worker] Starting separation for file:', file.name, 'model:', modelInfo.id);
 
         try {
             // Phase 1: Generate file hash
