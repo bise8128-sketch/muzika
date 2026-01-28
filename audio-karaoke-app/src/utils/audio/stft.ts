@@ -24,26 +24,43 @@ export class STFT {
 
     /**
      * Performs STFT on the input signal.
-     * Automatically applies padding (reflection) to center frames and ensure full reconstruction.
+     * Automatically applies padding (reflection to start, zero/reflection to end) to ensure full signal coverage.
      */
     process(signal: Float32Array): { magnitude: Float32Array; phase: Float32Array; dims: [number, number] } {
-        // Pad signal to center frames
-        const padLen = this.fftSize / 2;
-        const paddedSignal = new Float32Array(signal.length + padLen * 2);
+        // 1. Determine number of frames needed to fully cover the signal
+        // We want the windows to slide over the entire signal.
+        // Including the first window centered at start (offset by fftSize/2 usually)
+        // With padLen = fftSize/2, the first window (frame 0) covers [-fftSize/2, fftSize/2] of original signal (so 0..fftSize/2)
+        // We want the last window to cover up to signal.length.
 
-        // Reflection padding for better edge handling
+        const padLen = this.fftSize / 2;
+
+        // Calculate total length required to have an integer number of frames that cover the signal
+        const minLength = signal.length + padLen * 2;
+        const numFrames = Math.ceil((minLength - this.fftSize) / this.hopLength) + 1;
+        const targetLength = (numFrames - 1) * this.hopLength + this.fftSize;
+
+        const paddedSignal = new Float32Array(targetLength);
+
+        // Reflection padding for left side
         paddedSignal.set(signal, padLen);
-        // Left reflection (1-based to avoid repeating 0th sample twice if strictly symmetric, but 0-based fine here)
         for (let i = 0; i < padLen; i++) {
             paddedSignal[i] = signal[padLen - i];
         }
-        // Right reflection
-        for (let i = 0; i < padLen; i++) {
+
+        // Fill the rest with reflection or zeros
+        // We reflected left `padLen`. The signal is at `padLen`.
+        // The signal ends at `padLen + signal.length`.
+        // Right side padding starts there.
+        const endOfSignal = padLen + signal.length;
+
+        // Right reflection for available data, then zeros
+        for (let i = 0; endOfSignal + i < targetLength; i++) {
             const idx = signal.length - 1 - i;
-            paddedSignal[paddedSignal.length - 1 - i] = idx >= 0 ? signal[idx] : 0;
+            // If we run out of signal to reflect, pad with zeros
+            paddedSignal[endOfSignal + i] = idx >= 0 ? signal[idx] : 0;
         }
 
-        const numFrames = Math.floor((paddedSignal.length - this.fftSize) / this.hopLength) + 1;
         const numFreqs = this.fftSize / 2 + 1;
 
         const magnitude = new Float32Array(numFreqs * numFrames);
