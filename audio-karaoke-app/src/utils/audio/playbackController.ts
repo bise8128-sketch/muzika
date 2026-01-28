@@ -244,6 +244,18 @@ export class PlaybackController {
     }
 
     /**
+     * Set EQ (Equalizer) levels
+     * @param bass - Bass gain in dB (-12 to 12)
+     * @param mid - Mid gain in dB (-12 to 12)
+     * @param treble - Treble gain in dB (-12 to 12)
+     */
+    setEQ(bass: number, mid: number, treble: number): void {
+        this.bassNode.gain.value = bass;
+        this.midNode.gain.value = mid;
+        this.trebleNode.gain.value = treble;
+    }
+
+    /**
      * Start playback
      */
     play(): void {

@@ -13,6 +13,11 @@ export function usePlayback(controller: PlaybackController | null) {
     const [vocalsVolume, setVocalsVolume] = useState(1);
     const [instrumentalVolume, setInstrumentalVolume] = useState(1);
 
+    // EQ State
+    const [bass, setBass] = useState(0);
+    const [mid, setMid] = useState(0);
+    const [treble, setTreble] = useState(0);
+
     useEffect(() => {
         if (!controller) return;
 
@@ -64,16 +69,28 @@ export function usePlayback(controller: PlaybackController | null) {
         }
     }, [controller]);
 
+    const setEQ = useCallback((b: number, m: number, t: number) => {
+        if (!controller) return;
+        controller.setEQ(b, m, t);
+        setBass(b);
+        setMid(m);
+        setTreble(t);
+    }, [controller]);
+
     return {
         isPlaying,
         currentTime,
         duration,
         vocalsVolume,
         instrumentalVolume,
+        bass,
+        mid,
+        treble,
         play,
         pause,
         stop,
         seek,
         setVolume,
+        setEQ
     };
 }
