@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack configuration for Next.js 16+
+  turbopack: {
+    // Enable WebAssembly support in Turbopack
+    resolveAlias: {
+      // Add any path aliases needed
+    },
+  },
+
+  // Webpack configuration (backward compatibility)
   webpack: (config, { isServer }) => {
     // Enable WebAssembly support
     config.experiments = {
@@ -27,6 +36,7 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+
   // Allow loading WASM from external sources
   async headers() {
     return [
