@@ -11,7 +11,8 @@ const mockAudioWorklet = {
 
 const mockAudioWorkletNode = {
     port: {
-        onmessage: jest.fn()
+        onmessage: jest.fn(),
+        close: jest.fn()
     },
     connect: jest.fn(),
     disconnect: jest.fn(),

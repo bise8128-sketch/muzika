@@ -1,6 +1,7 @@
 /**
  * AudioContext initialization and management
  * Handles Web Audio API context creation and state management with AudioWorklet support
+ * Uses AudioWorkletManager to wrap and manage the GenericAudioProcessor
  */
 
 import { AudioWorkletManager } from './audioWorkletManager';
@@ -12,6 +13,7 @@ let workletManager: AudioWorkletManager | null = null;
 /**
  * Initialize and get the global AudioContext
  * Sample rate: 44100 Hz (standard for audio processing)
+ * Creates and initializes the AudioWorkletManager for real-time audio processing
  */
 export function getAudioContext(): AudioContext {
     if (!audioContext) {
@@ -24,7 +26,7 @@ export function getAudioContext(): AudioContext {
         gainNode = audioContext.createGain();
         gainNode.connect(audioContext.destination);
 
-        // Initialize AudioWorklet manager
+        // Initialize AudioWorklet manager (wraps GenericAudioProcessor)
         workletManager = new AudioWorkletManager(audioContext);
     }
 
