@@ -50,7 +50,7 @@ Context7 MCP provides two main tools:
 - `query` (required): The user's question or task (used to rank results by relevance)
 - `libraryName` (required): The name of the library to search for
 
-**Example**: 
+**Example**:
 ```
 resolve-library-id("Create a Next.js middleware", "Next.js")
 ```
@@ -95,10 +95,10 @@ Context7 will automatically match the appropriate version.
 
 ## Key Benefits
 
-✅ **Up-to-date Documentation**: Pulls real-time, version-specific docs from source  
-✅ **No Hallucinations**: Avoids outdated or non-existent APIs  
-✅ **Instant Context**: Documentation placed directly into your LLM's prompt  
-✅ **Version-Specific**: Automatically matches library versions  
+✅ **Up-to-date Documentation**: Pulls real-time, version-specific docs from source
+✅ **No Hallucinations**: Avoids outdated or non-existent APIs
+✅ **Instant Context**: Documentation placed directly into your LLM's prompt
+✅ **Version-Specific**: Automatically matches library versions
 
 ## Existing MCP Servers
 
@@ -134,6 +134,6 @@ If you encounter issues:
 
 ---
 
-**Installation Date**: January 28, 2026  
-**Project**: Muzika - Audio Karaoke Application  
+**Installation Date**: January 28, 2026
+**Project**: Muzika - Audio Karaoke Application
 **Status**: ✅ Active and Ready

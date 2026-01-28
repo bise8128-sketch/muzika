@@ -64,3 +64,6 @@ console.log('\n');
 
 console.log('✨ Context7 is ready to enhance your coding with up-to-date documentation!');
 console.log('   Add "use context7" to any coding prompt to leverage its capabilities.\n');
+
+console.log('📦 Example Task:');
+console.log('  "Create a Next.js middleware that checks for JWT in cookies. use context7"');
