@@ -47,15 +47,19 @@ export async function separateAudio(
             const left = new Float32Array(channel1);
             const right = new Float32Array(channel2);
 
+            console.log('[separateAudio] Creating worker...');
             const worker = new Worker(new URL('./audio.worker.ts', import.meta.url));
+            console.log('[separateAudio] Worker created successfully');
 
             worker.onmessage = (e) => {
                 const { type, payload } = e.data;
+                console.log('[separateAudio] Worker message received:', type);
 
                 if (type === 'PROGRESS') {
                     if (onProgress) onProgress(payload);
                 } else if (type === 'COMPLETE') {
                     const { vocals, instrumentals, fileHash, timestamp } = payload;
+                    console.log('[separateAudio] Worker completed successfully');
 
                     // Convert ArrayBuffers back to AudioBuffers
                     Promise.all([
@@ -71,13 +75,21 @@ export async function separateAudio(
                             fileHash
                         });
                     }).catch(err => {
+                        console.error('[separateAudio] Error converting buffers:', err);
                         worker.terminate();
                         reject(err);
                     });
                 } else if (type === 'ERROR') {
+                    console.error('[separateAudio] Worker error:', payload.message);
                     worker.terminate();
                     reject(new Error(payload.message));
                 }
+            };
+
+            worker.onerror = (error) => {
+                console.error('[separateAudio] Worker error event:', error);
+                worker.terminate();
+                reject(new Error(`Worker error: ${error.message}`));
             };
 
             worker.postMessage({
