@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 
 interface AudioUploadProps {
-    onUpload: (file: File) => void;
+    onUpload: (files: File[]) => void;
     isLoading?: boolean;
 }
 
@@ -12,18 +12,19 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const validateFile = (file: File) => {
-        const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3'];
+    const validateFiles = (files: File[]): boolean => {
+        const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac'];
         const maxSize = 50 * 1024 * 1024; // 50MB
 
-        if (!validTypes.includes(file.type)) {
-            setError('Unsupported file format. Please upload MP3 or WAV.');
-            return false;
-        }
-
-        if (file.size > maxSize) {
-            setError('File is too large. Max size is 50MB.');
-            return false;
+        for (const file of files) {
+            if (!validTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && !file.name.endsWith('.flac')) {
+                setError(`Unsupported file format: ${file.name}. Please upload MP3, WAV, or FLAC.`);
+                return false;
+            }
+            if (file.size > maxSize) {
+                setError(`File ${file.name} is too large. Max size is 50MB.`);
+                return false;
+            }
         }
 
         setError(null);
@@ -44,16 +45,16 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
         e.preventDefault();
         setIsDragging(false);
 
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && validateFile(files[0])) {
-            onUpload(files[0]);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0 && validateFiles(files)) {
+            onUpload(files);
         }
     }, [onUpload]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0 && validateFile(files[0])) {
-            onUpload(files[0]);
+        const files = e.target.files ? Array.from(e.target.files) : [];
+        if (files.length > 0 && validateFiles(files)) {
+            onUpload(files);
         }
     };
 
@@ -77,6 +78,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
                     ref={fileInputRef}
                     type="file"
                     accept="audio/*"
+                    multiple
                     onChange={handleFileChange}
                     className="hidden"
                 />
@@ -99,7 +101,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
                     </div>
 
                     <h3 className="text-2xl font-bold mb-2 group-hover:text-gradient transition-all">
-                        {isDragging ? 'Drop it here!' : 'Select Audio File'}
+                        {isDragging ? 'Drop them here!' : 'Select Audio Files'}
                     </h3>
                     <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
                         Drag and drop your MP3/WAV files, or click to browse. Secure and local.
