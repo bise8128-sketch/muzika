@@ -92,13 +92,21 @@ export async function separateAudio(
                 reject(new Error(`Worker error: ${error.message}`));
             };
 
+            // Ensure absolute URL for worker
+            const absoluteModelInfo = {
+                ...modelInfo,
+                url: modelInfo.url.startsWith('http')
+                    ? modelInfo.url
+                    : `${window.location.origin}${modelInfo.url}`
+            };
+
             worker.postMessage({
                 type: 'START_SEPARATION',
                 payload: {
                     file, // File objects are clonable
                     decodedData: { left, right },
                     sampleRate: audioBuffer.sampleRate,
-                    modelInfo,
+                    modelInfo: absoluteModelInfo,
                     skipCache
                 }
             }, [left.buffer, right.buffer]); // Transfer buffers

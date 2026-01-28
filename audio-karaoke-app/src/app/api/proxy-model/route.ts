@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         headers.set('Content-Type', response.headers.get('Content-Type') || 'application/octet-stream');
         headers.set('Content-Length', response.headers.get('Content-Length') || '');
         headers.set('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
+        headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
 
         return new NextResponse(response.body, {
             status: 200,
