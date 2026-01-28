@@ -18,11 +18,11 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
 
         for (const file of files) {
             if (!validTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && !file.name.endsWith('.flac')) {
-                setError(`Unsupported file format: ${file.name}. Please upload MP3, WAV, or FLAC.`);
+                setError(`Nepodržan format datoteke: ${file.name}. Molimo učitajte MP3, WAV ili FLAC.`);
                 return false;
             }
             if (file.size > maxSize) {
-                setError(`File ${file.name} is too large. Max size is 50MB.`);
+                setError(`Datoteka ${file.name} je prevelika. Maksimalna veličina je 50MB.`);
                 return false;
             }
         }
