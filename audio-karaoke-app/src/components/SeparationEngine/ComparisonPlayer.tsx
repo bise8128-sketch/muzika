@@ -69,7 +69,7 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         const time = parseFloat(e.target.value);
         if (controllerRef.current) {
-            controllerRef.current.seek(time);
+            controllerRef.current.setCurrentTime(time);
             setCurrentTime(time);
         }
     };

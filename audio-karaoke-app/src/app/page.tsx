@@ -163,7 +163,7 @@ export default function Home() {
         return (
           <ResultsDisplay
             tracks={[
-              { id: 'original', name: 'Original', blob: separationResult?.original || null },
+              { id: 'original', name: 'Original', blob: separationResult?.originalAudio || null },
               { id: 'vocals', name: 'Vocals', blob: separationResult?.vocals || null },
               { id: 'instrumental', name: 'Instrumental', blob: separationResult?.instrumentals || null }
             ]}
