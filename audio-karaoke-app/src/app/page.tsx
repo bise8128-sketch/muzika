@@ -47,6 +47,9 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+  // Result state (from hook OR from restoration)
+  const [restoredResult, setRestoredResult] = useState<any>(null);
+
   // Model Selection
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
 
@@ -144,31 +147,25 @@ export default function Home() {
       const vocals = float32ArrayToAudioBuffer(new Float32Array(session.vocals), session.sampleRate, 2);
       const instrumentals = float32ArrayToAudioBuffer(new Float32Array(session.instrumentals), session.sampleRate, 2);
 
-      // We don't have the original audio buffer stored in IndexedDB to save space, 
-      // but we can show vocals and instrumentals.
+      setRestoredResult({
+        vocals,
+        instrumentals,
+        originalAudio: null, // Not stored to save space
+        timestamp: session.processedAt,
+        fileHash: session.fileHash
+      });
 
-      // I need to manually update the separationResult state or trigger a pseudo-completion
-      // For now, let's just alert that it's loading. 
-      // BETTER: I should probably update the separation hook to allow setting results manually.
-      // But I can't easily modify the hook state from here unless I add a setter.
-
-      // Wait, let's check ResultsDisplay again. 
-      // It takes 'tracks' which are passed from Home.
-
-      // If I want to "restore" I need to populate a result-like object.
-      // Since useSeparation doesn't expose a setter, I might need to move some state out or adjust the hook.
-      // Actually, I can just use a local 'restoredResult' state in Home if I want to bypass the hook for restored sessions.
-
-      alert('Session restoration logic is being connected...');
-      // For now, I'll just leave this as a placeholder or update useSeparation.
+      setState('results');
     } catch (e) {
       console.error('Restore failed:', e);
+      alert('Failed to restore session from database.');
     }
   };
 
   const handleRestart = () => {
     setState('upload');
     resetSeparation();
+    setRestoredResult(null);
   };
 
   const handleTryKaraoke = () => {
@@ -228,19 +225,22 @@ export default function Home() {
         );
 
       case 'results':
+        const activeResult = separationResult || restoredResult;
         return (
           <ResultsDisplay
             tracks={[
-              { id: 'original', name: 'Original', blob: separationResult?.originalAudio || null },
-              { id: 'vocals', name: 'Vocals', blob: separationResult?.vocals || null },
-              { id: 'instrumental', name: 'Instrumental', blob: separationResult?.instrumentals || null }
+              { id: 'original', name: 'Original', blob: activeResult?.originalAudio || null },
+              { id: 'vocals', name: 'Vocals', blob: activeResult?.vocals || null },
+              { id: 'instrumental', name: 'Instrumental', blob: activeResult?.instrumentals || null }
             ]}
             onDownload={handleDownload}
             onRestart={handleRestart}
+            onTryKaraoke={handleTryKaraoke}
           />
         );
 
       case 'karaoke':
+        const karaokeResult = separationResult || restoredResult;
         return (
           <div className="animate-in fade-in duration-700">
             <button
