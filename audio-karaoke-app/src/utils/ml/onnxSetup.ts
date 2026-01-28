@@ -26,9 +26,11 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     console.log('[onnxSetup] Setting up ONNX Runtime...');
 
     // Configure WASM paths to point to our public/wasm directory
-    // Note: onnxruntime-web looks for these files relative to the host or via env.wasmPaths
+    // In workers, we might need a full URL to avoid relative path issues
+    const wasmPath = typeof self !== 'undefined' && self.location ? `${self.location.origin}/wasm/` : '/wasm/';
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ort as any).env.wasm.wasmPaths = '/wasm/';
+    (ort as any).env.wasm.wasmPaths = wasmPath;
     console.log('[onnxSetup] WASM paths set to:', (ort as any).env.wasm.wasmPaths);
 
     // Enable SIMD for better performance on CPU fallback

@@ -13,9 +13,16 @@ export async function downloadModel(
         throw new Error(`No URL provided for model ${modelInfo.id}`);
     }
 
-    const response = await fetch(modelInfo.url);
+    let response: Response;
+    try {
+        response = await fetch(modelInfo.url);
+    } catch (err) {
+        console.error(`[modelDownloader] fetch failed for ${modelInfo.url}:`, err);
+        throw new Error(`Failed to fetch model from ${modelInfo.url}. This may be due to CORS, network issues, or an invalid URL.`);
+    }
+
     if (!response.ok) {
-        throw new Error(`Failed to download model: ${response.statusText}`);
+        throw new Error(`Failed to download model from ${modelInfo.url}: ${response.status} ${response.statusText}`);
     }
 
     const contentLength = response.headers.get('content-length');

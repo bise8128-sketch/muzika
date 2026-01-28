@@ -182,8 +182,24 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             } as WindowPostMessageOptions);
 
         } catch (error) {
-            console.error('[audio.worker] Separation error:', error);
-            self.postMessage({ type: 'ERROR', payload: { message: error instanceof Error ? error.message : 'Unknown error' } });
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const stack = error instanceof Error ? error.stack : undefined;
+
+            console.error('[audio.worker] Separation error:', {
+                message: errorMessage,
+                stack,
+                error
+            });
+
+            let clientMessage = errorMessage;
+            if (errorMessage.includes('Failed to fetch')) {
+                clientMessage = `Network error: ${errorMessage}. Check if the model URL is accessible and CORS is allowed.`;
+            }
+
+            self.postMessage({
+                type: 'ERROR',
+                payload: { message: clientMessage }
+            });
         }
     }
 };
