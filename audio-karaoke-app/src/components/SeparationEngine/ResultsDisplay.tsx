@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ComparisonPlayer } from './ComparisonPlayer';
 
 interface track {
     id: string;
@@ -15,6 +16,9 @@ interface ResultsDisplayProps {
 }
 
 export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownload, onRestart }) => {
+    // Separate original from others for the cards
+    const displayTracks = tracks.filter(t => t.id !== 'original');
+
     return (
         <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-1000">
             <div className="flex justify-between items-end mb-8">
@@ -22,19 +26,24 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                     <h2 className="text-3xl font-bold mb-2 text-gradient">Separation Complete</h2>
                     <p className="text-muted-foreground">Your tracks are ready for download.</p>
                 </div>
-                <button
-                    onClick={onRestart}
-                    className="px-6 py-2.5 rounded-xl glass hover:bg-white/10 transition-all font-medium flex items-center gap-2 group"
-                >
-                    <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Process Another
-                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={onRestart}
+                        className="px-6 py-2.5 rounded-xl glass hover:bg-white/10 transition-all font-medium flex items-center gap-2 group"
+                    >
+                        <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Process Another
+                    </button>
+                </div>
             </div>
 
+            {/* Comparison Player Section */}
+            <ComparisonPlayer tracks={tracks} />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {tracks.map((track) => (
+                {displayTracks.map((track) => (
                     <div key={track.id} className="glass-card p-6 rounded-3xl group hover:border-primary/20 transition-all relative overflow-hidden">
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-6">
@@ -102,7 +111,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                             You can also use our <span className="text-primary font-medium">Karaoke Mode</span> to sing along with real-time lyrics and pitch adjustment!
                         </p>
                     </div>
-                    <button className="ml-auto px-6 py-2 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all">TRY KARAOKE</button>
+                    <button className="ml-auto px-6 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all text-sm uppercase tracking-wider">TRY KARAOKE</button>
                 </div>
             </div>
         </div>

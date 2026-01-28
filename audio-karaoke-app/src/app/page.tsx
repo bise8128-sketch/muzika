@@ -27,6 +27,10 @@ const History = dynamic(() => import('@/components/UI/History').then(mod => mod.
   ssr: false
 });
 
+const Onboarding = dynamic(() => import('@/components/UI/Onboarding').then(mod => mod.Onboarding), {
+  ssr: false
+});
+
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
 
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
@@ -38,6 +42,7 @@ export default function Home() {
   const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Model Selection
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
@@ -158,6 +163,7 @@ export default function Home() {
         return (
           <ResultsDisplay
             tracks={[
+              { id: 'original', name: 'Original', blob: separationResult?.original || null },
               { id: 'vocals', name: 'Vocals', blob: separationResult?.vocals || null },
               { id: 'instrumental', name: 'Instrumental', blob: separationResult?.instrumentals || null }
             ]}
@@ -204,7 +210,12 @@ export default function Home() {
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">How it works</a>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+            >
+              How it works
+            </button>
             <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</a>
             <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Privacy</a>
             <button
@@ -247,6 +258,7 @@ export default function Home() {
         onModelChange={setSelectedModelId}
       />
 
+      <Onboarding key={showHelp ? 'manual-help' : 'auto-onboarding'} />
 
       {/* Footer / Credits */}
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
