@@ -23,6 +23,7 @@ export class GPUMemoryManager {
         this.activeTensors.forEach(tensor => {
             // InferenceSession output tensors should be disposed explicitly in WebGPU
             try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (tensor as any).dispose?.();
             } catch (e) {
                 // Silently fail if dispose is not available or fails

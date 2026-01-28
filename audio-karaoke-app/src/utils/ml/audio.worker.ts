@@ -33,16 +33,7 @@ const sendProgress = (progress: ProcessingProgress) => {
     self.postMessage({ type: 'PROGRESS', payload: progress });
 };
 
-// Helper to audio buffer to array buffer (interleaved)
-function float32ToInterleaved(left: Float32Array, right: Float32Array): ArrayBuffer {
-    const length = left.length;
-    const interleaved = new Float32Array(length * 2);
-    for (let i = 0; i < length; i++) {
-        interleaved[i * 2] = left[i];
-        interleaved[i * 2 + 1] = right[i];
-    }
-    return interleaved.buffer;
-}
+
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;

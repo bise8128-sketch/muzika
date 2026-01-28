@@ -30,7 +30,9 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     (ort as any).env.wasm.wasmPaths = '/wasm/';
 
     // Enable SIMD for better performance on CPU fallback
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.numThreads = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.simd = true;
 
     const options: ort.InferenceSession.SessionOptions = {
@@ -38,6 +40,7 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
         graphOptimizationLevel: 'all',
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.log(`ONNX Setup: WebGPU=${hasWebGPU}, Threads=${(ort as any).env.wasm.numThreads}`);
 
     return options;
