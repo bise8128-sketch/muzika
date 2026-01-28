@@ -19,7 +19,7 @@ describe('LyricDisplay', () => {
 
     it('renders "No lyrics available" when no lyrics are provided', () => {
         render(<LyricDisplay lyrics={null} currentTime={0} />);
-        expect(screen.getByText('No lyrics available')).toBeInTheDocument();
+        expect(screen.getByText('No lyrics loaded')).toBeInTheDocument();
     });
 
     it('renders all lyric lines', () => {
@@ -34,13 +34,13 @@ describe('LyricDisplay', () => {
 
         // The second line (index 1) should be active
         const lines = container.querySelectorAll('.text-center');
-        expect(lines[1]).toHaveClass('text-3xl', 'font-bold', 'text-white');
+        expect(lines[1]).toHaveClass('text-4xl', 'md:text-5xl', 'text-white');
 
         // The first line should be "past"
-        expect(lines[0]).toHaveClass('text-xl', 'text-gray-500');
+        expect(lines[0]).toHaveClass('text-2xl', 'text-white/40');
 
         // The third line should be "future"
-        expect(lines[2]).toHaveClass('text-xl', 'text-gray-400');
+        expect(lines[2]).toHaveClass('text-2xl', 'text-white/20');
     });
 
     it('calls scrollIntoView when current line changes', () => {
