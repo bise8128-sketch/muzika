@@ -8,7 +8,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '1.0.0',
         size: 40 * 1024 * 1024, // Estimate
         description: 'Standard lightweight model for vocals/instrumental separation.',
-        url: 'https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Inst_HQ_3.onnx', // Example URL
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Inst_HQ_3.onnx'),
     },
     {
         id: 'demucs-ht-v4',
