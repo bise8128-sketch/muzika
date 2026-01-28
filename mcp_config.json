@@ -16,7 +16,7 @@
                 "@modelcontextprotocol/server-github"
             ],
             "env": {
-                "GITHUB_PERSONAL_ACCESS_TOKEN": "REPLACE_WITH_YOUR_TOKEN"
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
             }
         },
         "filesystem": {
@@ -27,21 +27,42 @@
                 "/home/k/Downloads/muzika"
             ]
         },
-        "postgres": {
+        "brave-search": {
             "command": "npx",
             "args": [
                 "-y",
-                "@modelcontextprotocol/server-postgres"
+                "@modelcontextprotocol/server-brave-search"
             ],
             "env": {
-                "DATABASE_URL": "REPLACE_WITH_YOUR_DATABASE_URL"
+                "BRAVE_SEARCH_API_KEY": "BSAotF0rYCjZm7xgrhfQHoEwcfG1RnI"
             }
         },
-        "sqlite": {
+        "docker": {
             "command": "npx",
             "args": [
                 "-y",
-                "@modelcontextprotocol/server-sqlite"
+                "@modelcontextprotocol/server-docker"
+            ]
+        },
+        "puppeteer": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-puppeteer"
+            ]
+        },
+        "node": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-node"
+            ]
+        },
+        "ffmpeg": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-ffmpeg"
             ]
         }
     }
