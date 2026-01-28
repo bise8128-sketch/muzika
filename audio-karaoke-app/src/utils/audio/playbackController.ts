@@ -24,6 +24,12 @@ export class PlaybackController {
     private echoFeedback: GainNode;
     private echoGain: GainNode;
 
+    // EQ & Master
+    private masterGain: GainNode;
+    private bassNode: BiquadFilterNode;
+    private midNode: BiquadFilterNode;
+    private trebleNode: BiquadFilterNode;
+
     // Track state
     private audioBuffers: AudioBuffer[] = [];
     private voiceBuffer: AudioBuffer | null = null;
@@ -78,6 +84,34 @@ export class PlaybackController {
         this.echoGain.connect(this.audioContext.destination);
         this.echoNode.connect(this.echoFeedback);
         this.echoFeedback.connect(this.echoNode);
+
+        // Master Gain Node
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.gain.value = 1.0; // Default 0 dB
+        this.masterGain.connect(this.audioContext.destination);
+
+        // EQ Nodes
+        this.bassNode = this.audioContext.createBiquadFilter();
+        this.bassNode.type = 'lowshelf';
+        this.bassNode.frequency.value = 200; // 200 Hz
+        this.bassNode.gain.value = 0; // Default flat
+
+        this.midNode = this.audioContext.createBiquadFilter();
+        this.midNode.type = 'peaking';
+        this.midNode.frequency.value = 1000; // 1 kHz
+        this.midNode.gain.value = 0; // Default flat
+
+        this.trebleNode = this.audioContext.createBiquadFilter();
+        this.trebleNode.type = 'highshelf';
+        this.trebleNode.frequency.value = 5000; // 5 kHz
+        this.trebleNode.gain.value = 0; // Default flat
+
+        // Connect EQ: Source -> Bass -> Mid -> Treble -> Destination
+        // We will connect ScriptNode -> EQ -> Master Gain -> Destination
+
+        this.bassNode.connect(this.midNode);
+        this.midNode.connect(this.trebleNode);
+        this.trebleNode.connect(this.masterGain);
 
         this.createImpulseResponse();
     }
@@ -141,6 +175,38 @@ export class PlaybackController {
      */
     setEchoLevel(level: number): void {
         this.echoGain.gain.value = Math.max(0, Math.min(1, level));
+    }
+
+    /**
+     * Set Master Gain
+     * @param gain - Gain value in dB
+     */
+    setMasterGain(gain: number): void {
+        this.masterGain.gain.value = gain;
+    }
+
+    /**
+     * Set Bass Gain
+     * @param gain - Gain value in dB
+     */
+    setBassGain(gain: number): void {
+        this.bassNode.gain.value = gain;
+    }
+
+    /**
+     * Set Mid Gain
+     * @param gain - Gain value in dB
+     */
+    setMidGain(gain: number): void {
+        this.midNode.gain.value = gain;
+    }
+
+    /**
+     * Set Treble Gain
+     * @param gain - Gain value in dB
+     */
+    setTrebleGain(gain: number): void {
+        this.trebleNode.gain.value = gain;
     }
 
     /**
@@ -248,16 +314,16 @@ export class PlaybackController {
         const numSamplesNeeded = BUFFER_SIZE; // We assume 1:1 for input-fetching logic, SoundTouch handles time stretch buffering
 
         // Use an input buffer for SoundTouch
-        // Ideally we fetch enough samples. 
+        // Ideally we fetch enough samples.
         // Logic: specific amount of INPUT samples produce BUFFER_SIZE OUTPUT samples? No.
-        // Logic: We force feed SoundTouch, and it buffers. 
+        // Logic: We force feed SoundTouch, and it buffers.
         // We need to keep feeding it until it has enough data to output BUFFER_SIZE samples.
         // OR: We feed it chunk by chunk.
 
         // Better Strategy for ScriptProcessor:
         // We ask SoundTouch: "Give me BUFFER_SIZE samples".
         // It might return less if it needs more input.
-        // So we loop: 
+        // So we loop:
         // While (SoundTouchOutput < BUFFER_SIZE) { Feed Input }
 
         const generatedL = new Float32Array(BUFFER_SIZE);
