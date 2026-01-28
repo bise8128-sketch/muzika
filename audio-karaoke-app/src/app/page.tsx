@@ -2,12 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { KaraokePlayer } from '@/components/Karaoke/KaraokePlayer';
+import dynamic from 'next/dynamic';
+
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
-import { ResultsDisplay } from '@/components/SeparationEngine/ResultsDisplay';
-import { SettingsPanel } from '@/components/UI/SettingsPanel';
-import { History } from '@/components/UI/History';
+
+const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Karaoke Player...</div>,
+  ssr: false
+});
+
+const ResultsDisplay = dynamic(() => import('@/components/SeparationEngine/ResultsDisplay').then(mod => mod.ResultsDisplay), {
+  loading: () => <div className="h-64 flex items-center justify-center">Preparing results...</div>,
+  ssr: false
+});
+
+const SettingsPanel = dynamic(() => import('@/components/UI/SettingsPanel').then(mod => mod.SettingsPanel), {
+  ssr: false
+});
+
+const History = dynamic(() => import('@/components/UI/History').then(mod => mod.History), {
+  ssr: false
+});
 
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
 
