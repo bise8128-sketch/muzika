@@ -96,7 +96,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     accept="audio/*"
                     multiple
                     onChange={handleFileChange}
-                    className="hidden"
+                    className="sr-only"
                 />
 
                 <div className="relative z-10 p-12 text-center">

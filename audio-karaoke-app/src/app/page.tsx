@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
 import dynamic from 'next/dynamic';
 
 import { PlaybackController } from '@/utils/audio/playbackController';
@@ -295,6 +294,7 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <AudioUpload
               onUpload={handleUpload}
+              isLoading={separationStatus === 'processing'}
               autoStartKaraoke={autoStartKaraoke}
               onAutoStartToggle={(val) => {
                 setAutoStartKaraoke(val);
@@ -394,11 +394,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen selection:bg-primary/30">
-      <Head>
-        <title>Muzika | Professional AI Audio Separation</title>
-        <meta name="description" content="Premium, browser-native AI audio separation with high-fidelity output." />
-      </Head>
-
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-white/5">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
@@ -463,10 +458,13 @@ export default function Home() {
         onModelChange={setSelectedModelId}
       />
 
-      <Onboarding
-        key={showHelp ? 'manual-help' : 'auto-onboarding'}
-        forceShow={showHelp}
+      <Onboarding 
+        key={showHelp ? 'manual-help' : 'auto-onboarding'} 
+        forceShow={showHelp} 
         onClose={() => setShowHelp(false)}
+      />
+
+      {/* Footer / Credits */}
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
         <p>© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.</p>
       </footer>
