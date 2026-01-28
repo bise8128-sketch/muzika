@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Muzika | AI Audio Separation",
-  description: "Professional, browser-native AI audio separation with high-fidelity output. Separate vocals and instrumentals with ease.",
+  title: "DaorsKaraoke | Premium AI Karaoke Experience",
+  description: "Experience the future of karaoke with our AI-powered separation and real-time effects. Perfect your performance with precision and style.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
