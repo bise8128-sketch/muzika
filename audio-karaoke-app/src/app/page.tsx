@@ -4,132 +4,196 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { KaraokePlayer } from '@/components/Karaoke/KaraokePlayer';
 import { PlaybackController } from '@/utils/audio/playbackController';
+import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
+import { ResultsDisplay } from '@/components/SeparationEngine/ResultsDisplay';
+import { SettingsPanel } from '@/components/UI/SettingsPanel';
+import { History } from '@/components/UI/History';
+
+type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
 
 export default function Home() {
+  const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // Mock history for demo
+  const [historyItems, setHistoryItems] = useState([
+    { id: '1', fileName: 'Bohemian Rhapsody.mp3', date: '2 hours ago', duration: '5:55' },
+    { id: '2', fileName: 'Imagine.wav', date: 'Yesterday', duration: '3:03' }
+  ]);
 
   useEffect(() => {
-    // Initialize controller on mount
     const newController = new PlaybackController();
     setController(newController);
-
-    return () => {
-      newController.dispose();
-    };
+    return () => newController.dispose();
   }, []);
 
-  // Mock function to "load" audio for demonstration
-  const handleMockLoad = async () => {
-    if (!controller) return;
+  const handleUpload = async (file: File) => {
+    setState('processing');
 
-    // In a real app, this would come from the separation engine
-    // For now, we'll just show the UI components
-    setIsReady(true);
+    // Simulate processing progress
+    let currentProgress = 0;
+    const interval = setInterval(() => {
+      currentProgress += Math.random() * 15;
+      if (currentProgress >= 100) {
+        currentProgress = 100;
+        clearInterval(interval);
+        setTimeout(() => setState('results'), 500);
+      }
+      setProgress(Math.floor(currentProgress));
+    }, 400);
+  };
+
+  const handleDownload = (track: any, format: string) => {
+    console.log(`Downloading ${track.name} as ${format}`);
+    // Real implementation would use the encoded blob
+  };
+
+  const handleRestart = () => {
+    setState('upload');
+    setProgress(0);
+  };
+
+  const handleTryKaraoke = () => {
+    setState('karaoke');
+  };
+
+  const clearHistory = () => {
+    setHistoryItems([]);
+  };
+
+  const renderContent = () => {
+    switch (state) {
+      case 'upload':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <AudioUpload onUpload={handleUpload} />
+            <History items={historyItems} onRestore={() => setState('results')} onClear={clearHistory} />
+          </div>
+        );
+
+      case 'processing':
+        return (
+          <div className="max-w-2xl mx-auto py-20 text-center animate-in zoom-in-95 duration-500">
+            <div className="relative inline-block mb-12">
+              <div className="w-32 h-32 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl">
+                {progress}%
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold mb-4 text-gradient">Separating Audio...</h2>
+            <p className="text-muted-foreground animate-pulse">Running AI models locally on your GPU</p>
+
+            <div className="mt-12 space-y-2 max-w-sm mx-auto">
+              <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">
+                <span>Phase: {progress < 40 ? 'Loading Model' : progress < 80 ? 'Inference' : 'Merging'}</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'results':
+        return (
+          <ResultsDisplay
+            tracks={[
+              { id: 'vocals', name: 'Vocals', blob: null },
+              { id: 'instrumental', name: 'Instrumental', blob: null }
+            ]}
+            onDownload={handleDownload}
+            onRestart={handleRestart}
+          />
+        );
+
+      case 'karaoke':
+        return (
+          <div className="animate-in fade-in duration-700">
+            <button
+              onClick={() => setState('results')}
+              className="mb-8 flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Results
+            </button>
+            {controller && <KaraokePlayer controller={controller} />}
+          </div>
+        );
+    }
   };
 
   return (
-    <>
+    <div className="min-h-screen selection:bg-primary/30">
       <Head>
-        <title>Audio Karaoke Separation</title>
-        <meta name="description" content="AI-powered audio separation and karaoke app" />
+        <title>Muzika | Professional AI Audio Separation</title>
+        <meta name="description" content="Premium, browser-native AI audio separation with high-fidelity output." />
       </Head>
-      <main className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white pb-20">
-        <div className="container mx-auto px-4 py-12">
-          {/* Header */}
-          <header className="text-center mb-16">
-            <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-              🎵 Audio Karaoke Separation
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-white/5">
+        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleRestart}>
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
+            <span className="text-2xl font-black tracking-tighter">MUZIKA</span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">How it works</a>
+            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</a>
+            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Privacy</a>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-6 pt-32 pb-20">
+        {state === 'upload' && (
+          <header className="text-center max-w-3xl mx-auto mb-16 space-y-6">
+            <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest animate-float">
+              Powered by ONNX Runtime Web
+            </div>
+            <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-tight">
+              Separate your music <br />
+              <span className="text-gradient">with AI precision.</span>
             </h1>
-            <p className="text-xl text-gray-300">
-              AI-powered audio separation running entirely in-browser
+            <p className="text-xl text-muted-foreground max-w-xl mx-auto">
+              Professional vocal and instrumental separation directly in your browser. No accounts, no servers, just quality.
             </p>
           </header>
+        )}
 
-          {!isReady ? (
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl">
-                <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                  <span className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                  </span>
-                  Upload Audio File
-                </h2>
-                <div
-                  onClick={handleMockLoad}
-                  className="group border-2 border-dashed border-purple-400/30 rounded-2xl p-16 text-center hover:border-purple-400 hover:bg-purple-400/5 transition-all cursor-pointer relative overflow-hidden"
-                >
-                  <div className="relative z-10">
-                    <svg
-                      className="mx-auto h-20 w-20 text-purple-400 mb-6 group-hover:scale-110 transition-transform"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                      />
-                    </svg>
-                    <p className="text-xl text-gray-200 mb-2 font-medium">
-                      Drop your song here
-                    </p>
-                    <p className="text-gray-400 max-w-xs mx-auto">
-                      All processing happens locally. Your files never leave your device.
-                    </p>
-                  </div>
-                  {/* Decorative element */}
-                  <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full"></div>
-                  <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-pink-500/10 blur-3xl rounded-full"></div>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
-                  <div className="text-3xl mb-4 p-3 bg-purple-500/10 rounded-xl w-fit">🎤</div>
-                  <h3 className="font-semibold mb-2">Phase 4 Ready</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">
-                    Karaoke features including LRC lyrics and visualizer are now integrated.
-                  </p>
-                </div>
-                <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
-                  <div className="text-3xl mb-4 p-3 bg-pink-500/10 rounded-xl w-fit">⚡</div>
-                  <h3 className="font-semibold mb-2">Local GPU</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">
-                    Powered by ONNX Runtime Web for blazing fast local separation.
-                  </p>
-                </div>
-                <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
-                  <div className="text-3xl mb-4 p-3 bg-blue-500/10 rounded-xl w-fit">💾</div>
-                  <h3 className="font-semibold mb-2">Auto-Caching</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">
-                    Results are saved to IndexedDB for instant subseqent loads.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-6xl mx-auto animate-in fade-in duration-700">
-              <button
-                onClick={() => setIsReady(false)}
-                className="mb-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Upload
-              </button>
-
-              {controller && <KaraokePlayer controller={controller} />}
-            </div>
-          )}
-        </div>
+        {renderContent()}
       </main>
-    </>
+
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Footer / Credits */}
+      <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
+        <p>© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.</p>
+      </footer>
+    </div>
   );
 }
