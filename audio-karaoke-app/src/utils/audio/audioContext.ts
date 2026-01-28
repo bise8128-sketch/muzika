@@ -182,9 +182,13 @@ export function isAudioWorkletSupported(): boolean {
 /**
  * Get AudioWorklet node for connecting to audio graph
  */
-export function getWorkletNode(): AudioWorkletNode | null {
+export async function getWorkletNode(): Promise<AudioWorkletNode | null> {
     const manager = getWorkletManager();
     if (manager) {
+        // Ensure the manager is initialized
+        if (!manager.isInitialized()) {
+            await manager.initialize();
+        }
         return manager.getWorkletNode();
     }
     return null;
