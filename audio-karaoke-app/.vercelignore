@@ -1,11 +1,14 @@
-# Vercel Ignore File
 .git
-.github
-.vscode
-.DS_Store
-node_modules
-coverage
-test-results
-playwright-report
+.gitignore
 README.md
+node_modules
+npm-debug.log
+.next/cache
+.env.local
+.env.*.local
 *.log
+coverage
+.playwright
+e2e/test-results
+jest
+.DS_Store

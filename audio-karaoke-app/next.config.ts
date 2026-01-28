@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  // Allow loading WASM from external sources
+  // Allow loading WASM from external sources and set security headers
   async headers() {
     return [
       {
@@ -52,6 +52,46 @@ const nextConfig: NextConfig = {
           {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-no-referrer-when-downgrade",
+          },
+          // Allow WASM execution with Content-Security-Policy
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';",
+          },
+        ],
+      },
+      // Cache ONNX models and WASM files for 1 year
+      {
+        source: "/public/models/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/public/wasm/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          {
+            key: "Content-Type",
+            value: "application/wasm",
           },
         ],
       },

@@ -1,11 +1,14 @@
 {
-    "framework": "nextjs",
     "buildCommand": "next build",
-    "installCommand": "npm install",
     "outputDirectory": ".next",
+    "installCommand": "npm install",
+    "framework": "nextjs",
+    "env": {
+        "NEXT_PUBLIC_API_URL": "@next-public-api-url"
+    },
     "headers": [
         {
-            "source": "/(.*)",
+            "source": "/:path*",
             "headers": [
                 {
                     "key": "Cross-Origin-Opener-Policy",
@@ -22,11 +25,15 @@
                 {
                     "key": "X-Frame-Options",
                     "value": "SAMEORIGIN"
+                },
+                {
+                    "key": "Referrer-Policy",
+                    "value": "strict-no-referrer-when-downgrade"
                 }
             ]
         },
         {
-            "source": "/models/(.*)",
+            "source": "/public/models/:path*",
             "headers": [
                 {
                     "key": "Cache-Control",
@@ -35,7 +42,7 @@
             ]
         },
         {
-            "source": "/wasm/(.*)",
+            "source": "/public/wasm/:path*",
             "headers": [
                 {
                     "key": "Cache-Control",
@@ -49,8 +56,9 @@
         }
     ],
     "functions": {
-        "src/app/api/**/*": {
-            "maxDuration": 60
+        "src/app/api/**": {
+            "maxDuration": 300,
+            "memory": 3008
         }
     }
 }

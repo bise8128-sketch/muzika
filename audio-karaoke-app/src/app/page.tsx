@@ -230,43 +230,44 @@ export default function Home() {
   const handleTryKaraoke = () => {
     setState('karaoke');
   };
-batch':
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
-      <div className="flex justify-between items-center mb-6">
-        <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
-          <span>←</span> Back
-        </button>
-        <div className="space-x-4">
-          <button
-            onClick={batch.clearQueue}
-            disabled={batch.isProcessing}
-            className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
-          >
-            Clear All
+
+  const batchHandler = () => {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
+        <div className="flex justify-between items-center mb-6">
+          <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
+            <span>←</span> Back
           </button>
-          <button
-            onClick={() => {
-              const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
-              if (model) batch.startBatch(model);
-            }}
-            disabled={batch.isProcessing || batch.queue.length === 0}
-            className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
-          >
-            {batch.isProcessing ? 'Processing...' : 'Start Batch'}
-          </button>
+          <div className="space-x-4">
+            <button
+              onClick={batch.clearQueue}
+              disabled={batch.isProcessing}
+              className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={() => {
+                const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
+                if (model) batch.startBatch(model);
+              }}
+              disabled={batch.isProcessing || batch.queue.length === 0}
+              className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
+            >
+              {batch.isProcessing ? 'Processing...' : 'Start Batch'}
+            </button>
+          </div>
         </div>
+
+        <BatchQueue
+          queue={batch.queue}
+          onRemove={batch.removeFromQueue}
+          onDownload={handleBatchDownload}
+        />
       </div>
+    );
+  };
 
-      <BatchQueue
-        queue={batch.queue}
-        onRemove={batch.removeFromQueue}
-        onDownload={handleBatchDownload}
-      />
-    </div>
-  );
-
-      case '
   const clearHistory = async () => {
     await dbClearHistory();
     setHistoryItems([]);
