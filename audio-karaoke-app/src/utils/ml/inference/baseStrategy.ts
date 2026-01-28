@@ -1,7 +1,7 @@
 import * as ort from 'onnxruntime-web';
 
 /**
- * Manages GPU memory by tracking and disposing of tensors.
+ * Upravlja GPU memorijom praćenjem i otpuštanjem tenzora.
  */
 export class GPUMemoryManager {
     private activeTensors: Set<ort.Tensor> = new Set();

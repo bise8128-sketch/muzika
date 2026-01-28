@@ -1,17 +1,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { translate } from '../../../utils/translations';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const url = searchParams.get('url');
 
     if (!url) {
-        return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
+        return NextResponse.json({ error: translate('Missing url parameter') }, { status: 400 });
     }
 
     // Security check: only allow GitHub release URLs
     if (!url.startsWith('https://github.com/') && !url.includes('githubusercontent.com')) {
-        return NextResponse.json({ error: 'Invalid URL. Only GitHub URLs are allowed.' }, { status: 400 });
+        return NextResponse.json({ error: translate('Invalid URL. Only GitHub URLs are allowed.') }, { status: 400 });
     }
 
     try {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
         if (!response.ok) {
             return NextResponse.json(
-                { error: `Failed to fetch model: ${response.statusText}` },
+                { error: translate('Failed to fetch model: %s', response.statusText) },
                 { status: response.status }
             );
         }
@@ -37,6 +38,6 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('Proxy error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: translate('Internal server error') }, { status: 500 });
     }
 }
