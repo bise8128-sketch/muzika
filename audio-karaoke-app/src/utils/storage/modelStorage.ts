@@ -3,7 +3,7 @@
  */
 
 import { db } from './audioDatabase';
-import type { ModelInfo, ModelStorageData } from '@/types/model';
+import { ModelType, type ModelInfo, type ModelStorageData } from '@/types/model';
 import type { StorageStats, StorageQuota } from '@/types/storage';
 
 /**
