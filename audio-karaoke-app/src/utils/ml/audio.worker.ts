@@ -182,7 +182,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             } as WindowPostMessageOptions);
 
         } catch (error) {
+            console.error('[audio.worker] Separation error:', error);
             self.postMessage({ type: 'ERROR', payload: { message: error instanceof Error ? error.message : 'Unknown error' } });
         }
     }
+};
+
+self.onerror = (error) => {
+    console.error('[audio.worker] Worker error event:', error);
 };
