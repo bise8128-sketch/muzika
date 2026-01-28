@@ -1,5 +1,6 @@
 import * as ort from 'onnxruntime-web';
 import type { InferenceOutput } from '@/types/model';
+import { bufferPool } from '../audio/bufferPool';
 
 /**
  * Manages GPU memory by tracking and disposing of tensors.
@@ -64,11 +65,8 @@ export async function runInference(
         const results = await session.run(feeds);
 
         // Extract outputs. Assumes standard vocal/instrumental output names or first two outputs.
-        // Vocational names vary: "vocals", "out", etc.
         const outputNames = session.outputNames;
 
-        // We expect at least two outputs or one output that we split
-        // For Kim_Vocal_2 or similar, it's often 'vocals' and 'instrumental'
         const vocalsTensor = results[outputNames.find(n => n.includes('vocal')) || outputNames[0]];
         const instrumentalTensor = results[outputNames.find(n => n.includes('inst')) || outputNames[1]];
 
@@ -80,18 +78,25 @@ export async function runInference(
         memoryManager.track(vocalsTensor);
         memoryManager.track(instrumentalTensor);
 
+        // Copy data to pooled buffers to ensure we can dispose of the tensors immediately
+        const vocalsData = vocalsTensor.data as Float32Array;
+        const instrumentalsData = instrumentalTensor.data as Float32Array;
+
+        const vocalsPooled = bufferPool.acquire(vocalsData.length);
+        const instrumentalsPooled = bufferPool.acquire(instrumentalsData.length);
+
+        vocalsPooled.set(vocalsData);
+        instrumentalsPooled.set(instrumentalsData);
+
         return {
-            vocals: vocalsTensor.data as Float32Array,
-            instrumentals: instrumentalTensor.data as Float32Array,
+            vocals: vocalsPooled,
+            instrumentals: instrumentalsPooled,
         };
     } catch (err) {
         console.error('Inference execution failed:', err);
         throw err;
     } finally {
-        // Note: We don't dispose here if we return the raw data views, 
-        // but in WebGPU, we MUST dispose the tensors after copying data.
-        // If and only if data is copied out, we can dispose.
-        // (vocalsTensor.data as Float32Array) usually creates a copy or a view.
+        // Dispose of all tracked tensors (including session outputs)
         memoryManager.dispose();
     }
 }
