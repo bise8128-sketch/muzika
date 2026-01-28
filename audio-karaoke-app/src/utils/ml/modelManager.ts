@@ -2,6 +2,7 @@ import type { ModelInfo, ModelDownloadProgress, ModelType } from '@/types/model'
 import { getModel, modelExists, getAllModels } from '@/utils/storage/modelStorage';
 import { downloadModel } from './modelDownloader';
 import { setupONNX } from './onnxSetup';
+import * as ort from 'onnxruntime-web';
 
 // Memory cache for loaded sessions
 const sessionCache = new Map<string, ort.InferenceSession>();
