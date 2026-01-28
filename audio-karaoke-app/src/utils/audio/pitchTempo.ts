@@ -145,21 +145,28 @@ async function processSoundTouch(
  * Supports stereo processing using two synchronized shifters
  */
 export class RealtimeAudioProcessor {
-    private leftShifter: PitchShifter;
-    private rightShifter: PitchShifter;
+    private leftShifter: PitchShifter | null;
+    private rightShifter: PitchShifter | null;
     private sampleRate: number;
 
     constructor(sampleRate: number = 44100) {
         this.sampleRate = sampleRate;
         // detailed constructor: sampleRate, bufferSize, distinct channels (not used effectively in JS port generally, so we use 1 per shifter)
-        this.leftShifter = new PitchShifter(sampleRate, 4096, 1);
-        this.rightShifter = new PitchShifter(sampleRate, 4096, 1);
+        try {
+            this.leftShifter = new PitchShifter(sampleRate, 4096, 1);
+            this.rightShifter = new PitchShifter(sampleRate, 4096, 1);
+        } catch (error) {
+            console.warn('PitchShifter not available, pitch shifting disabled:', error);
+            this.leftShifter = null;
+            this.rightShifter = null;
+        }
     }
 
     /**
      * Set pitch shift in semitones
      */
     setPitchSemitones(semitones: number): void {
+        if (!this.leftShifter || !this.rightShifter) return;
         const clampedSemitones = Math.max(-12, Math.min(12, semitones));
         const pitch = Math.pow(2, clampedSemitones / 12);
         this.leftShifter.pitch = pitch;
@@ -170,6 +177,7 @@ export class RealtimeAudioProcessor {
      * Set tempo rate
      */
     setTempo(rate: number): void {
+        if (!this.leftShifter || !this.rightShifter) return;
         const clampedRate = Math.max(0.5, Math.min(2.0, rate));
         this.leftShifter.tempo = clampedRate;
         this.rightShifter.tempo = clampedRate;
@@ -182,6 +190,10 @@ export class RealtimeAudioProcessor {
      * @returns Object containing left and right processed samples, or null if not enough data
      */
     process(leftInput: Float32Array, rightInput: Float32Array): { left: Float32Array, right: Float32Array } | null {
+        if (!this.leftShifter || !this.rightShifter) {
+            // No pitch shifting, return input as output
+            return { left: leftInput, right: rightInput };
+        }
         // Feed data
         const leftOut = this.leftShifter.process(leftInput);
         const rightOut = this.rightShifter.process(rightInput);
@@ -202,6 +214,9 @@ export class RealtimeAudioProcessor {
      * Flush remaining samples
      */
     flush(): { left: Float32Array, right: Float32Array } | null {
+        if (!this.leftShifter || !this.rightShifter) {
+            return null;
+        }
         const leftOut = this.leftShifter.flush();
         const rightOut = this.rightShifter.flush();
 
@@ -218,7 +233,13 @@ export class RealtimeAudioProcessor {
      * Reset processor state
      */
     reset(): void {
-        this.leftShifter = new PitchShifter(this.sampleRate, 4096, 1);
-        this.rightShifter = new PitchShifter(this.sampleRate, 4096, 1);
+        try {
+            this.leftShifter = new PitchShifter(this.sampleRate, 4096, 1);
+            this.rightShifter = new PitchShifter(this.sampleRate, 4096, 1);
+        } catch (error) {
+            console.warn('PitchShifter not available, pitch shifting disabled:', error);
+            this.leftShifter = null;
+            this.rightShifter = null;
+        }
     }
 }
