@@ -458,9 +458,9 @@ export default function Home() {
         onModelChange={setSelectedModelId}
       />
 
-      <Onboarding 
-        key={showHelp ? 'manual-help' : 'auto-onboarding'} 
-        forceShow={showHelp} 
+      <Onboarding
+        key={showHelp ? 'manual-help' : 'auto-onboarding'}
+        forceShow={showHelp}
         onClose={() => setShowHelp(false)}
       />
 
