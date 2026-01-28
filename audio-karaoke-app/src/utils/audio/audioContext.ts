@@ -3,7 +3,7 @@
  * Handles Web Audio API context creation and state management with AudioWorklet support
  */
 
-import { AudioWorkletManager } from './audioWorkletProcessor';
+import { effectsManager } from './effectsManager';
 
 let audioContext: AudioContext | null = null;
 let gainNode: GainNode | null = null;

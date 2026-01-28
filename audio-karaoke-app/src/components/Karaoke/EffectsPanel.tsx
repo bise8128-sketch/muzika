@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { effectsManager } from '../../utils/audio/effectsManager';
 
 interface EffectsPanelProps {
     pitch: number;
