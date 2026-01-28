@@ -18,12 +18,31 @@ export class AudioWorkletManager {
     }
 
     /**
+     * Load the AudioWorklet script
+     */
+    private async loadWorkletScript(): Promise<void> {
+        try {
+            // Get the URL of the worklet file
+            const workletUrl = new URL('./audioWorkletProcessor.worklet.ts', import.meta.url);
+
+            // Load the worklet script
+            await this.audioContext.audioWorklet.addModule(workletUrl);
+        } catch (error) {
+            console.error('Failed to load AudioWorklet script:', error);
+            throw new Error(`Failed to load AudioWorklet script: ${error}`);
+        }
+    }
+
+    /**
      * Initialize the AudioWorklet manager
      */
     async initialize(): Promise<void> {
         if (this.initialized) return;
 
         try {
+            // Load the worklet script first
+            await this.loadWorkletScript();
+
             // Create the AudioWorklet node
             this.workletNode = new AudioWorkletNode(this.audioContext, 'generic-audio-processor');
 
