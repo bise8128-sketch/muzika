@@ -34,7 +34,12 @@ const Onboarding = dynamic(() => import('@/components/UI/Onboarding').then(mod =
   ssr: false
 });
 
-type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
+const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManager').then(mod => mod.ModelManager), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Model Manager...</div>,
+  ssr: false
+});
+
+type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models';
 
 import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
@@ -290,6 +295,16 @@ export default function Home() {
             </button>
             {controller && <KaraokePlayer controller={controller} />}
           </div>
+        );
+
+      case 'models':
+        return (
+          <ModelManager
+            availableModels={AVAILABLE_MODELS}
+            selectedModelId={selectedModelId}
+            onSelectModel={setSelectedModelId}
+            onBack={() => setState('upload')}
+          />
         );
     }
   };

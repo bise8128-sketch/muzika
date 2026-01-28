@@ -107,7 +107,8 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         controller.setReverbLevel(0);
         setEcho(0);
         controller.setEchoLevel(0);
-    }, [controller]);
+        playback.setEQ(0, 0, 0);
+    }, [controller, playback]);
 
     const handleLRCUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -347,10 +348,16 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 tempo={tempo}
                 reverb={reverb}
                 echo={echo}
+                bass={playback.bass}
+                mid={playback.mid}
+                treble={playback.treble}
                 onPitchChange={handlePitchChange}
                 onTempoChange={handleTempoChange}
                 onReverbChange={handleReverbChange}
                 onEchoChange={handleEchoChange}
+                onBassChange={(v) => playback.setEQ(v, playback.mid, playback.treble)}
+                onMidChange={(v) => playback.setEQ(playback.bass, v, playback.treble)}
+                onTrebleChange={(v) => playback.setEQ(playback.bass, playback.mid, v)}
                 onReset={handleResetEffects}
             />
         </div>
