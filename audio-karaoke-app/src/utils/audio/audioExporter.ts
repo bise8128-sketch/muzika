@@ -161,7 +161,7 @@ export async function exportToMP3(
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
 
-    return new Blob([data], { type: 'audio/mpeg' });
+    return new Blob([data as any], { type: 'audio/mpeg' });
 }
 
 /**
