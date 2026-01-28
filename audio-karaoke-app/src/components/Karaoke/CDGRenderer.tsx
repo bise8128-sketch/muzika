@@ -6,6 +6,8 @@ import { CDGParser, CDGInstruction } from '@/utils/karaoke/cdgParser';
 interface CDGRendererProps {
     cdgData: Uint8Array | null;
     currentTime: number;
+    width?: number;
+    height?: number;
 }
 
 export const CDGRenderer: React.FC<CDGRendererProps> = ({ cdgData, currentTime }) => {

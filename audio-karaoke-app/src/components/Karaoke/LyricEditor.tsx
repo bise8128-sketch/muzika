@@ -88,21 +88,21 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     return (
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">Lyric Editor</h2>
+                <h2 className="text-2xl font-bold text-white">Uređivač stihova</h2>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setEditMode('text')}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Edit Text
+                        Uređivanje teksta
                     </button>
                     <button
                         onClick={startSync}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'sync' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Sync Mode
+                        Mod sinhronizacije
                     </button>
                 </div>
             </div>
@@ -112,7 +112,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     value={rawText}
                     onChange={handleTextChange}
                     className="w-full h-[400px] bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-mono focus:ring-2 focus:ring-primary outline-none resize-none"
-                    placeholder="Paste your lyrics here, one line per line..."
+                    placeholder="Zalijepite svoje stihove ovdje, jedan red po red..."
                 />
             ) : (
                 <div className="space-y-4">
@@ -121,10 +121,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                             <div
                                 key={index}
                                 className={`p-4 rounded-2xl transition-all border ${index === activeLineIndex
-                                        ? 'bg-primary/20 border-primary text-white'
-                                        : index < activeLineIndex
-                                            ? 'bg-white/10 border-white/5 text-white/80'
-                                            : 'bg-white/5 border-transparent text-white/40'
+                                    ? 'bg-primary/20 border-primary text-white'
+                                    : index < activeLineIndex
+                                        ? 'bg-white/10 border-white/5 text-white/80'
+                                        : 'bg-white/5 border-transparent text-white/40'
                                     }`}
                             >
                                 <div className="flex justify-between">
@@ -142,7 +142,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         disabled={activeLineIndex >= lines.length}
                         className="w-full py-6 bg-primary hover:bg-primary/80 disabled:bg-white/5 disabled:text-white/20 text-white font-bold text-xl rounded-2xl transition-all active:scale-95 shadow-lg shadow-primary/20"
                     >
-                        Mark Next Line [Space]
+                        Označi sljedeći red [Space]
                     </button>
                 </div>
             )}
@@ -155,13 +155,13 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download .LRC
+                    Preuzmi .LRC
                 </button>
                 <button
                     onClick={handleSave}
                     className="px-8 py-2 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-all"
                 >
-                    Apply to Player
+                    Primijeni na plejer
                 </button>
             </div>
         </div>

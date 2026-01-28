@@ -38,7 +38,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     return (
         <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 w-full max-w-4xl mx-auto">
-            {/* Progress Bar */}
+            {/* Traka napretka */}
             <div className="flex items-center gap-4 mb-6">
                 <span className="text-xs font-mono text-gray-400 w-10 text-right">
                     {formatTime(currentTime)}
@@ -56,9 +56,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 </span>
             </div>
 
-            {/* Controls */}
+            {/* Kontrole */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                {/* Play/Pause */}
+                {/* Reprodukcija/Pauza */}
                 <div className="flex items-center gap-4">
                     <button
                         onClick={isPlaying ? onPause : onPlay}
@@ -76,19 +76,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         )}
                     </button>
                     <div className="hidden md:block">
-                        <h4 className="text-sm font-medium text-gray-300">Now Playing</h4>
-                        <p className="text-xs text-gray-500">Separated Audio Track</p>
+                        <h4 className="text-sm font-medium text-gray-300">Sada se reprodukuje</h4>
+                        <p className="text-xs text-gray-500">Razdvojeni audio zapis</p>
                     </div>
                 </div>
 
-                {/* Mixer */}
+                {/* Mješalica */}
                 <div className="flex flex-col sm:flex-row gap-8 flex-1 justify-end w-full sm:w-auto">
-                    {/* Vocals Volume */}
+                    {/* Glasnoća vokala */}
                     <div className="flex-1 max-w-[200px]">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                                Vocals
+                                Vokali
                             </span>
                             <span className="text-xs text-gray-500">{Math.round(vocalsVolume * 100)}%</span>
                         </div>
@@ -103,7 +103,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         />
                     </div>
 
-                    {/* Instrumental Volume */}
+                    {/* Glasnoća instrumentala */}
                     <div className="flex-1 max-w-[200px]">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-pink-400 uppercase tracking-wider flex items-center gap-2">

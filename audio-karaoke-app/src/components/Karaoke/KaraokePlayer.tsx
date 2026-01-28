@@ -1,6 +1,6 @@
 /**
- * KaraokePlayer Component
- * Main container for the karaoke experience
+ * Komponenta KaraokePlayer
+ * Glavni kontejner za karaoke iskustvo
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,7 +25,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const playback = usePlayback(controller);
 
-    // Effects State
+    // Stanje efekata
     const [pitch, setPitch] = useState(0);
     const [tempo, setTempo] = useState(1.0);
     const [reverb, setReverb] = useState(0);
@@ -47,7 +47,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
 
-    // Initialize visualizer
+    // Inicijalizacija vizualizera
     useEffect(() => {
         if (!visualizerRef.current) {
             visualizerRef.current = new AudioVisualizer();

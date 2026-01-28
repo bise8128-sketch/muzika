@@ -1,6 +1,6 @@
 /**
- * LyricDisplay Component
- * Renders lyrics and highlights the current line based on playback time
+ * Komponenta LyricDisplay
+ * Prikazuje stihove i ističe trenutni red na osnovu vremena reprodukcije
  */
 
 import React, { useEffect, useRef, useMemo } from 'react';
