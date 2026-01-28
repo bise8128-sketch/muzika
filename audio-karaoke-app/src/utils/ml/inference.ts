@@ -95,3 +95,33 @@ export async function runInference(
         memoryManager.dispose();
     }
 }
+
+/**
+ * Processes an array of audio segments sequentially.
+ * Used for batch processing long audio files.
+ * 
+ * @param session The ONNX InferenceSession
+ * @param segments Array of Float32Array segments
+ * @param channels Number of audio channels (usually 2)
+ * @param onProgress Callback for progress tracking
+ */
+export async function processAudioInChunks(
+    session: ort.InferenceSession,
+    segments: Float32Array[],
+    channels: number,
+    onProgress?: (index: number, total: number) => void
+): Promise<InferenceOutput[]> {
+    const results: InferenceOutput[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const samples = segment.length / channels;
+
+        if (onProgress) onProgress(i, segments.length);
+
+        const result = await runInference(session, segment, channels, samples);
+        results.push(result);
+    }
+
+    return results;
+}
