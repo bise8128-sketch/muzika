@@ -1,0 +1,1 @@
+This file provides AI agents with essential coding guidelines for the Muzika codebase, focusing on architecture, workflows, conventions, and integration points.
