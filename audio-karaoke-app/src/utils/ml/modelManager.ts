@@ -44,11 +44,15 @@ export async function loadModel(
     }
 
     // Setup ONNX options (WebGPU vs WASM)
+    console.log(`[modelManager] Setting up ONNX for model ${modelInfo.id}...`);
     const options = await setupONNX();
 
     // Create InferenceSession
     try {
+        console.log(`[modelManager] Creating InferenceSession for model ${modelInfo.id}...`);
         const session = await ort.InferenceSession.create(modelData, options);
+        console.log(`[modelManager] InferenceSession created successfully for model ${modelInfo.id}`);
+
         // We do NOT cache the engine directly because engines are stateful (strategies might be stateful)
         // But sessions are stateless and expensive. We cache sessions.
         sessionCache.set(modelInfo.id, session);
@@ -59,7 +63,7 @@ export async function loadModel(
         await engine.init();
         return engine;
     } catch (err) {
-        console.error(`Failed to create ONNX session for model ${modelInfo.id}:`, err);
+        console.error(`[modelManager] Failed to create ONNX session for model ${modelInfo.id}:`, err);
         throw err;
     }
 }
