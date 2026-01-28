@@ -60,32 +60,36 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [controller, playback.vocalsVolume, playback.instrumentalVolume]);
 
     // Handle Effects Changes
-    const handlePitchChange = (val: number) => {
+    const handlePitchChange = React.useCallback((val: number) => {
         setPitch(val);
         controller.setPitch(val);
-    };
+    }, [controller]);
 
-    const handleTempoChange = (val: number) => {
+    const handleTempoChange = React.useCallback((val: number) => {
         setTempo(val);
         controller.setTempo(val);
-    };
+    }, [controller]);
 
-    const handleReverbChange = (val: number) => {
+    const handleReverbChange = React.useCallback((val: number) => {
         setReverb(val);
         controller.setReverbLevel(val);
-    };
+    }, [controller]);
 
-    const handleEchoChange = (val: number) => {
+    const handleEchoChange = React.useCallback((val: number) => {
         setEcho(val);
         controller.setEchoLevel(val);
-    };
+    }, [controller]);
 
-    const handleResetEffects = () => {
-        handlePitchChange(0);
-        handleTempoChange(1.0);
-        handleReverbChange(0);
-        handleEchoChange(0);
-    };
+    const handleResetEffects = React.useCallback(() => {
+        setPitch(0);
+        controller.setPitch(0);
+        setTempo(1.0);
+        controller.setTempo(1.0);
+        setReverb(0);
+        controller.setReverbLevel(0);
+        setEcho(0);
+        controller.setEchoLevel(0);
+    }, [controller]);
 
     const handleLRCUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
