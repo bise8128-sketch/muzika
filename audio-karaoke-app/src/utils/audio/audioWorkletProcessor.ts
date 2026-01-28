@@ -193,7 +193,9 @@ class GenericAudioProcessor {
                 // Bypass mode: copy input to output
                 for (let channel = 0; channel < inputs.length && channel < outputs.length; channel++) {
                     if (inputs[channel] && outputs[channel] && inputs[channel].length === outputs[channel].length) {
-                        outputs[channel].set(inputs[channel]);
+                        for (let sample = 0; sample < inputs[channel].length; sample++) {
+                            outputs[channel][sample] = inputs[channel][sample];
+                        }
                     }
                 }
             } else {
@@ -205,7 +207,7 @@ class GenericAudioProcessor {
                     if (input && output && input.length === output.length) {
                         // Apply gain
                         for (let sample = 0; sample < input.length; sample++) {
-                            output[sample] = input[sample] * this.gain;
+                            (output as any)[sample] = (input as any)[sample] * this.gain;
                         }
                     }
                 }
