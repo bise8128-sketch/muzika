@@ -53,6 +53,7 @@ export async function getAllModels(): Promise<ModelInfo[]> {
     const models = await db.models.toArray();
     return models.map(model => ({
         id: model.modelId,
+        type: ModelType.MDX, // Default type or determine from modelId
         name: model.name,
         version: model.version,
         size: model.size,
