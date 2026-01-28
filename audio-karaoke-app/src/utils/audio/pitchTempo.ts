@@ -140,13 +140,20 @@ async function processSoundTouch(
 /**
  * Real-time pitch/tempo processor for streaming audio
  */
+/**
+ * Real-time pitch/tempo processor for streaming audio
+ * Supports stereo processing using two synchronized shifters
+ */
 export class RealtimeAudioProcessor {
-    private shifter: PitchShifter;
+    private leftShifter: PitchShifter;
+    private rightShifter: PitchShifter;
     private sampleRate: number;
 
     constructor(sampleRate: number = 44100) {
         this.sampleRate = sampleRate;
-        this.shifter = new PitchShifter(sampleRate, 4096, 1);
+        // detailed constructor: sampleRate, bufferSize, distinct channels (not used effectively in JS port generally, so we use 1 per shifter)
+        this.leftShifter = new PitchShifter(sampleRate, 4096, 1);
+        this.rightShifter = new PitchShifter(sampleRate, 4096, 1);
     }
 
     /**
@@ -154,7 +161,9 @@ export class RealtimeAudioProcessor {
      */
     setPitchSemitones(semitones: number): void {
         const clampedSemitones = Math.max(-12, Math.min(12, semitones));
-        this.shifter.pitch = Math.pow(2, clampedSemitones / 12);
+        const pitch = Math.pow(2, clampedSemitones / 12);
+        this.leftShifter.pitch = pitch;
+        this.rightShifter.pitch = pitch;
     }
 
     /**
@@ -162,29 +171,54 @@ export class RealtimeAudioProcessor {
      */
     setTempo(rate: number): void {
         const clampedRate = Math.max(0.5, Math.min(2.0, rate));
-        this.shifter.tempo = clampedRate;
+        this.leftShifter.tempo = clampedRate;
+        this.rightShifter.tempo = clampedRate;
     }
 
     /**
-     * Process audio chunk
+     * Process audio chunk (Stereo)
+     * @param leftInput - Left channel input samples
+     * @param rightInput - Right channel input samples
+     * @returns Object containing left and right processed samples, or null if not enough data
      */
-    process(input: Float32Array): Float32Array | null {
-        const output = this.shifter.process(input);
-        return output ? new Float32Array(output) : null;
+    process(leftInput: Float32Array, rightInput: Float32Array): { left: Float32Array, right: Float32Array } | null {
+        // Feed data
+        const leftOut = this.leftShifter.process(leftInput);
+        const rightOut = this.rightShifter.process(rightInput);
+
+        // SoundTouch buffers output. We might get nothing back until enough input accumulates.
+        // We assume both channels produce same amount of output since they have same settings and input size.
+        if (leftOut && rightOut && leftOut.length > 0) {
+            return {
+                left: new Float32Array(leftOut),
+                right: new Float32Array(rightOut)
+            };
+        }
+
+        return null;
     }
 
     /**
      * Flush remaining samples
      */
-    flush(): Float32Array | null {
-        const output = this.shifter.flush();
-        return output ? new Float32Array(output) : null;
+    flush(): { left: Float32Array, right: Float32Array } | null {
+        const leftOut = this.leftShifter.flush();
+        const rightOut = this.rightShifter.flush();
+
+        if (leftOut && rightOut && leftOut.length > 0) {
+            return {
+                left: new Float32Array(leftOut),
+                right: new Float32Array(rightOut)
+            };
+        }
+        return null;
     }
 
     /**
      * Reset processor state
      */
     reset(): void {
-        this.shifter = new PitchShifter(this.sampleRate, 4096, 1);
+        this.leftShifter = new PitchShifter(this.sampleRate, 4096, 1);
+        this.rightShifter = new PitchShifter(this.sampleRate, 4096, 1);
     }
 }
