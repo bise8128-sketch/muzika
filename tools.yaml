@@ -1,0 +1,45 @@
+# MCP Toolbox for Databases Configuration
+# For more info: https://github.com/googleapis/genai-toolbox
+
+# 1. Define your data sources
+sources:
+  # Example SQLite source
+  - name: local_db
+    type: sqlite
+    connection:
+      database: ./data.db  # Path to your SQLite file
+
+  # Example PostgreSQL source (uncomment and edit to use)
+  # - name: postgres_db
+  #   type: postgres
+  #   connection:
+  #     host: localhost
+  #     port: 5432
+  #     user: postgres
+  #     password: password
+  #     database: my_database
+
+# 2. Define tools that interact with these sources
+tools:
+  - name: list_tables
+    type: query
+    source: local_db
+    query: "SELECT name FROM sqlite_master WHERE type='table';"
+    description: "Lists all tables in the local SQLite database."
+
+  - name: get_table_schema
+    type: query
+    source: local_db
+    query: "PRAGMA table_info({{table_name}});"
+    description: "Gets the schema for a specific table."
+    parameters:
+      - name: table_name
+        type: string
+        description: "The name of the table to inspect."
+
+# 3. Group tools into toolsets
+toolsets:
+  - name: default_tools
+    tools:
+      - list_tables
+      - get_table_schema
