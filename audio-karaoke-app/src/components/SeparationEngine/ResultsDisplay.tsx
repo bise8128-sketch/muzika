@@ -107,16 +107,16 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                 <div className="flex items-center gap-6">
                     <div className="text-4xl animate-bounce">🎁</div>
                     <div>
-                        <h4 className="font-bold text-lg mb-1">Did you know?</h4>
+                        <h4 className="font-bold text-lg mb-1">Znali ste da?</h4>
                         <p className="text-sm text-muted-foreground">
-                            You can also use our <span className="text-primary font-medium">Karaoke Mode</span> to sing along with real-time lyrics and pitch adjustment!
+                            Također možete koristiti naš <span className="text-primary font-medium">Modus karaokea</span> za pjevanje uz stvarne stihove i podešavanje visine tona!
                         </p>
                     </div>
                     <button
                         onClick={onTryKaraoke}
                         className="ml-auto px-6 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all text-sm uppercase tracking-wider"
                     >
-                        TRY KARAOKE
+                        IZPROBAJ KARAOKE
                     </button>
                 </div>
             </div>
