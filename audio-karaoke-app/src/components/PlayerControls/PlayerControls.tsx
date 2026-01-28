@@ -30,6 +30,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onSeek,
     onVocalsVolumeChange,
     onInstrumentalVolumeChange,
+    onBalanceChange,
 }) => {
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);

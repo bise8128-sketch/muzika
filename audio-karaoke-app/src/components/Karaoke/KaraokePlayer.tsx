@@ -227,6 +227,14 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         setShowEditor(false);
     };
 
+    const handleBalanceChange = React.useCallback((balance: number) => {
+        const vVol = Math.min(1, balance * 2);
+        const iVol = Math.min(1, (1 - balance) * 2);
+        playback.setVolume(vVol, 0); // Vocals
+        playback.setVolume(iVol, 1); // Instrumental
+        saveSettings({ defaultVolumeBalance: balance });
+    }, [playback]);
+
     return (
         <div className={`flex flex-col gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
             {/* Stage Mode Toggle (Always visible in stage mode) */}
