@@ -4,14 +4,6 @@ import withBundleAnalyzer from '@next/bundle-analyzer';
 
 const nextConfig: NextConfig = {
   compress: true,
-  // Turbopack configuration for Next.js 16+
-  turbopack: {
-    root: ".",
-    // Enable WebAssembly support in Turbopack
-    resolveAlias: {
-      // Add any path aliases needed
-    },
-  },
 
   // Webpack configuration (backward compatibility)
   webpack: (config, { isServer }) => {
