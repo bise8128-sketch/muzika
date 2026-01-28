@@ -10,6 +10,7 @@ import { PlaybackController } from '@/utils/audio/playbackController';
 import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
+import { PitchTempoControls } from '../PlayerControls/PitchTempoControls';
 import { LyricDisplay } from './LyricDisplay';
 
 interface KaraokePlayerProps {
@@ -18,6 +19,8 @@ interface KaraokePlayerProps {
 
 export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
+    const [pitch, setPitch] = useState(0);
+    const [tempo, setTempo] = useState(1.0);
     const playback = usePlayback(controller);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
@@ -105,6 +108,17 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onSeek={playback.seek}
                 onVocalsVolumeChange={(v) => playback.setVolume(v, 0)}
                 onInstrumentalVolumeChange={(v) => playback.setVolume(v, 1)}
+            />
+
+            <PitchTempoControls
+                pitch={pitch}
+                tempo={tempo}
+                onPitchChange={setPitch}
+                onTempoChange={setTempo}
+                onReset={() => {
+                    setPitch(0);
+                    setTempo(1.0);
+                }}
             />
         </div>
     );
