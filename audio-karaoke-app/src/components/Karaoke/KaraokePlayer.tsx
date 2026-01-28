@@ -10,8 +10,7 @@ import { PlaybackController } from '@/utils/audio/playbackController';
 import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
-import { PitchTempoControls } from '../PlayerControls/PitchTempoControls';
-import { LyricDisplay } from './LyricDisplay';
+import { EffectsPanel } from './EffectsPanel';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -19,9 +18,14 @@ interface KaraokePlayerProps {
 
 export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
+    const playback = usePlayback(controller);
+
+    // Effects State
     const [pitch, setPitch] = useState(0);
     const [tempo, setTempo] = useState(1.0);
-    const playback = usePlayback(controller);
+    const [reverb, setReverb] = useState(0);
+    const [echo, setEcho] = useState(0);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
 
@@ -53,7 +57,35 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         if (gainNodes.length > 0 && visualizerRef.current) {
             gainNodes.forEach(node => visualizerRef.current?.setSource(node));
         }
-    }, [controller, playback.vocalsVolume, playback.instrumentalVolume]); // Dependency on volumes to trigger update if needed
+    }, [controller, playback.vocalsVolume, playback.instrumentalVolume]);
+
+    // Handle Effects Changes
+    const handlePitchChange = (val: number) => {
+        setPitch(val);
+        controller.setPitch(val);
+    };
+
+    const handleTempoChange = (val: number) => {
+        setTempo(val);
+        controller.setTempo(val);
+    };
+
+    const handleReverbChange = (val: number) => {
+        setReverb(val);
+        controller.setReverbLevel(val);
+    };
+
+    const handleEchoChange = (val: number) => {
+        setEcho(val);
+        controller.setEchoLevel(val);
+    };
+
+    const handleResetEffects = () => {
+        handlePitchChange(0);
+        handleTempoChange(1.0);
+        handleReverbChange(0);
+        handleEchoChange(0);
+    };
 
     const handleLRCUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -110,15 +142,17 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onInstrumentalVolumeChange={(v) => playback.setVolume(v, 1)}
             />
 
-            <PitchTempoControls
+            {/* Advanced Effects */}
+            <EffectsPanel
                 pitch={pitch}
                 tempo={tempo}
-                onPitchChange={setPitch}
-                onTempoChange={setTempo}
-                onReset={() => {
-                    setPitch(0);
-                    setTempo(1.0);
-                }}
+                reverb={reverb}
+                echo={echo}
+                onPitchChange={handlePitchChange}
+                onTempoChange={handleTempoChange}
+                onReverbChange={handleReverbChange}
+                onEchoChange={handleEchoChange}
+                onReset={handleResetEffects}
             />
         </div>
     );
