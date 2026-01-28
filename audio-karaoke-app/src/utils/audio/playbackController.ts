@@ -126,6 +126,14 @@ export class PlaybackController {
     }
 
     /**
+     * Get gain nodes for each track
+     * Useful for connecting visualizers or other AudioNodes
+     */
+    getGainNodes(): GainNode[] {
+        return this.gainNodes;
+    }
+
+    /**
      * Seek to specific time
      * @param seconds - Time position in seconds
      */

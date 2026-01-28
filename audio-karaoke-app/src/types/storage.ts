@@ -12,6 +12,7 @@ export interface CachedAudio {
     processedAt: number;
     duration: number;
     sampleRate: number;
+    lyrics?: string; // Raw LRC content
 }
 
 export interface ProcessingLog {

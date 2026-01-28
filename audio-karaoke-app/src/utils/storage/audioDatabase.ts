@@ -17,7 +17,7 @@ export class AudioKaraokeDB extends Dexie {
         super('AudioKaraokeDB');
 
         // Define database schema
-        this.version(1).stores({
+        this.version(2).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt',
             processingLogs: '++id, fileHash, status, startedAt',
