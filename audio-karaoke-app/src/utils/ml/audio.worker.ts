@@ -151,26 +151,15 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // Phase 7: Cache
             sendProgress({ phase: 'caching', currentSegment: totalSegments, totalSegments, percentage: 95, message: 'Caching results...' });
 
-            // Convert mono float32 to ArrayBuffer (interleaved stereo-like or just one channel?)
-            // cacheAudioResult expects ArrayBuffer.
-            // audioCache.ts doesn't specify channel count.
-            // But separateAudio.ts (client) converts them back using 'arrayBufferToAudioBuffer' which calls 'float32ArrayToAudioBuffer'
-            // 'float32ArrayToAudioBuffer' in audioDecoder.ts defaults to 2 channels if not specified? 
-            // No, it defaults to 1.
-
-            // Let's use float32ToInterleaved to make it dual-mono (fake stereo) just to be safe if the UI expects stereo files, 
-            // OR just send the mono buffer if that's what we have.
-            // If we use float32ToInterleaved, we double the size.
-            // Let's stick to what we have. If vocalsMerged is Float32Array, its .buffer is an ArrayBuffer.
-
-            const vocalsBuffer = vocalsMerged.buffer;
-            const instrumentalsBuffer = instrumentalsMerged.buffer;
+            // Convert Float32Array buffers to ArrayBuffers
+            const vocalsArrayBuffer = vocalsMerged.buffer as ArrayBuffer;
+            const instrumentalsArrayBuffer = instrumentalsMerged.buffer as ArrayBuffer;
 
             await cacheAudioResult(
                 fileHash,
                 file.name,
-                vocalsBuffer,
-                instrumentalsBuffer,
+                vocalsArrayBuffer,
+                instrumentalsArrayBuffer,
                 decodedData.left.length / sampleRate, // duration
                 sampleRate
             );
@@ -181,12 +170,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             self.postMessage({
                 type: 'COMPLETE',
                 payload: {
-                    vocals: vocalsBuffer,
-                    instrumentals: instrumentalsBuffer,
+                    vocals: vocalsArrayBuffer,
+                    instrumentals: instrumentalsArrayBuffer,
                     fileHash,
                     timestamp: Date.now()
                 }
-            }, [vocalsBuffer, instrumentalsBuffer]); // Transfer buffers
+            }, {
+                transfer: [vocalsArrayBuffer, instrumentalsArrayBuffer]
+            } as WindowPostMessageOptions);
 
         } catch (error) {
             self.postMessage({ type: 'ERROR', payload: { message: error instanceof Error ? error.message : 'Unknown error' } });
