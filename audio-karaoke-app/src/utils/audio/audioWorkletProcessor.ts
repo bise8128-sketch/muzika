@@ -32,7 +32,7 @@ declare function registerProcessor(name: string, processor: any): void;
  * Generic audio processor for basic audio manipulation
  * This is the actual AudioWorklet processor that runs in the audio thread
  */
-class GenericAudioProcessor {
+export class GenericAudioProcessor {
     private config: AudioWorkletProcessorConfig;
     private metrics: PerformanceMetrics;
     private lastProcessTime: number = 0;
