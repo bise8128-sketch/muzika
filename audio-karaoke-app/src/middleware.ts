@@ -13,7 +13,6 @@ export function middleware(request: NextRequest) {
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: https://github.com https://githubusercontent.com https://huggingface.co; worker-src 'self' blob:;",
     };
 
     Object.entries(securityHeaders).forEach(([key, value]) => {

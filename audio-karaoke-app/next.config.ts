@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 import withBundleAnalyzer from '@next/bundle-analyzer';
 
 const nextConfig: NextConfig = {
+  compress: true,
   // Turbopack configuration for Next.js 16+
   turbopack: {
     // Enable WebAssembly support in Turbopack
@@ -68,7 +69,7 @@ const nextConfig: NextConfig = {
           // Allow WASM execution with Content-Security-Policy
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://github.com https://githubusercontent.com https://huggingface.co; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;",
           },
         ],
       },
