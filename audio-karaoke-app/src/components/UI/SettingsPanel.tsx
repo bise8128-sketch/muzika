@@ -1,13 +1,13 @@
-'use client';
-
-import React from 'react';
+import { AVAILABLE_MODELS } from '@/utils/constants';
 
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    selectedModelId: string;
+    onModelChange: (modelId: string) => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, selectedModelId, onModelChange }) => {
     return (
         <>
             {/* Backdrop */}
@@ -56,10 +56,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
 
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                 <div className="font-semibold mb-3">Model Version</div>
-                                <select className="w-full bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                                    <option>MDX-Net Vocals/Instruments (v2)</option>
-                                    <option>Kim_Vocal_2 (Lightweight)</option>
-                                    <option disabled>Demucs v4 (Coming Soon)</option>
+                                <select
+                                    className="w-full bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    value={selectedModelId}
+                                    onChange={(e) => onModelChange(e.target.value)}
+                                >
+                                    {AVAILABLE_MODELS.map(model => (
+                                        <option key={model.id} value={model.id}>
+                                            {model.name} {model.description ? ` - ${model.description}` : ''}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

@@ -27,13 +27,30 @@ const History = dynamic(() => import('@/components/UI/History').then(mod => mod.
 
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke';
 
+import { AVAILABLE_MODELS, DEFAULT_MODEL_ID } from '@/utils/constants';
+import { useSeparation } from '@/hooks/useSeparation';
+
+// ... existing dynamic imports ...
+
 export default function Home() {
   const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [progress, setProgress] = useState(0);
 
-  // Mock history for demo
+  // Model Selection
+  const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
+
+  // Separation Hook
+  const {
+    separate,
+    progress: separationProgress,
+    status: separationStatus,
+    message: separationMessage,
+    result: separationResult,
+    reset: resetSeparation
+  } = useSeparation();
+
+  // Mock history for demo (keep for now)
   const [historyItems, setHistoryItems] = useState([
     { id: '1', fileName: 'Bohemian Rhapsody.mp3', date: '2 hours ago', duration: '5:55' },
     { id: '2', fileName: 'Imagine.wav', date: 'Yesterday', duration: '3:03' }
@@ -45,20 +62,35 @@ export default function Home() {
     return () => newController.dispose();
   }, []);
 
-  const handleUpload = async (file: File) => {
-    setState('processing');
+  // Update UI based on separation status
+  useEffect(() => {
+    if (separationStatus === 'processing') {
+      setState('processing');
+    } else if (separationStatus === 'completed' && separationResult) {
+      // Short delay for smooth transition
+      const timer = setTimeout(() => setState('results'), 500);
+      return () => clearTimeout(timer);
+    } else if (separationStatus === 'error') {
+      // Handle error state (maybe stay on results with error, or alert)
+      console.error("Separation Error", separationMessage);
+      // ideally set state to error or show toast
+      setState('upload'); // Reset for now or show error UI
+      alert(`Error: ${separationMessage || 'Unknown error'}`);
+    }
+  }, [separationStatus, separationResult, separationMessage]);
 
-    // Simulate processing progress
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += Math.random() * 15;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-        setTimeout(() => setState('results'), 500);
-      }
-      setProgress(Math.floor(currentProgress));
-    }, 400);
+  const handleUpload = async (file: File) => {
+    const modelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
+    if (!modelInfo) {
+      alert('Selected model not found!');
+      return;
+    }
+
+    try {
+      await separate(file, modelInfo);
+    } catch (e) {
+      console.error("Upload/Separation failed immediately:", e);
+    }
   };
 
   const handleDownload = (track: any, format: string) => {
@@ -68,7 +100,7 @@ export default function Home() {
 
   const handleRestart = () => {
     setState('upload');
-    setProgress(0);
+    resetSeparation();
   };
 
   const handleTryKaraoke = () => {
@@ -95,20 +127,22 @@ export default function Home() {
             <div className="relative inline-block mb-12">
               <div className="w-32 h-32 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
               <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl">
-                {progress}%
+                {Math.round(separationProgress)}%
               </div>
             </div>
             <h2 className="text-3xl font-bold mb-4 text-gradient">Separating Audio...</h2>
-            <p className="text-muted-foreground animate-pulse">Running AI models locally on your GPU</p>
+            <p className="text-muted-foreground animate-pulse">
+              {separationMessage || 'Running AI models locally on your GPU'}
+            </p>
 
             <div className="mt-12 space-y-2 max-w-sm mx-auto">
               <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">
-                <span>Phase: {progress < 40 ? 'Loading Model' : progress < 80 ? 'Inference' : 'Merging'}</span>
+                <span>Status: {separationStatus}</span>
               </div>
               <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${separationProgress}%` }}
                 ></div>
               </div>
             </div>
@@ -119,8 +153,8 @@ export default function Home() {
         return (
           <ResultsDisplay
             tracks={[
-              { id: 'vocals', name: 'Vocals', blob: null },
-              { id: 'instrumental', name: 'Instrumental', blob: null }
+              { id: 'vocals', name: 'Vocals', blob: separationResult?.vocals || null },
+              { id: 'instrumental', name: 'Instrumental', blob: separationResult?.instrumentals || null }
             ]}
             onDownload={handleDownload}
             onRestart={handleRestart}
@@ -186,7 +220,7 @@ export default function Home() {
         {state === 'upload' && (
           <header className="text-center max-w-3xl mx-auto mb-16 space-y-6">
             <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest animate-float">
-              Powered by ONNX Runtime Web
+              Active Model: {AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown'}
             </div>
             <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-tight">
               Separate your music <br />
@@ -204,7 +238,10 @@ export default function Home() {
       <SettingsPanel
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        selectedModelId={selectedModelId}
+        onModelChange={setSelectedModelId}
       />
+
 
       {/* Footer / Credits */}
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
