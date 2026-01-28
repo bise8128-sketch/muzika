@@ -56,8 +56,8 @@ export class EffectsManager {
 
             this.state.isSupported = true;
 
-            // Get the worklet node
-            this.workletNode = getWorkletNode();
+            // Get the worklet node (this will initialize the AudioWorkletManager if needed)
+            this.workletNode = await getWorkletNode();
 
             if (this.workletNode) {
                 // Set up initial configuration
