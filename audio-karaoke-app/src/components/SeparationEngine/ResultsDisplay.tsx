@@ -13,9 +13,10 @@ interface ResultsDisplayProps {
     tracks: track[];
     onDownload: (track: track, format: 'wav' | 'mp3') => void;
     onRestart: () => void;
+    onTryKaraoke: () => void;
 }
 
-export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownload, onRestart }) => {
+export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownload, onRestart, onTryKaraoke }) => {
     // Separate original from others for the cards
     const displayTracks = tracks.filter(t => t.id !== 'original');
 
@@ -111,7 +112,12 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                             You can also use our <span className="text-primary font-medium">Karaoke Mode</span> to sing along with real-time lyrics and pitch adjustment!
                         </p>
                     </div>
-                    <button className="ml-auto px-6 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all text-sm uppercase tracking-wider">TRY KARAOKE</button>
+                    <button
+                        onClick={onTryKaraoke}
+                        className="ml-auto px-6 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all text-sm uppercase tracking-wider"
+                    >
+                        TRY KARAOKE
+                    </button>
                 </div>
             </div>
         </div>

@@ -25,20 +25,24 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
         controllerRef.current = controller;
 
         const loadTracks = async () => {
-            const buffers: AudioBuffer[] = [];
+            const validTracks: { buffer: AudioBuffer, id: string }[] = [];
+
             for (const track of tracks) {
                 if (track.blob instanceof AudioBuffer) {
-                    buffers.push(track.blob);
+                    validTracks.push({ buffer: track.blob, id: track.id });
                 } else if (track.blob instanceof Blob) {
                     const arrayBuffer = await track.blob.arrayBuffer();
                     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
                     const decoded = await audioContext.decodeAudioData(arrayBuffer);
-                    buffers.push(decoded);
+                    validTracks.push({ buffer: decoded, id: track.id });
                 }
             }
-            if (buffers.length > 0) {
-                controller.setAudioBuffers(buffers);
-                setDuration(buffers[0].duration);
+
+            if (validTracks.length > 0) {
+                controller.setAudioBuffers(validTracks.map(t => t.buffer));
+                setDuration(validTracks[0].buffer.duration);
+                // Store valid track IDs to map volume controls correctly
+                (controller as any)._validTrackIds = validTracks.map(t => t.id);
             }
         };
 
@@ -74,16 +78,17 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
         }
     };
 
-    const toggleSolo = (id: string, index: number) => {
+    const toggleSolo = (id: string) => {
         if (!controllerRef.current) return;
 
         const newSolos = { ...solos, [id]: !solos[id] };
         setSolos(newSolos);
 
         const anySolo = Object.values(newSolos).some(v => v);
+        const validTrackIds = (controllerRef.current as any)._validTrackIds || [];
 
-        tracks.forEach((t, i) => {
-            const volume = anySolo ? (newSolos[t.id] ? 1 : 0) : 1;
+        validTrackIds.forEach((trackId: string, i: number) => {
+            const volume = anySolo ? (newSolos[trackId] ? 1 : 0) : 1;
             controllerRef.current?.setVolume(volume, i);
         });
     };
@@ -142,10 +147,10 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {tracks.map((track, index) => (
+                    {tracks.filter(t => t.blob !== null).map((track) => (
                         <button
                             key={track.id}
-                            onClick={() => toggleSolo(track.id, index)}
+                            onClick={() => toggleSolo(track.id)}
                             className={`
                                 flex items-center justify-between px-4 py-3 rounded-2xl border transition-all
                                 ${solos[track.id]
