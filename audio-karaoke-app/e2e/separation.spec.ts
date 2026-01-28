@@ -18,12 +18,19 @@ test.describe('Audio Separation Flow', () => {
 
         // 2. Verify upload button exists
         await expect(page.getByText('Select Audio Files')).toBeVisible();
-        expect(page.locator('input[type="file"]')).toBeAttached();
+        // Wait for file input to be attached
+        await expect(page.locator('input[type="file"]')).toBeAttached({ timeout: 5000 });
     });
 
     test('should show settings panel', async ({ page }) => {
         // Click the settings icon (it's the last button in the nav on desktop)
-        await page.locator('nav').locator('button').last().click();
-        await expect(page.getByText('Separation Settings')).toBeVisible();
+        const settingsButton = page.locator('nav').locator('button').last();
+        await expect(settingsButton).toBeVisible({ timeout: 5000 });
+        await settingsButton.click();
+
+        // Wait for settings panel to appear
+        await expect(page.getByText('Settings')).toBeVisible({ timeout: 5000 });
+        // The panel title is just "Settings", not "Separation Settings"
+        await expect(page.getByRole('dialog', { name: /Settings/i })).toBeVisible({ timeout: 5000 });
     });
 });
