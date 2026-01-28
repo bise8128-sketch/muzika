@@ -1,13 +1,4 @@
-/**
- * Main Audio Separation Pipeline
- * Orchestrates the complete separation process with caching and progress tracking
- */
-
-import { hashFile, getCachedAudio, cacheAudioResult } from '@/utils/storage/audioCache';
 import { decodeAudioFile, float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
-import { segmentAudio, mergeSegments } from '@/utils/audio/audioProcessor';
-import { loadModel } from './modelManager';
-import { processAudioInChunks } from './inference';
 import type { ModelInfo } from '@/types/model';
 import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 
@@ -30,115 +21,81 @@ export async function separateAudio(
 ): Promise<SeparationResult> {
     const { modelInfo, onProgress, skipCache = false } = options;
 
-    try {
-        // Phase 1: Generate file hash for cache lookup
-        updateProgress(onProgress, 'loading-model', 0, 0, 0, 'Generating file hash...');
-        const fileHash = await hashFile(file);
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Check cache first in main thread to avoid worker overhead if possible?
+            // Actually, we moved cache check to worker. But we CAN check hash here if we want.
+            // Let's stick to the plan: Worker does it all.
 
-        // Phase 2: Check cache (unless explicitly skipped)
-        if (!skipCache) {
-            updateProgress(onProgress, 'loading-model', 0, 0, 5, 'Checking cache...');
-            const cached = await getCachedAudio(fileHash);
+            // Phase 4 (Pre-Worker): Decode Audio
+            // We do this in main thread because we have AudioContext
+            updateProgress(onProgress, 'decoding', 0, 0, 0, 'Decoding audio file...');
+            const audioBuffer = await decodeAudioFile(file);
 
-            if (cached) {
-                updateProgress(onProgress, 'loading-model', 0, 0, 100, 'Loading from cache...');
+            // Prepare data for worker
+            // We need to pass raw data. 
+            // Current model works in Mono (based on segmentAudio impl).
+            // But we should pass Stereo just in case we upgrade later.
+            const channel1 = audioBuffer.getChannelData(0);
+            const channel2 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : channel1;
 
-                // Convert cached ArrayBuffers back to AudioBuffers
-                const vocalsBuffer = await arrayBufferToAudioBuffer(cached.vocals, cached.sampleRate);
-                const instrumentalsBuffer = await arrayBufferToAudioBuffer(cached.instrumentals, cached.sampleRate);
-                const originalBuffer = await decodeAudioFile(file);
+            // Transfer these buffers to worker
+            // Note: getChannelData returns the internal buffer reference in some browsers, copy in others.
+            // Using a copy ensures we don't detach the AudioBuffer's data if we want to keep playing it.
+            // But here we return 'originalAudio', so we might need it.
+            // Safe bet: copy.
+            const left = new Float32Array(channel1);
+            const right = new Float32Array(channel2);
 
-                return {
-                    vocals: vocalsBuffer,
-                    instrumentals: instrumentalsBuffer,
-                    originalAudio: originalBuffer,
-                    timestamp: cached.processedAt,
-                    fileHash,
-                };
-            }
+            const worker = new Worker(new URL('./audio.worker.ts', import.meta.url));
+
+            worker.onmessage = (e) => {
+                const { type, payload } = e.data;
+
+                if (type === 'PROGRESS') {
+                    if (onProgress) onProgress(payload);
+                } else if (type === 'COMPLETE') {
+                    const { vocals, instrumentals, fileHash, timestamp } = payload;
+
+                    // Convert ArrayBuffers back to AudioBuffers
+                    Promise.all([
+                        arrayBufferToAudioBuffer(vocals, audioBuffer.sampleRate),
+                        arrayBufferToAudioBuffer(instrumentals, audioBuffer.sampleRate)
+                    ]).then(([vocalsBuffer, instrumentalsBuffer]) => {
+                        worker.terminate();
+                        resolve({
+                            vocals: vocalsBuffer,
+                            instrumentals: instrumentalsBuffer,
+                            originalAudio: audioBuffer,
+                            timestamp,
+                            fileHash
+                        });
+                    }).catch(err => {
+                        worker.terminate();
+                        reject(err);
+                    });
+                } else if (type === 'ERROR') {
+                    worker.terminate();
+                    reject(new Error(payload.message));
+                }
+            };
+
+            worker.postMessage({
+                type: 'START_SEPARATION',
+                payload: {
+                    file, // File objects are clonable
+                    decodedData: { left, right },
+                    sampleRate: audioBuffer.sampleRate,
+                    modelInfo,
+                    skipCache
+                }
+            }, [left.buffer, right.buffer]); // Transfer buffers
+
+        } catch (error) {
+            console.error('Separation failed:', error);
+            reject(new Error(`Audio separation failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
-
-        // Phase 3: Load model
-        updateProgress(onProgress, 'loading-model', 0, 0, 10, 'Loading AI model...');
-        const session = await loadModel(modelInfo, (downloadProgress) => {
-            // Forward model download progress
-            updateProgress(
-                onProgress,
-                'loading-model',
-                0,
-                0,
-                10 + (downloadProgress.percentage * 0.2), // 10-30%
-                `Downloading model: ${downloadProgress.percentage.toFixed(0)}%`
-            );
-        });
-
-        // Phase 4: Decode audio file
-        updateProgress(onProgress, 'decoding', 0, 0, 30, 'Decoding audio file...');
-        const audioBuffer = await decodeAudioFile(file);
-
-        // Phase 5: Segment audio into chunks
-        updateProgress(onProgress, 'segmenting', 0, 0, 35, 'Segmenting audio...');
-        const segments = segmentAudio(audioBuffer);
-        const totalSegments = segments.length;
-
-        // Phase 6: Process each segment through inference
-        updateProgress(onProgress, 'separating', 0, totalSegments, 40, 'Starting separation...');
-
-        const results = await processAudioInChunks(
-            session,
-            segments.map(s => s.data),
-            audioBuffer.numberOfChannels,
-            (currentSegment, total) => {
-                const separationProgress = 40 + ((currentSegment / total) * 50); // 40-90%
-                updateProgress(
-                    onProgress,
-                    'separating',
-                    currentSegment,
-                    total,
-                    separationProgress,
-                    `Processing segment ${currentSegment + 1} of ${total}...`
-                );
-            }
-        );
-
-        // Phase 7: Merge results with crossfading
-        updateProgress(onProgress, 'merging', totalSegments, totalSegments, 90, 'Merging segments...');
-
-        const vocalsData = results.map(r => r.vocals);
-        const instrumentalsData = results.map(r => r.instrumentals);
-
-        const vocalsBuffer = mergeSegments(vocalsData, audioBuffer.sampleRate);
-        const instrumentalsBuffer = mergeSegments(instrumentalsData, audioBuffer.sampleRate);
-
-        // Phase 8: Cache results
-        updateProgress(onProgress, 'caching', totalSegments, totalSegments, 95, 'Caching results...');
-
-        await cacheAudioResult(
-            fileHash,
-            file.name,
-            audioBufferToArrayBuffer(vocalsBuffer),
-            audioBufferToArrayBuffer(instrumentalsBuffer),
-            audioBuffer.duration,
-            audioBuffer.sampleRate
-        );
-
-        // Complete
-        updateProgress(onProgress, 'caching', totalSegments, totalSegments, 100, 'Complete!');
-
-        return {
-            vocals: vocalsBuffer,
-            instrumentals: instrumentalsBuffer,
-            originalAudio: audioBuffer,
-            timestamp: Date.now(),
-            fileHash,
-        };
-
-    } catch (error) {
-        console.error('Separation failed:', error);
-        throw new Error(
-            `Audio separation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-    }
+    });
 }
 
 /**
@@ -175,21 +132,4 @@ async function arrayBufferToAudioBuffer(
     return float32ArrayToAudioBuffer(float32Data, sampleRate, 2); // Assume stereo
 }
 
-/**
- * Convert AudioBuffer to ArrayBuffer for storage
- */
-function audioBufferToArrayBuffer(audioBuffer: AudioBuffer): ArrayBuffer {
-    // Interleave channels if stereo
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const length = audioBuffer.length;
-    const interleaved = new Float32Array(length * numberOfChannels);
 
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-        const channelData = audioBuffer.getChannelData(channel);
-        for (let i = 0; i < length; i++) {
-            interleaved[i * numberOfChannels + channel] = channelData[i];
-        }
-    }
-
-    return interleaved.buffer;
-}

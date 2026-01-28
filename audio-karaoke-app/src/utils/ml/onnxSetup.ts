@@ -8,6 +8,7 @@ export async function checkWebGPUSupport(): Promise<boolean> {
         return false;
     }
     try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const adapter = await (navigator as any).gpu.requestAdapter();
         return !!adapter;
     } catch (e) {
@@ -25,6 +26,7 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
 
     // Configure WASM paths to point to our public/wasm directory
     // Note: onnxruntime-web looks for these files relative to the host or via env.wasmPaths
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.wasmPaths = '/wasm/';
 
     // Enable SIMD for better performance on CPU fallback

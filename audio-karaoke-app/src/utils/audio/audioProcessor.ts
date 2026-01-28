@@ -22,8 +22,22 @@ const CROSSFADE_DURATION = 0.5;
  * @param segmentDuration - Duration of each segment in seconds (default: 30s)
  * @returns Array of audio segments
  */
+export interface SimpleAudioBuffer {
+    sampleRate: number;
+    numberOfChannels: number;
+    length: number;
+    duration: number;
+    getChannelData(channel: number): Float32Array;
+}
+
+/**
+ * Segment audio into chunks for processing
+ * @param audioBuffer - Input AudioBuffer or compatible interface
+ * @param segmentDuration - Duration of each segment in seconds (default: 30s)
+ * @returns Array of audio segments
+ */
 export function segmentAudio(
-    audioBuffer: AudioBuffer,
+    audioBuffer: SimpleAudioBuffer | AudioBuffer,
     segmentDuration: number = DEFAULT_SEGMENT_DURATION
 ): AudioSegment[] {
     const sampleRate = audioBuffer.sampleRate;
@@ -69,14 +83,22 @@ export function segmentAudio(
  * @param sampleRate - Sample rate
  * @returns Merged AudioBuffer
  */
-export function mergeSegments(segments: Float32Array[], sampleRate: number): AudioBuffer {
+export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: true): AudioBuffer;
+export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: false): Float32Array;
+export function mergeSegments(segments: Float32Array[], sampleRate: number): Float32Array;
+export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: boolean = false): AudioBuffer | Float32Array {
     if (segments.length === 0) {
         throw new Error('Cannot merge empty segments array');
     }
 
+    // Prepare helper to return correct type
+    const finish = (data: Float32Array) => {
+        return returnAudioBuffer ? createAudioBufferFromFloat32(data, sampleRate) : data;
+    };
+
     if (segments.length === 1) {
         // Single segment, no need to merge
-        return createAudioBufferFromFloat32(segments[0], sampleRate);
+        return finish(segments[0]);
     }
 
     const crossfadeSamples = Math.floor(CROSSFADE_DURATION * sampleRate);
@@ -110,7 +132,7 @@ export function mergeSegments(segments: Float32Array[], sampleRate: number): Aud
         }
     });
 
-    return createAudioBufferFromFloat32(merged, sampleRate);
+    return finish(merged);
 }
 
 /**
