@@ -1,0 +1,11 @@
+# Vercel Ignore File
+.git
+.github
+.vscode
+.DS_Store
+node_modules
+coverage
+test-results
+playwright-report
+README.md
+*.log
