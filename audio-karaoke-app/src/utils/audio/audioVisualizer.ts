@@ -62,7 +62,7 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get time domain data
-            this.analyser.getByteTimeDomainData(this.dataArray);
+            this.analyser.getByteTimeDomainData(this.dataArray as any);
 
             // Clear canvas
             ctx.fillStyle = 'rgb(20, 20, 20)';
@@ -110,7 +110,7 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get frequency data
-            this.analyser.getByteFrequencyData(this.dataArray);
+            this.analyser.getByteFrequencyData(this.dataArray as any);
 
             // Clear canvas
             ctx.fillStyle = 'rgb(20, 20, 20)';
@@ -161,8 +161,8 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get both time and frequency data
-            this.analyser.getByteTimeDomainData(timeDataArray);
-            this.analyser.getByteFrequencyData(freqDataArray);
+            this.analyser.getByteTimeDomainData(timeDataArray as any);
+            this.analyser.getByteFrequencyData(freqDataArray as any);
 
             // Draw waveform
             waveCtx.fillStyle = 'rgb(20, 20, 20)';
@@ -223,11 +223,8 @@ export class AudioVisualizer {
     }
 
     /**
-     * Get current frequency data
-     * Useful for external processing
-     */
     getFrequencyData(): Uint8Array {
-        this.analyser.getByteFrequencyData(this.dataArray);
+        this.analyser.getByteFrequencyData(this.dataArray as any);
         return this.dataArray;
     }
 
@@ -235,7 +232,7 @@ export class AudioVisualizer {
      * Get current time domain data
      */
     getTimeDomainData(): Uint8Array {
-        this.analyser.getByteTimeDomainData(this.dataArray);
+        this.analyser.getByteTimeDomainData(this.dataArray as any);
         return this.dataArray;
     }
 
