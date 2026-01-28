@@ -3,28 +3,40 @@
  */
 
 import { AudioWorkletManager } from '../audioWorkletManager';
-import { AudioContext } from 'web-audio-api';
 
-// Mock AudioContext
-jest.mock('web-audio-api', () => ({
-    AudioContext: jest.fn().mockImplementation(() => ({
-        audioWorklet: {
-            addModule: jest.fn().mockResolvedValue(undefined)
-        },
-        destination: {
-            connect: jest.fn()
-        },
-        close: jest.fn().mockResolvedValue(undefined)
-    }))
-}));
+// Mock the AudioContext and AudioWorkletNode
+const mockAudioWorklet = {
+    addModule: jest.fn().mockResolvedValue(undefined)
+};
+
+const mockAudioWorkletNode = {
+    port: {
+        onmessage: jest.fn()
+    },
+    disconnect: jest.fn(),
+    close: jest.fn()
+};
+
+const mockAudioContext = {
+    audioWorklet: mockAudioWorklet,
+    destination: {
+        connect: jest.fn()
+    },
+    close: jest.fn().mockResolvedValue(undefined)
+};
+
+// Mock the global AudioContext constructor
+global.AudioContext = jest.fn().mockImplementation(() => mockAudioContext);
+
+// Mock AudioWorkletNode
+global.AudioWorkletNode = jest.fn().mockImplementation(() => mockAudioWorkletNode);
 
 describe('AudioWorkletManager', () => {
-    let audioContext: any;
     let manager: AudioWorkletManager;
 
     beforeEach(() => {
-        audioContext = new AudioContext();
-        manager = new AudioWorkletManager(audioContext);
+        jest.clearAllMocks();
+        manager = new AudioWorkletManager(mockAudioContext as any);
     });
 
     afterEach(() => {
@@ -47,12 +59,13 @@ describe('AudioWorkletManager', () => {
 
         it('should load the worklet script', async () => {
             await manager.initialize();
-            expect(audioContext.audioWorklet.addModule).toHaveBeenCalled();
+            expect(mockAudioWorklet.addModule).toHaveBeenCalled();
         });
 
         it('should create an AudioWorkletNode', async () => {
             await manager.initialize();
             expect(manager.getWorkletNode()).not.toBeNull();
+            expect(global.AudioWorkletNode).toHaveBeenCalled();
         });
     });
 
@@ -102,7 +115,7 @@ describe('AudioWorkletManager', () => {
     describe('Error Handling', () => {
         it('should handle initialization errors', async () => {
             // Mock addModule to throw an error
-            audioContext.audioWorklet.addModule.mockRejectedValueOnce(new Error('Failed to load worklet'));
+            mockAudioWorklet.addModule.mockRejectedValueOnce(new Error('Failed to load worklet'));
             await expect(manager.initialize()).rejects.toThrow('Failed to load worklet');
         });
     });
