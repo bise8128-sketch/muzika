@@ -70,8 +70,8 @@ function BackendStatus() {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold uppercase tracking-widest">
       <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-          status === 'error' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
-            'bg-amber-500 animate-pulse'
+        status === 'error' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
+          'bg-amber-500 animate-pulse'
         }`} />
       <span className={status === 'error' ? 'text-rose-400' : 'text-muted-foreground'}>
         Backend: {status}
