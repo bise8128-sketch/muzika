@@ -23,17 +23,20 @@ export async function checkWebGPUSupport(): Promise<boolean> {
  */
 export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> {
     const hasWebGPU = await checkWebGPUSupport();
+    console.log('[onnxSetup] Setting up ONNX Runtime...');
 
     // Configure WASM paths to point to our public/wasm directory
     // Note: onnxruntime-web looks for these files relative to the host or via env.wasmPaths
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.wasmPaths = '/wasm/';
+    console.log('[onnxSetup] WASM paths set to:', (ort as any).env.wasm.wasmPaths);
 
     // Enable SIMD for better performance on CPU fallback
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.numThreads = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.simd = true;
+    console.log('[onnxSetup] Threads:', (ort as any).env.wasm.numThreads, 'SIMD:', (ort as any).env.wasm.simd);
 
     const options: ort.InferenceSession.SessionOptions = {
         executionProviders: hasWebGPU ? ['webgpu', 'wasm'] : ['wasm'],
@@ -41,7 +44,7 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log(`ONNX Setup: WebGPU=${hasWebGPU}, Threads=${(ort as any).env.wasm.numThreads}`);
+    console.log(`[onnxSetup] ONNX Setup: WebGPU=${hasWebGPU}, Threads=${(ort as any).env.wasm.numThreads}`);
 
     return options;
 }
