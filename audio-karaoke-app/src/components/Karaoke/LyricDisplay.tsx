@@ -72,12 +72,12 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime 
                 return (
                     <div
                         key={`${line.startTime}-${index}`}
-                        ref={(el) => (lineRefs.current[index] = el)}
+                        ref={(el) => { lineRefs.current[index] = el; }}
                         className={`text-center transition-all duration-500 transform ${isActive
-                                ? 'text-3xl font-bold text-white scale-110 opacity-100'
-                                : isPast
-                                    ? 'text-xl text-gray-500 opacity-60 scale-95'
-                                    : 'text-xl text-gray-400 opacity-40 scale-90'
+                            ? 'text-3xl font-bold text-white scale-110 opacity-100'
+                            : isPast
+                                ? 'text-xl text-gray-500 opacity-60 scale-95'
+                                : 'text-xl text-gray-400 opacity-40 scale-90'
                             }`}
                     >
                         {line.text || '♪'}
