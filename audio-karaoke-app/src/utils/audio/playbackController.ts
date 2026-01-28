@@ -265,8 +265,8 @@ export class PlaybackController {
             this.scriptNode.onaudioprocess = this.handleAudioProcess.bind(this);
 
             // Connect Master Graph
-            // ScriptNode -> Destination (Dry)
-            this.scriptNode.connect(this.audioContext.destination);
+            // ScriptNode -> MasterGain (Dry)
+            this.scriptNode.connect(this.masterGain);
 
             // ScriptNode -> Effects
             this.scriptNode.connect(this.reverbNode);
