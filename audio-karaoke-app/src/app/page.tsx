@@ -11,6 +11,7 @@ import { useBatchSeparation, QueueItem } from '@/hooks/useBatchSeparation';
 import { exportAudio } from '@/utils/audio/audioExporter';
 import { getHistorySessions, restoreSession, clearHistory as dbClearHistory, HistorySession } from '@/utils/storage/historyStore';
 import { float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
+import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 
 const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
   loading: () => <div className="h-64 flex items-center justify-center">Loading Karaoke Player...</div>,
@@ -58,7 +59,7 @@ function BackendStatus() {
         } else {
           setStatus('error');
         }
-      } catch (e) {
+      } catch {
         setStatus('error');
       }
     };
@@ -87,6 +88,7 @@ export default function Home() {
   const [controller, setController] = useState<PlaybackController | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [autoStartKaraoke, setAutoStartKaraoke] = useState(false);
 
   // Result state (from hook OR from restoration)
   const [restoredResult, setRestoredResult] = useState<any>(null);
@@ -117,17 +119,17 @@ export default function Home() {
   // History state
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
 
-  // Load history on mount
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
   const loadHistory = async () => {
     const sessions = await getHistorySessions();
     setHistoryItems(sessions);
   };
 
+  // Load settings and init controller on mount
   useEffect(() => {
+    loadHistory();
+    const settings = getSettings();
+    setAutoStartKaraoke(settings.autoStartKaraoke);
+
     const newController = new PlaybackController();
     setController(newController);
     return () => newController.dispose();
@@ -140,9 +142,16 @@ export default function Home() {
     } else if (separationStatus === 'completed' && separationResult) {
       // Refresh history
       loadHistory();
-      // Short delay for smooth transition
-      const timer = setTimeout(() => setState('results'), 500);
-      return () => clearTimeout(timer);
+
+      // If auto-start is enabled, set buffers and go to karaoke
+      if (autoStartKaraoke && controller) {
+        controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
+        setState('karaoke');
+      } else {
+        // Short delay for smooth transition
+        const timer = setTimeout(() => setState('results'), 500);
+        return () => clearTimeout(timer);
+      }
     } else if (separationStatus === 'error') {
       console.error("Separation Error", separationMessage);
       setState('upload');
@@ -278,7 +287,14 @@ export default function Home() {
       case 'upload':
         return (
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <AudioUpload onUpload={handleUpload} />
+            <AudioUpload
+              onUpload={handleUpload}
+              autoStartKaraoke={autoStartKaraoke}
+              onAutoStartToggle={(val) => {
+                setAutoStartKaraoke(val);
+                saveSettings({ autoStartKaraoke: val });
+              }}
+            />
             <History
               items={historyItems.map(h => ({
                 id: h.fileHash,

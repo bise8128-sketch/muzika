@@ -5,9 +5,16 @@ import React, { useState, useRef, useCallback } from 'react';
 interface AudioUploadProps {
     onUpload: (files: File[]) => void;
     isLoading?: boolean;
+    autoStartKaraoke?: boolean;
+    onAutoStartToggle?: (value: boolean) => void;
 }
 
-export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading }) => {
+export const AudioUpload: React.FC<AudioUploadProps> = ({
+    onUpload,
+    isLoading,
+    autoStartKaraoke = false,
+    onAutoStartToggle
+}) => {
     const [isDragging, setIsDragging] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,6 +125,27 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ onUpload, isLoading })
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-primary/10 blur-[60px] rounded-full group-hover:bg-primary/20 transition-all"></div>
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-accent/10 blur-[60px] rounded-full group-hover:bg-accent/20 transition-all"></div>
             </div>
+
+            {/* Quick Actions / Settings */}
+            {!isLoading && (
+                <div className="mt-6 flex items-center justify-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                checked={autoStartKaraoke}
+                                onChange={(e) => onAutoStartToggle?.(e.target.checked)}
+                                className="peer sr-only"
+                            />
+                            <div className="w-10 h-6 bg-white/10 rounded-full border border-white/20 peer-checked:bg-primary transition-all duration-300"></div>
+                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 peer-checked:left-5"></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-400 group-hover:text-gray-300 transition-colors">
+                            Start Singing Automatically
+                        </span>
+                    </label>
+                </div>
+            )}
 
             {error && (
                 <div className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2">

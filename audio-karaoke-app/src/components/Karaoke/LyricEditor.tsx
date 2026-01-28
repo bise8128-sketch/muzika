@@ -85,24 +85,67 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         URL.revokeObjectURL(url);
     };
 
+    const handlePaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                setRawText(text);
+                const newLines = text.split('\n').map(line => ({
+                    startTime: 0,
+                    endTime: 0,
+                    text: line.trim()
+                }));
+                setLines(newLines);
+            }
+        } catch (err) {
+            console.error('Failed to read clipboard', err);
+        }
+    };
+
+    const handleClear = () => {
+        if (confirm('Are you sure you want to clear all lyrics?')) {
+            setRawText('');
+            setLines([]);
+        }
+    };
+
     return (
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">Uređivač stihova</h2>
+                <h2 className="text-2xl font-bold text-white">Lyric Editor</h2>
                 <div className="flex gap-2">
+                    {editMode === 'text' && (
+                        <>
+                            <button
+                                onClick={handlePaste}
+                                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-full text-sm font-medium transition-all flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Paste
+                            </button>
+                            <button
+                                onClick={handleClear}
+                                className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-full text-sm font-medium transition-all"
+                            >
+                                Clear
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={() => setEditMode('text')}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Uređivanje teksta
+                        Edit Text
                     </button>
                     <button
                         onClick={startSync}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'sync' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Mod sinhronizacije
+                        Sync Mode
                     </button>
                 </div>
             </div>

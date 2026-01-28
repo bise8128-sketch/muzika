@@ -16,6 +16,7 @@ import { LyricEditor } from './LyricEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { VideoExporter } from '@/utils/audio/videoExport';
 import { CDGRenderer } from './CDGRenderer';
+import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -32,11 +33,74 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [echo, setEcho] = useState(0);
     const [showEditor, setShowEditor] = useState(false);
     const [theme, setTheme] = useState<LyricTheme>('modern');
+    const [isStageMode, setIsStageMode] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
 
     const recorder = useVoiceRecorder();
+
+    // Load persisted settings
+    useEffect(() => {
+        const settings = getSettings();
+        setTheme(settings.theme);
+        setIsStageMode(settings.stageModeEnabled);
+
+        // Apply default volume balance if available
+        const bal = settings.defaultVolumeBalance;
+        const vVol = Math.min(1, bal * 2);
+        const iVol = Math.min(1, (1 - bal) * 2);
+        playback.setVolume(vVol, 0); // Vocals
+        playback.setVolume(iVol, 1); // Instrumental
+        const iVol = Math.min(1, (1 - balance) * 2);
+        playback.setVolume(vVol, 0);
+        playback.setVolume(iVol, 1);
+        saveSettings({ defaultVolumeBalance: balance });
+    };
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if user is typing in an input or editor
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || showEditor) return;
+
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    playback.isPlaying ? playback.pause() : playback.play();
+                    break;
+                case 'm':
+                case 'M':
+                    // Toggle Mute (quick way to 0 volume)
+                    const isMuted = playback.vocalsVolume === 0 && playback.instrumentalVolume === 0;
+                    if (isMuted) {
+                        playback.setVolume(0.8, 0);
+                        playback.setVolume(0.8, 1);
+                    } else {
+                        playback.setVolume(0, 0);
+                        playback.setVolume(0, 1);
+                    }
+                    break;
+                case 'f':
+                case 'F':
+                    setIsStageMode(prev => {
+                        const next = !prev;
+                        saveSettings({ stageModeEnabled: next });
+                        return next;
+                    });
+                    break;
+                case 'ArrowLeft':
+                    playback.seek(Math.max(0, playback.currentTime - 5));
+                    break;
+                case 'ArrowRight':
+                    playback.seek(Math.min(playback.duration, playback.currentTime + 5));
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [playback, showEditor]);
 
     useEffect(() => {
         if (recorder.recordedBuffer) {
@@ -168,19 +232,36 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     };
 
     return (
-        <div className="flex flex-col gap-8 w-full">
+        <div className={`flex flex-col gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
+            {/* Stage Mode Toggle (Always visible in stage mode) */}
+            {isStageMode && (
+                <button
+                    onClick={() => {
+                        setIsStageMode(false);
+                        saveSettings({ stageModeEnabled: false });
+                    }}
+                    className="absolute top-8 left-8 z-[110] p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all"
+                    title="Exit Stage Mode (F)"
+                >
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            )}
+
             {/* Visualizer and Lyrics Area */}
-            <div className="relative bg-black/40 rounded-3xl overflow-hidden border border-white/10 aspect-video md:aspect-[21/9] flex flex-col items-center justify-center p-8 group">
+            <div className={`relative bg-black/40 rounded-3xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-8 group transition-all duration-700 ${isStageMode ? 'flex-1 aspect-auto border-none bg-transparent' : 'aspect-video md:aspect-[21/9]'
+                }`}>
                 {/* Background Visualizer */}
                 <canvas
                     ref={canvasRef}
-                    className="absolute inset-0 w-full h-full opacity-30 pointer-events-none"
+                    className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${isStageMode ? 'opacity-40' : 'opacity-30'}`}
                     width={1200}
                     height={400}
                 />
 
                 {/* Lyrics Layer */}
-                <div className="relative z-10 w-full flex flex-col items-center">
+                <div className={`relative z-10 w-full flex flex-col items-center transition-all duration-700 ${isStageMode ? 'scale-125' : ''}`}>
                     {cdgData && (
                         <div className="mb-4 scale-150 transform">
                             <CDGRenderer cdgData={cdgData} currentTime={playback.currentTime} />
@@ -236,7 +317,10 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                             {(['modern', 'neon', 'classic', 'retro'] as LyricTheme[]).map(t => (
                                 <button
                                     key={t}
-                                    onClick={() => setTheme(t)}
+                                    onClick={() => {
+                                        setTheme(t);
+                                        saveSettings({ theme: t });
+                                    }}
                                     className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${theme === t ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white/60'
                                         }`}
                                 >
@@ -244,6 +328,18 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                                 </button>
                             ))}
                         </div>
+                        <button
+                            onClick={() => {
+                                setIsStageMode(true);
+                                saveSettings({ stageModeEnabled: true });
+                            }}
+                            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2"
+                            title="Stage Mode (F)"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </button>
                         <button
                             onClick={() => setShowEditor(true)}
                             className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2"
@@ -266,7 +362,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col gap-4">
+            <div className={`flex flex-col gap-4 ${isStageMode ? 'max-w-4xl mx-auto w-full' : ''}`}>
                 <PlayerControls
                     isPlaying={playback.isPlaying}
                     currentTime={playback.currentTime}
@@ -278,6 +374,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     onSeek={playback.seek}
                     onVocalsVolumeChange={(v) => playback.setVolume(v, 0)}
                     onInstrumentalVolumeChange={(v) => playback.setVolume(v, 1)}
+                    onBalanceChange={handleBalanceChange}
                 />
 
                 {/* Recording Controls */}

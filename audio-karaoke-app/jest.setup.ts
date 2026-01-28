@@ -46,5 +46,7 @@ class AudioContextMock {
     destination = {};
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).AudioContext = AudioContextMock;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).webkitAudioContext = AudioContextMock;

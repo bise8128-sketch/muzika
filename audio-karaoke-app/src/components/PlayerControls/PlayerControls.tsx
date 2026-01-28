@@ -16,6 +16,7 @@ interface PlayerControlsProps {
     onSeek: (time: number) => void;
     onVocalsVolumeChange: (volume: number) => void;
     onInstrumentalVolumeChange: (volume: number) => void;
+    onBalanceChange?: (balance: number) => void;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -82,48 +83,70 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 </div>
 
                 {/* Mješalica */}
-                <div className="flex flex-col sm:flex-row gap-8 flex-1 justify-end w-full sm:w-auto">
-                    {/* Glasnoća vokala */}
-                    <div className="flex-1 max-w-[200px]">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                                Vokali
-                            </span>
-                            <span className="text-xs text-gray-500">{Math.round(vocalsVolume * 100)}%</span>
+                <div className="flex-1 flex flex-col gap-4">
+                    {/* Crossfader Balance */}
+                    <div className="px-4">
+                        <div className="flex justify-between mb-1 text-[10px] font-bold uppercase tracking-tighter text-gray-400">
+                            <span>Instrumental</span>
+                            <span>Miks (Vokali ↔ Instrumental)</span>
+                            <span>Vokali</span>
                         </div>
                         <input
                             type="range"
                             min={0}
                             max={1}
                             step={0.01}
-                            value={vocalsVolume}
-                            onChange={(e) => onVocalsVolumeChange(parseFloat(e.target.value))}
-                            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                            value={vocalsVolume / (vocalsVolume + instrumentalVolume || 1)}
+                            onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (onBalanceChange) onBalanceChange(val);
+                            }}
+                            className="w-full h-2 bg-gradient-to-r from-pink-500 via-purple-500 to-purple-400 rounded-lg appearance-none cursor-pointer"
                         />
                     </div>
 
-                    {/* Glasnoća instrumentala */}
-                    <div className="flex-1 max-w-[200px]">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-pink-400 uppercase tracking-wider flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-pink-400"></span>
-                                Instrumental
-                            </span>
-                            <span className="text-xs text-gray-500">{Math.round(instrumentalVolume * 100)}%</span>
+                    <div className="flex flex-col sm:flex-row gap-8 justify-end w-full sm:w-auto">
+                        {/* Glasnoća vokala */}
+                        <div className="flex-1 max-w-[200px]">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                                    Vokali
+                                </span>
+                                <span className="text-xs text-gray-500">{Math.round(vocalsVolume * 100)}%</span>
+                            </div>
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={vocalsVolume}
+                                onChange={(e) => onVocalsVolumeChange(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                            />
                         </div>
-                        <input
-                            type="range"
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            value={instrumentalVolume}
-                            onChange={(e) => onInstrumentalVolumeChange(parseFloat(e.target.value))}
-                            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-400"
-                        />
+
+                        {/* Glasnoća instrumentala */}
+                        <div className="flex-1 max-w-[200px]">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-pink-400 uppercase tracking-wider flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-pink-400"></span>
+                                    Instrumental
+                                </span>
+                                <span className="text-xs text-gray-500">{Math.round(instrumentalVolume * 100)}%</span>
+                            </div>
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={instrumentalVolume}
+                                onChange={(e) => onInstrumentalVolumeChange(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-400"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 };
