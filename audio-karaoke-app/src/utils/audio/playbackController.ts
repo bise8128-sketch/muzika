@@ -41,6 +41,11 @@ export class PlaybackController {
     private pitch: number = 0; // Semitones
     private tempo: number = 1.0; // Rate
 
+    // Buffer overflow handling - stores excess samples from SoundTouch processing
+    private leftoverLeft: Float32Array | null = null;
+    private leftoverRight: Float32Array | null = null;
+    private leftoverIndex: number = 0;
+
     constructor() {
         this.audioContext = getAudioContext();
         this.processor = new RealtimeAudioProcessor(this.audioContext.sampleRate);
@@ -193,6 +198,11 @@ export class PlaybackController {
         this.playHead = 0;
         this.processor.reset();
 
+        // Clear leftover buffers
+        this.leftoverLeft = null;
+        this.leftoverRight = null;
+        this.leftoverIndex = 0;
+
         // Re-apply settings after reset
         this.processor.setPitchSemitones(this.pitch);
         this.processor.setTempo(this.tempo);
@@ -242,6 +252,26 @@ export class PlaybackController {
         let loopCount = 0;
         const maxLoops = 20;
 
+        // First, consume any leftover samples from previous iteration
+        if (this.leftoverLeft && this.leftoverRight && this.leftoverIndex < this.leftoverLeft.length) {
+            const leftoverAvailable = this.leftoverLeft.length - this.leftoverIndex;
+            const toCopy = Math.min(leftoverAvailable, BUFFER_SIZE);
+
+            for (let k = 0; k < toCopy; k++) {
+                generatedL[k] = this.leftoverLeft[this.leftoverIndex + k];
+                generatedR[k] = this.leftoverRight[this.leftoverIndex + k];
+            }
+            generatedCount += toCopy;
+            this.leftoverIndex += toCopy;
+
+            // If we consumed all leftovers, clear them
+            if (this.leftoverIndex >= this.leftoverLeft.length) {
+                this.leftoverLeft = null;
+                this.leftoverRight = null;
+                this.leftoverIndex = 0;
+            }
+        }
+
         while (generatedCount < BUFFER_SIZE && loopCount < maxLoops) {
             loopCount++;
 
@@ -251,8 +281,11 @@ export class PlaybackController {
             // Feed data
             const feedSize = BUFFER_SIZE; // Feed same amount as we want, usually good enough
 
-            // Check if we hit end
-            if (this.playHead >= this.getDuration() * this.audioContext.sampleRate) {
+            // Check if we hit end - FIX: Account for tempo in duration calculation
+            // At slower tempos (< 1.0), the effective duration is longer (more output samples)
+            // At faster tempos (> 1.0), the effective duration is shorter (fewer output samples)
+            const effectiveDuration = this.getDuration() / this.tempo;
+            if (this.playHead >= effectiveDuration * this.audioContext.sampleRate) {
                 break;
             }
 
@@ -286,8 +319,11 @@ export class PlaybackController {
                 }
             }
 
-            // Advance Playhead
-            this.playHead += feedSize;
+            // Advance Playhead - FIX: Account for tempo in playHead advancement
+            // When tempo is slower (< 1.0), we consume input samples slower, so playHead should advance less
+            // When tempo is faster (> 1.0), we consume input samples faster, so playHead should advance more
+            // The playHead represents the INPUT sample position, so we divide by tempo
+            this.playHead += Math.floor(feedSize / this.tempo);
 
             // If no tracks were active (silence/end), input is just zeros, still feed it to flush out tail
 
@@ -306,23 +342,31 @@ export class PlaybackController {
                 }
                 generatedCount += toCopy;
 
-                // If we have extra, we lose it?! 
-                // Limitation of this simple loop: SoundTouchJS usually queues internally if we use the simple API?
-                // No, RealtimeAudioProcessor wraps PitchShifter.process() which returns processed data immediately.
-                // If there is leftover, we lose it if we don't buffer it.
-                // BUT RealtimeAudioProcessor doesn't seem to expose internal buffer.
-                // Actually soundtouchjs process() keeps internal buffer. 
-                // If we pass in data, it adds to buffer, and returns what it can.
-                // Ideally we should handle the "extra" if 'available > needed'.
-                // For now, let's assume loose sync is okay or SoundTouch won't return massive chunks.
+                // FIX: Buffer overflow handling - store excess samples for next iteration
+                // If SoundTouch returned more samples than we needed, store the excess
+                if (available > needed) {
+                    const excessCount = available - needed;
+                    this.leftoverLeft = new Float32Array(excessCount);
+                    this.leftoverRight = new Float32Array(excessCount);
+                    this.leftoverIndex = 0;
+
+                    for (let k = 0; k < excessCount; k++) {
+                        this.leftoverLeft[k] = processed.left[needed + k];
+                        this.leftoverRight[k] = processed.right[needed + k];
+                    }
+                }
             }
 
-            // Check if end
+            // Check if end - FIX: Account for tempo in end detection
+            // At slower tempos, we need to continue processing even if no active tracks
+            // because SoundTouch may still have buffered samples to output
             if (activeTracks === 0 && generatedCount < BUFFER_SIZE) {
-                // End of playback
-                this.stop();
-                this.emit('ended');
-                break;
+                // End of playback - only stop if we have no leftovers and no active tracks
+                if (!this.leftoverLeft && !this.leftoverRight) {
+                    this.stop();
+                    this.emit('ended');
+                    break;
+                }
             }
         }
 
