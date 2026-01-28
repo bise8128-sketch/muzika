@@ -67,21 +67,41 @@ export class PlaybackController {
         this.echoFeedback = this.audioContext.createGain();
         this.echoGain = this.audioContext.createGain();
 
+        // Initialize EQ & Master
+        this.masterGain = this.audioContext.createGain();
+        this.bassNode = this.audioContext.createBiquadFilter();
+        this.midNode = this.audioContext.createBiquadFilter();
+        this.trebleNode = this.audioContext.createBiquadFilter();
+
+        // EQ Config
+        this.bassNode.type = 'lowshelf';
+        this.bassNode.frequency.value = 200; // Hz
+
+        this.midNode.type = 'peaking';
+        this.midNode.frequency.value = 1000; // Hz
+        this.midNode.Q.value = 0.7;
+
+        this.trebleNode.type = 'highshelf';
+        this.trebleNode.frequency.value = 3000; // Hz
+
+        // Build Master Chain: masterGain -> bass -> mid -> treble -> destination
+        this.masterGain.connect(this.bassNode);
+        this.bassNode.connect(this.midNode);
+        this.midNode.connect(this.trebleNode);
+        this.trebleNode.connect(this.audioContext.destination);
+
         // Echo config
         this.echoNode.delayTime.value = 0.3; // 300ms default
         this.echoFeedback.gain.value = 0.4;
         this.echoGain.gain.value = 0; // Default dry
 
-        // Connect Effects: Effects -> Destination
-        // We will connect ScriptNode -> Effects -> Destination
-
         // Reverb Chain
         this.reverbNode.connect(this.reverbGain);
-        this.reverbGain.connect(this.audioContext.destination);
+        this.reverbGain.connect(this.masterGain);
 
         // Echo Chain
         this.echoNode.connect(this.echoGain);
-        this.echoGain.connect(this.audioContext.destination);
+        this.echoGain.connect(this.masterGain);
         this.echoNode.connect(this.echoFeedback);
         this.echoFeedback.connect(this.echoNode);
 
