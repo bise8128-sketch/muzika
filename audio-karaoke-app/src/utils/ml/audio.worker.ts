@@ -111,9 +111,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             sendProgress({ phase: 'separating', currentSegment: 0, totalSegments, percentage: 40, message: 'Starting separation...' });
 
             const results = await processAudioInChunks(
-                session,
+                session, // This is now an instance of InferenceEngine (variable name 'session' kept for minimized diff, but it holds an engine)
                 segments.map(s => s.data),
                 2, // channels
+                sampleRate,
                 (currentSegment, total) => {
                     const separationProgress = 40 + ((currentSegment / total) * 50);
                     sendProgress({

@@ -11,13 +11,22 @@ const sessionCache = new Map<string, ort.InferenceSession>();
  * Loads an ONNX model, either from IndexedDB cache or by downloading it.
  * Creates an InferenceSession and caches it in memory.
  */
+import { InferenceEngine } from './inference';
+
+/**
+ * Loads an ONNX model, either from IndexedDB cache or by downloading it.
+ * Creates an InferenceEngine with the loaded session.
+ */
 export async function loadModel(
     modelInfo: ModelInfo,
     onProgress?: (progress: ModelDownloadProgress) => void
-): Promise<ort.InferenceSession> {
+): Promise<InferenceEngine> {
     // Return from memory cache if already loaded
     if (sessionCache.has(modelInfo.id)) {
-        return sessionCache.get(modelInfo.id)!;
+        const session = sessionCache.get(modelInfo.id)!;
+        const engine = new InferenceEngine(session, modelInfo);
+        await engine.init();
+        return engine;
     }
 
     let modelData: ArrayBuffer | null = null;
@@ -40,8 +49,15 @@ export async function loadModel(
     // Create InferenceSession
     try {
         const session = await ort.InferenceSession.create(modelData, options);
+        // We do NOT cache the engine directly because engines are stateful (strategies might be stateful)
+        // But sessions are stateless and expensive. We cache sessions.
         sessionCache.set(modelInfo.id, session);
-        return session;
+
+        // Return new engine instance with the cached session
+        const { InferenceEngine } = await import('./inference');
+        const engine = new InferenceEngine(session, modelInfo);
+        await engine.init();
+        return engine;
     } catch (err) {
         console.error(`Failed to create ONNX session for model ${modelInfo.id}:`, err);
         throw err;

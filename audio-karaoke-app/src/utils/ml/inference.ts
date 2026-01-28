@@ -1,133 +1,71 @@
 import * as ort from 'onnxruntime-web';
-import type { InferenceOutput } from '@/types/model';
-import { bufferPool } from '../audio/bufferPool';
+import type { InferenceOutput, ModelInfo } from '@/types/model';
+import { ModelType } from '@/types/model';
+import type { InferenceStrategy } from './inference/types';
+import { WaveformInferenceStrategy } from './inference/waveformStrategy';
+import { SpectralInferenceStrategy } from './inference/spectralStrategy';
 
 /**
- * Manages GPU memory by tracking and disposing of tensors.
+ * Factory to create the appropriate inference strategy.
  */
-export class GPUMemoryManager {
-    private activeTensors: Set<ort.Tensor> = new Set();
-
-    /**
-     * Tracks a tensor for later disposal.
-     */
-    track(tensor: ort.Tensor): ort.Tensor {
-        this.activeTensors.add(tensor);
-        return tensor;
-    }
-
-    /**
-     * Disposes of all tracked tensors to prevent memory leaks.
-     */
-    dispose(): void {
-        this.activeTensors.forEach(tensor => {
-            // InferenceSession output tensors should be disposed explicitly in WebGPU
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (tensor as any).dispose?.();
-            } catch (e) {
-                // Silently fail if dispose is not available or fails
-            }
-        });
-        this.activeTensors.clear();
+function createStrategy(modelInfo: ModelInfo): InferenceStrategy {
+    switch (modelInfo.type) {
+        case ModelType.DEMUCS:
+        case ModelType.BS_ROFORMER:
+            return new SpectralInferenceStrategy(modelInfo.config || {});
+        case ModelType.MDX:
+        default:
+            return new WaveformInferenceStrategy();
     }
 }
 
 /**
- * Runs inference on a single audio chunk.
- * 
- * @param session The ONNX InferenceSession
- * @param inputData Float32Array of audio data (expected shape: [channels, samples])
- * @param channels Number of audio channels (usually 2)
- * @param samples Number of samples in the chunk
+ * Facade for running inference using the appropriate strategy.
  */
-export async function runInference(
-    session: ort.InferenceSession,
-    inputData: Float32Array,
-    channels: number,
-    samples: number
-): Promise<InferenceOutput> {
-    const memoryManager = new GPUMemoryManager();
+export class InferenceEngine {
+    private session: ort.InferenceSession;
+    private strategy: InferenceStrategy;
 
-    try {
-        // Create input tensor [1, channels, samples] or as required by model
-        // Note: This shape might need adjustment based on the specific MDX-Net model used.
-        // Standard MDX models often use [1, 2, duration * sample_rate]
-        const inputShape = [1, channels, samples];
-        const inputTensor = new ort.Tensor('float32', inputData, inputShape);
-        memoryManager.track(inputTensor);
+    constructor(session: ort.InferenceSession, modelInfo: ModelInfo) {
+        this.session = session;
+        this.strategy = createStrategy(modelInfo);
+    }
 
-        const feeds: Record<string, ort.Tensor> = {};
-        // Assumes input node name is "input", common in MDX models
-        const inputName = session.inputNames[0];
-        feeds[inputName] = inputTensor;
+    async init() {
+        await this.strategy.initialize(this.session);
+    }
 
-        // Run inference
-        const results = await session.run(feeds);
+    async processChunk(inputData: Float32Array, channels: number, sampleRate: number): Promise<InferenceOutput> {
+        return this.strategy.processChunk(this.session, inputData, channels, sampleRate);
+    }
 
-        // Extract outputs. Assumes standard vocal/instrumental output names or first two outputs.
-        const outputNames = session.outputNames;
-
-        const vocalsTensor = results[outputNames.find(n => n.includes('vocal')) || outputNames[0]];
-        const instrumentalTensor = results[outputNames.find(n => n.includes('inst')) || outputNames[1]];
-
-        if (!vocalsTensor || !instrumentalTensor) {
-            throw new Error(`Inference produced incomplete results. Expected 2 outputs, got ${Object.keys(results).length}`);
-        }
-
-        // Track output tensors for disposal
-        memoryManager.track(vocalsTensor);
-        memoryManager.track(instrumentalTensor);
-
-        // Copy data to pooled buffers to ensure we can dispose of the tensors immediately
-        const vocalsData = vocalsTensor.data as Float32Array;
-        const instrumentalsData = instrumentalTensor.data as Float32Array;
-
-        const vocalsPooled = bufferPool.acquire(vocalsData.length);
-        const instrumentalsPooled = bufferPool.acquire(instrumentalsData.length);
-
-        vocalsPooled.set(vocalsData);
-        instrumentalsPooled.set(instrumentalsData);
-
-        return {
-            vocals: vocalsPooled,
-            instrumentals: instrumentalsPooled,
-        };
-    } catch (err) {
-        console.error('Inference execution failed:', err);
-        throw err;
-    } finally {
-        // Dispose of all tracked tensors (including session outputs)
-        memoryManager.dispose();
+    dispose() {
+        this.strategy.dispose();
     }
 }
 
 /**
  * Processes an array of audio segments sequentially.
  * Used for batch processing long audio files.
- * 
- * @param session The ONNX InferenceSession
- * @param segments Array of Float32Array segments
- * @param channels Number of audio channels (usually 2)
- * @param onProgress Callback for progress tracking
  */
 export async function processAudioInChunks(
-    session: ort.InferenceSession,
+    engine: InferenceEngine,
     segments: Float32Array[],
     channels: number,
+    sampleRate: number,
     onProgress?: (index: number, total: number) => void
 ): Promise<InferenceOutput[]> {
     const results: InferenceOutput[] = [];
 
     for (let i = 0; i < segments.length; i++) {
         const segment = segments[i];
-        const samples = segment.length / channels;
 
         if (onProgress) onProgress(i, segments.length);
 
-        const result = await runInference(session, segment, channels, samples);
+        const result = await engine.processChunk(segment, channels, sampleRate);
         results.push(result);
     }
 
     return results;
 }
+

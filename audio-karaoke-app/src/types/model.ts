@@ -2,11 +2,27 @@
  * ML model type definitions
  */
 
+export enum ModelType {
+    MDX = 'mdx',
+    DEMUCS = 'demucs',
+    BS_ROFORMER = 'bs_roformer'
+}
+
+export interface ModelConfig {
+    fftSize?: number;
+    hopLength?: number;
+    windowSize?: number;
+    sampleRate?: number; // Target sample rate for the model
+    channels?: number;
+}
+
 export interface ModelInfo {
     id: string;
+    type: ModelType;
     name: string;
     version: string;
     size: number; // Size in bytes
+    config?: ModelConfig; // Architecture specific config
     url?: string;
     description?: string;
     downloadedAt?: number;
