@@ -1,10 +1,13 @@
 /**
  * AudioContext initialization and management
- * Handles Web Audio API context creation and state management
+ * Handles Web Audio API context creation and state management with AudioWorklet support
  */
+
+import { AudioWorkletManager } from './audioWorkletProcessor';
 
 let audioContext: AudioContext | null = null;
 let gainNode: GainNode | null = null;
+let workletManager: AudioWorkletManager | null = null;
 
 /**
  * Initialize and get the global AudioContext
@@ -20,6 +23,9 @@ export function getAudioContext(): AudioContext {
         // Create gain node for volume control
         gainNode = audioContext.createGain();
         gainNode.connect(audioContext.destination);
+
+        // Initialize AudioWorklet manager
+        workletManager = new AudioWorkletManager(audioContext);
     }
 
     // Resume context if suspended (browser autoplay policy)
@@ -41,12 +47,79 @@ export function getGainNode(): GainNode {
 }
 
 /**
+ * Get the AudioWorklet manager for real-time audio processing
+ */
+export function getWorkletManager(): AudioWorkletManager | null {
+    if (!workletManager) {
+        const ctx = getAudioContext();
+        if (ctx) {
+            workletManager = new AudioWorkletManager(ctx);
+        }
+    }
+    return workletManager;
+}
+
+/**
+ * Initialize AudioWorklet for real-time audio processing
+ */
+export async function initializeAudioWorklet(): Promise<void> {
+    const manager = getWorkletManager();
+    if (manager) {
+        await manager.initialize();
+    }
+}
+
+/**
  * Set master volume
  * @param volume - Volume level (0.0 to 1.0)
  */
 export function setVolume(volume: number): void {
     const gain = getGainNode();
     gain.gain.value = Math.max(0, Math.min(1, volume));
+}
+
+/**
+ * Set AudioWorklet gain for real-time processing
+ * @param gain - Gain level (0.0 to 2.0)
+ */
+export function setWorkletGain(gain: number): void {
+    const manager = getWorkletManager();
+    if (manager) {
+        manager.setGain(gain);
+    }
+}
+
+/**
+ * Set AudioWorklet bypass mode
+ * @param bypass - Whether to bypass audio processing
+ */
+export function setWorkletBypass(bypass: boolean): void {
+    const manager = getWorkletManager();
+    if (manager) {
+        manager.setBypass(bypass);
+    }
+}
+
+/**
+ * Set callback for performance metrics from AudioWorklet
+ * @param callback - Function to call with metrics data
+ */
+export function onWorkletMetricsUpdate(callback: (metrics: any) => void): void {
+    const manager = getWorkletManager();
+    if (manager) {
+        manager.onMetricsUpdate(callback);
+    }
+}
+
+/**
+ * Get average performance metrics from AudioWorklet
+ */
+export function getWorkletAverageMetrics(): any | null {
+    const manager = getWorkletManager();
+    if (manager) {
+        return manager.getAverageMetrics();
+    }
+    return null;
 }
 
 /**
@@ -73,6 +146,12 @@ export async function resumeAudioContext(): Promise<void> {
  */
 export async function closeAudioContext(): Promise<void> {
     if (audioContext) {
+        // Clean up AudioWorklet
+        if (workletManager) {
+            workletManager.destroy();
+            workletManager = null;
+        }
+
         await audioContext.close();
         audioContext = null;
         gainNode = null;
@@ -91,4 +170,22 @@ export function getAudioContextState(): AudioContextState | null {
  */
 export function isWebAudioSupported(): boolean {
     return !!(window.AudioContext || (window as any).webkitAudioContext);
+}
+
+/**
+ * Check if AudioWorklet is supported
+ */
+export function isAudioWorkletSupported(): boolean {
+    return !!(window.AudioContext && (window.AudioContext.prototype as any).audioWorklet);
+}
+
+/**
+ * Get AudioWorklet node for connecting to audio graph
+ */
+export function getWorkletNode(): AudioWorkletNode | null {
+    const manager = getWorkletManager();
+    if (manager) {
+        return manager.getWorkletNode();
+    }
+    return null;
 }
