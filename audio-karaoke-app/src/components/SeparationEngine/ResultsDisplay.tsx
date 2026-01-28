@@ -5,7 +5,7 @@ import React from 'react';
 interface track {
     id: string;
     name: string;
-    blob: Blob | null;
+    blob: Blob | AudioBuffer | null;
 }
 
 interface ResultsDisplayProps {
