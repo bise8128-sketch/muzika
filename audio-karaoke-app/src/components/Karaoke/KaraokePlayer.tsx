@@ -11,6 +11,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { EffectsPanel } from './EffectsPanel';
+import { LyricDisplay } from './LyricDisplay';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
