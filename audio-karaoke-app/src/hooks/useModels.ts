@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ModelInfo } from '@/types/model';
-import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/utils/constants';
+import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/app/api/models/route';
 
 export function useModels() {
     const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
