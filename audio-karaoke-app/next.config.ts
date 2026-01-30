@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: 'node_modules/onnxruntime-web/dist/*.wasm',
+            from: 'node_modules/onnxruntime-web/dist/*.{wasm,mjs}',
             to: ({ context }: { context: string }) => {
               return `${context}/public/wasm/[name][ext]`;
             },
