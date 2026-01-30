@@ -87,7 +87,7 @@ const nextConfig: NextConfig = {
           // Allow WASM execution with Content-Security-Policy
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://github.com https://githubusercontent.com https://huggingface.co; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;",
+            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://github.com https://githubusercontent.com https://huggingface.co https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;",
           },
         ],
       },
