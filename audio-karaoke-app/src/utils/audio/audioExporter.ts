@@ -5,6 +5,7 @@
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { applyPitchAndTempo } from './pitchTempo';
 
 // Singleton FFmpeg instance
 let ffmpegInstance: FFmpeg | null = null;
@@ -204,4 +205,72 @@ export async function exportAudio(
     }
 
     downloadBlob(blob, filename);
+}
+
+/**
+ * Render multiple audio buffers into a single buffer with effects applied
+ */
+export async function renderProcessedAudio(
+    buffers: AudioBuffer[],
+    volumes: number[],
+    effects: {
+        pitch: number,
+        tempo: number,
+        bass: number,
+        mid: number,
+        treble: number
+    }
+): Promise<AudioBuffer> {
+    // 1. Combine buffers with volumes
+    const sampleRate = buffers[0]?.sampleRate || 44100;
+    const duration = buffers[0]?.duration || 0;
+    const channels = 2; // Always stereo for export
+
+    const offlineCtx = new OfflineAudioContext(channels, duration * sampleRate, sampleRate);
+
+    buffers.forEach((buffer, idx) => {
+        const source = offlineCtx.createBufferSource();
+        source.buffer = buffer;
+
+        const gain = offlineCtx.createGain();
+        gain.gain.value = volumes[idx] ?? 1.0;
+
+        source.connect(gain);
+        gain.connect(offlineCtx.destination);
+        source.start(0);
+    });
+
+    const combinedBuffer = await offlineCtx.startRendering();
+
+    // 2. Apply Pitch and Tempo
+    const pitchTempoBuffer = await applyPitchAndTempo(combinedBuffer, effects.pitch / 100, effects.tempo);
+
+    // 3. Apply EQ
+    const eqOfflineCtx = new OfflineAudioContext(channels, pitchTempoBuffer.length, sampleRate);
+    const eqSource = eqOfflineCtx.createBufferSource();
+    eqSource.buffer = pitchTempoBuffer;
+
+    const bass = eqOfflineCtx.createBiquadFilter();
+    bass.type = 'lowshelf';
+    bass.frequency.value = 200;
+    bass.gain.value = effects.bass;
+
+    const mid = eqOfflineCtx.createBiquadFilter();
+    mid.type = 'peaking';
+    mid.frequency.value = 1000;
+    mid.Q.value = 0.7;
+    mid.gain.value = effects.mid;
+
+    const treble = eqOfflineCtx.createBiquadFilter();
+    treble.type = 'highshelf';
+    treble.frequency.value = 3000;
+    treble.gain.value = effects.treble;
+
+    eqSource.connect(bass);
+    bass.connect(mid);
+    mid.connect(treble);
+    treble.connect(eqOfflineCtx.destination);
+    eqSource.start(0);
+
+    return await eqOfflineCtx.startRendering();
 }
