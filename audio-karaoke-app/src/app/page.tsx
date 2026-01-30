@@ -11,14 +11,17 @@ import { exportAudio } from '@/utils/audio/audioExporter';
 import { getHistorySessions, restoreSession, clearHistory as dbClearHistory, HistorySession } from '@/utils/storage/historyStore';
 import { float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
+import { DEFAULT_MODEL_ID } from '@/utils/constants';
+import { useSeparation } from '@/hooks/useSeparation';
+import { useModels } from '@/hooks/useModels';
 
 const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
-  loading: () => <div className="h-64 flex items-center justify-center">Loading Karaoke Player...</div>,
+  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Karaoke Player...</div>,
   ssr: false
 });
 
 const ResultsDisplay = dynamic(() => import('@/components/SeparationEngine/ResultsDisplay').then(mod => mod.ResultsDisplay), {
-  loading: () => <div className="h-64 flex items-center justify-center">Preparing results...</div>,
+  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Preparing results...</div>,
   ssr: false
 });
 
@@ -35,15 +38,11 @@ const Onboarding = dynamic(() => import('@/components/UI/Onboarding').then(mod =
 });
 
 const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManager').then(mod => mod.ModelManager), {
-  loading: () => <div className="h-64 flex items-center justify-center">Loading Model Manager...</div>,
+  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Model Manager...</div>,
   ssr: false
 });
 
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
-
-import { DEFAULT_MODEL_ID } from '@/utils/constants';
-import { useSeparation } from '@/hooks/useSeparation';
-import { useModels } from '@/hooks/useModels';
 
 // Backend Status Component
 function BackendStatus() {
@@ -80,8 +79,6 @@ function BackendStatus() {
     </div>
   );
 }
-
-// ... existing dynamic imports ...
 
 export default function Home() {
   const { models: AVAILABLE_MODELS } = useModels();
@@ -156,15 +153,13 @@ export default function Home() {
     } else if (separationStatus === 'error') {
       console.error("Separation Error", separationMessage);
       setState('upload');
-      // Replace with toast later, but alert is better than nothing for now
       alert(`Error: ${separationMessage || 'Unknown error'}`);
     }
-  }, [separationStatus, separationResult, separationMessage]);
+  }, [separationStatus, separationResult, separationMessage, autoStartKaraoke, controller]);
 
   const handleUpload = async (files: File[]) => {
     if (files.length === 0) return;
 
-    // Batch Mode Handling
     if (files.length > 1) {
       batch.addToQueue(files);
       setState('batch');
@@ -172,7 +167,6 @@ export default function Home() {
     }
 
     const file = files[0];
-
     const modelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
     if (!modelInfo) {
       alert('Selected model not found!');
@@ -193,10 +187,8 @@ export default function Home() {
     }
 
     try {
-      // The tracks in ResultsDisplay are AudioBuffers (passed via blob property in the tracks array)
       const buffer = track.blob as AudioBuffer;
       const filename = `${track.name.toLowerCase()}_${Date.now()}.${format}`;
-
       await exportAudio(buffer, format, filename);
     } catch (e) {
       console.error('Download failed:', e);
@@ -212,14 +204,13 @@ export default function Home() {
         return;
       }
 
-      // Convert ArrayBuffers back to AudioBuffers for the UI
       const vocals = float32ArrayToAudioBuffer(new Float32Array(session.vocals), session.sampleRate, 2);
       const instrumentals = float32ArrayToAudioBuffer(new Float32Array(session.instrumentals), session.sampleRate, 2);
 
       setRestoredResult({
         vocals,
         instrumentals,
-        originalAudio: null, // Not stored to save space
+        originalAudio: null,
         timestamp: session.processedAt,
         fileHash: session.fileHash
       });
@@ -243,43 +234,6 @@ export default function Home() {
       controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
     }
     setState('karaoke');
-  };
-
-  const batchHandler = () => {
-    return (
-      <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
-        <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
-            <span>←</span> Back
-          </button>
-          <div className="space-x-4">
-            <button
-              onClick={batch.clearQueue}
-              disabled={batch.isProcessing}
-              className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => {
-                const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
-                if (model) batch.startBatch(model);
-              }}
-              disabled={batch.isProcessing || batch.queue.length === 0}
-              className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
-            >
-              {batch.isProcessing ? 'Processing...' : 'Start Batch'}
-            </button>
-          </div>
-        </div>
-
-        <BatchQueue
-          queue={batch.queue}
-          onRemove={batch.removeFromQueue}
-          onDownload={handleBatchDownload}
-        />
-      </div>
-    );
   };
 
   const clearHistory = async () => {
@@ -358,7 +312,6 @@ export default function Home() {
         );
 
       case 'karaoke':
-        const karaokeResult = separationResult || restoredResult;
         return (
           <div className="animate-in fade-in duration-700">
             <button
@@ -389,12 +342,46 @@ export default function Home() {
             <ModelManager />
           </div>
         );
+
+      case 'batch':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
+            <div className="flex justify-between items-center mb-6">
+              <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
+                <span>←</span> Back
+              </button>
+              <div className="space-x-4">
+                <button
+                  onClick={batch.clearQueue}
+                  disabled={batch.isProcessing}
+                  className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => {
+                    const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
+                    if (model) batch.startBatch(model);
+                  }}
+                  disabled={batch.isProcessing || batch.queue.length === 0}
+                  className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
+                >
+                  {batch.isProcessing ? 'Processing...' : 'Start Batch'}
+                </button>
+              </div>
+            </div>
+            <BatchQueue
+              queue={batch.queue}
+              onRemove={batch.removeFromQueue}
+              onDownload={handleBatchDownload}
+            />
+          </div>
+        );
     }
   };
 
   return (
     <div className="min-h-screen selection:bg-primary/30">
-      {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-white/5">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={handleRestart}>
@@ -420,9 +407,9 @@ export default function Home() {
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5"
+              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5 transition-all"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -431,7 +418,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="container mx-auto px-6 pt-32 pb-20">
         {state === 'upload' && (
           <header className="text-center max-w-3xl mx-auto mb-16 space-y-6">
@@ -464,7 +450,6 @@ export default function Home() {
         onClose={() => setShowHelp(false)}
       />
 
-      {/* Footer / Credits */}
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
         <p>© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.</p>
       </footer>
