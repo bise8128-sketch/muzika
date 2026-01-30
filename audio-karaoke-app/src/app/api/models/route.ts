@@ -37,6 +37,54 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
             targetFreqs: 3072,
             targetFrames: 256
         }
+    },
+    {
+        id: 'kim-vocal-2',
+        type: ModelType.DEMUCS,
+        name: 'Kim Vocal 2',
+        version: '2.0.0',
+        size: 50 * 1024 * 1024,
+        description: 'Premier model for ultra-clean vocal extraction with minimal artifacts. Preferred by professionals.',
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/Kim_Vocal_2.onnx'),
+        config: {
+            fftSize: 6144,
+            hopLength: 1024,
+            windowSize: 6144,
+            targetFreqs: 3072,
+            targetFrames: 256
+        }
+    },
+    {
+        id: 'mdx-kara-2',
+        type: ModelType.DEMUCS,
+        name: 'MDX-Net Karaoke 2',
+        version: '2.0.0',
+        size: 45 * 1024 * 1024,
+        description: 'Specialized for karaoke: removes lead vocals while preserving backing harmonies.',
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_KARA_2.onnx'),
+        config: {
+            fftSize: 6144,
+            hopLength: 1024,
+            windowSize: 6144,
+            targetFreqs: 3072,
+            targetFrames: 256
+        }
+    },
+    {
+        id: 'mdx-net-main',
+        type: ModelType.DEMUCS,
+        name: 'MDX-Net Main',
+        version: '1.0.0',
+        size: 45 * 1024 * 1024,
+        description: 'A robust general-purpose model for balanced vocal and instrumental separation.',
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_Main.onnx'),
+        config: {
+            fftSize: 6144,
+            hopLength: 1024,
+            windowSize: 6144,
+            targetFreqs: 3072,
+            targetFrames: 256
+        }
     }
 ];
 
