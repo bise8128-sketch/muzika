@@ -13,8 +13,9 @@
     "analyze": "cross-env ANALYZE=true next build"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
+    "@ffmpeg/util": "^0.12.1",
     "dexie": "^4.2.1",
     "next": "16.1.6",
     "onnxruntime-web": "^1.23.2",
