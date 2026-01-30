@@ -14,6 +14,10 @@ export class STFT {
         this.window = this.createHannWindow(fftSize);
     }
 
+    public getFftSize(): number {
+        return this.fftSize;
+    }
+
     private createHannWindow(size: number): Float32Array {
         const window = new Float32Array(size);
         for (let i = 0; i < size; i++) {
@@ -171,6 +175,10 @@ export class ISTFT {
         this.fftSize = fftSize;
         this.hopLength = hopLength;
         this.window = this.createHannWindow(fftSize);
+    }
+
+    public getFftSize(): number {
+        return this.fftSize;
     }
 
     private createHannWindow(size: number): Float32Array {

@@ -25,7 +25,32 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
     }
 
     async initialize(session: ort.InferenceSession): Promise<void> {
-        // Prepare any specific resources
+        console.log('[SpectralInferenceStrategy] Initializing with session...');
+        // Inspect input metadata to adjust targetFreqs and targetFrames if possible
+        const inputName = session.inputNames[0];
+        const inputMeta = session.inputNames.length > 0 ? (session as any).inputMetadata?.[inputName] : null;
+
+        if (inputMeta && inputMeta.dims) {
+            console.log(`[SpectralInferenceStrategy] Detected input dimensions: ${JSON.stringify(inputMeta.dims)}`);
+            // Typically [Batch, Channels, Freq, Time]
+            const freqDim = inputMeta.dims[2];
+            const timeDim = inputMeta.dims[3];
+
+            if (typeof freqDim === 'number' && freqDim > 0) {
+                (this.config as any).targetFreqs = freqDim;
+
+                // If freqDim is different from expected, we might need to adjust fftSize
+                const expectedFftSize = (freqDim - 1) * 2;
+                if (expectedFftSize !== this.stft.getFftSize()) {
+                    console.log(`[SpectralInferenceStrategy] Re-initializing STFT with fftSize: ${expectedFftSize}`);
+                    this.stft = new STFT(expectedFftSize, this.config.hopLength || 1024);
+                    this.istft = new ISTFT(expectedFftSize, this.config.hopLength || 1024);
+                }
+            }
+            if (typeof timeDim === 'number' && timeDim > 0) {
+                (this.config as any).targetFrames = timeDim;
+            }
+        }
     }
 
     async processChunk(
