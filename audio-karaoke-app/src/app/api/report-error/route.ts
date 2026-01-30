@@ -7,7 +7,7 @@ const errorSchema = z.object({
     message: z.string(),
     stack: z.string().optional(),
     component: z.string().optional(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const POST = createHandler(errorSchema, async (data, request) => {

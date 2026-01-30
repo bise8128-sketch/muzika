@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
         patterns: [
           {
             from: 'node_modules/onnxruntime-web/dist/*.wasm',
-            to: ({ context }) => {
+            to: ({ context }: { context: string }) => {
               return `${context}/public/wasm/[name][ext]`;
             },
           },

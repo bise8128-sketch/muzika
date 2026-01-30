@@ -14,7 +14,7 @@ export function createHandler<T>(
             if (!result.success) {
                 return NextResponse.json({
                     error: 'Validation failed',
-                    details: result.error.errors
+                    details: result.error.issues
                 }, { status: 400 });
             }
 
