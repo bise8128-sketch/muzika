@@ -4,7 +4,7 @@
  */
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 import { applyPitchAndTempo } from './pitchTempo';
 
 // Singleton FFmpeg instance
@@ -24,13 +24,12 @@ async function getFFmpeg(): Promise<FFmpeg> {
     }
 
     if (!ffmpegLoaded) {
-        // Use CDN URLs to avoid Webpack module resolution issues with local files
-        // Especially problematic in Next.js development mode with ESM modules
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+        // Use local files to avoid Blob URL module resolution issues
+        const baseURL = `${window.location.origin}/ffmpeg`;
 
         await ffmpegInstance.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            coreURL: `${baseURL}/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
         });
 
         ffmpegLoaded = true;
