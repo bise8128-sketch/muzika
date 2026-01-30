@@ -25,9 +25,13 @@ async function getFFmpeg(): Promise<FFmpeg> {
 
     if (!ffmpegLoaded) {
         // Use local assets copied via Webpack CopyPlugin
+        // We use absolute URLs from window.origin to avoid Webpack module resolution issues
+        // with blob URLs in some environments.
+        const baseURL = typeof window !== 'undefined' ? window.location.origin : '';
+
         await ffmpegInstance.load({
-            coreURL: await toBlobURL('/ffmpeg/ffmpeg-core.js', 'text/javascript'),
-            wasmURL: await toBlobURL('/ffmpeg/ffmpeg-core.wasm', 'application/wasm'),
+            coreURL: `${baseURL}/ffmpeg/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg/ffmpeg-core.wasm`,
         });
 
         ffmpegLoaded = true;
