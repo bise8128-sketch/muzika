@@ -13,9 +13,11 @@ import { bufferPool } from '../../audio/bufferPool';
 export class SpectralInferenceStrategy extends BaseInferenceStrategy implements InferenceStrategy {
     private stft: STFT;
     private istft: ISTFT;
+    private config: ModelConfig;
 
     constructor(config: ModelConfig) {
         super();
+        this.config = config;
         const fftSize = config.fftSize || 4096;
         const hopLength = config.hopLength || 1024;
         this.stft = new STFT(fftSize, hopLength);
@@ -92,23 +94,29 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             fillPlane(2, stftR.magnitude, stftR.phase, false);
             fillPlane(3, stftR.magnitude, stftR.phase, true);
 
-            // Shape: [1, 4, Freq, Frames]? OR [1, 4, Frames, Freq]?
-            // STFT 'dims' is [Frames, Freq].
-            // If model expects [B, C, F, T], we need to transpose our STFT data if it's [T, F].
-            // Our STFT is flat [T, F]. Frame 0 is first.
-            // So floatData is currently [Plane 0 (T, F), Plane 1...].
-            // We might need to transpose to [F, T] logic if model expects Freq dim first.
-            // Let's assume [B, 4, F, T] for now, requiring transpose of our T-major data.
+            const { dims } = stftL;
+            const [numFrames, numFreqs] = dims;
 
-            // Transpose helper
+            // Handle fixed shapes for models like MDX HQ3
+            // These can be passed in ModelConfig or use defaults for HQ3
+            const targetFreqs = (this.config as any).targetFreqs || 3072;
+            const targetFrames = (this.config as any).targetFrames || 256;
+
+            const tensorSize = 4 * targetFreqs * targetFrames;
+            const floatData = new Float32Array(tensorSize);
+
+            // Transpose helper with cropping/padding to fixed size
             const transposeAndFill = (planeIdx: number, mag: Float32Array, ph: Float32Array, isImag: boolean) => {
-                const planeOffset = planeIdx * (numFreqs * numFrames);
-                for (let f = 0; f < numFreqs; f++) {
-                    for (let t = 0; t < numFrames; t++) {
+                const planeOffset = planeIdx * (targetFreqs * targetFrames);
+                for (let f = 0; f < targetFreqs; f++) {
+                    for (let t = 0; t < targetFrames; t++) {
+                        // Skip if out of bounds (padding with 0)
+                        if (f >= numFreqs || t >= numFrames) continue;
+
                         // Src index (Time-major): t * numFreqs + f
                         const srcIdx = t * numFreqs + f;
-                        // Dst index (Freq-major): f * numFrames + t (within the plane)
-                        const dstIdx = f * numFrames + t;
+                        // Dst index (Freq-major): f * targetFrames + t (within the plane)
+                        const dstIdx = f * targetFrames + t;
 
                         const val = isImag
                             ? mag[srcIdx] * Math.sin(ph[srcIdx])
@@ -124,7 +132,7 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             transposeAndFill(2, stftR.magnitude, stftR.phase, false);
             transposeAndFill(3, stftR.magnitude, stftR.phase, true);
 
-            const shape = [1, 4, numFreqs, numFrames];
+            const shape = [1, 4, targetFreqs, targetFrames];
             const inputTensor = new ort.Tensor('float32', floatData, shape);
             this.track(inputTensor);
 
@@ -154,19 +162,22 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
                 // And separate L/R
 
                 // data layout: [L_Re, L_Im, R_Re, R_Im] planes
-                const planeSize = numFreqs * numFrames;
+                const planeSize = targetFreqs * targetFrames;
 
                 const getPlane = (idx: number) => data.subarray(idx * planeSize, (idx + 1) * planeSize);
 
                 // Helper to de-transpose and convert to Mag/Phase
                 const toPolar = (realPlane: Float32Array, imagPlane: Float32Array) => {
-                    const mag = new Float32Array(planeSize);
-                    const ph = new Float32Array(planeSize);
+                    const mag = new Float32Array(numFreqs * numFrames);
+                    const ph = new Float32Array(numFreqs * numFrames);
 
-                    for (let f = 0; f < numFreqs; f++) {
-                        for (let t = 0; t < numFrames; t++) {
-                            // Src: F-major (f * numFrames + t)
-                            const srcIdx = f * numFrames + t;
+                    for (let f = 0; f < targetFreqs; f++) {
+                        for (let t = 0; t < targetFrames; t++) {
+                            // Skip if outside our original STFT bounds
+                            if (f >= numFreqs || t >= numFrames) continue;
+
+                            // Src: F-major (f * targetFrames + t)
+                            const srcIdx = f * targetFrames + t;
                             // Dst: T-major (t * numFreqs + f)
                             const dstIdx = t * numFreqs + f;
 

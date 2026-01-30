@@ -106,7 +106,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 getChannelData: (channel: number) => channel === 0 ? decodedData.left : decodedData.right
             };
 
-            const segments = segmentAudio(mockBuffer as import('@/utils/audio/audioProcessor').SimpleAudioBuffer);
+            const targetFrames = (modelInfo.config as any)?.targetFrames || 256;
+            const hopLength = modelInfo.config?.hopLength || 1024;
+            const idealSegmentDuration = (targetFrames * hopLength) / sampleRate;
+
+            const segments = segmentAudio(
+                mockBuffer as import('@/utils/audio/audioProcessor').SimpleAudioBuffer,
+                idealSegmentDuration
+            );
             const totalSegments = segments.length;
 
             // Phase 5: Inference

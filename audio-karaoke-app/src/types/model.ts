@@ -14,6 +14,8 @@ export interface ModelConfig {
     windowSize?: number;
     sampleRate?: number; // Target sample rate for the model
     channels?: number;
+    targetFreqs?: number;
+    targetFrames?: number;
 }
 
 export interface ModelInfo {
