@@ -115,11 +115,14 @@ export function float32ArrayToAudioBuffer(
     numberOfChannels: number = 1
 ): AudioBuffer {
     const audioContext = getAudioContext();
-    const audioBuffer = audioContext.createBuffer(numberOfChannels, data.length, sampleRate);
+    const samplesPerChannel = data.length / numberOfChannels;
+    const audioBuffer = audioContext.createBuffer(numberOfChannels, samplesPerChannel, sampleRate);
 
     for (let channel = 0; channel < numberOfChannels; channel++) {
         const channelData = audioBuffer.getChannelData(channel);
-        channelData.set(data);
+        for (let i = 0; i < samplesPerChannel; i++) {
+            channelData[i] = data[i * numberOfChannels + channel];
+        }
     }
 
     return audioBuffer;

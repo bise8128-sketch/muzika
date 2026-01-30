@@ -56,13 +56,12 @@ export function segmentAudio(
         const endSample = Math.min((i + 1) * segmentSamples + overlapSamples, audioBuffer.length);
         const segmentLength = endSample - startSample;
 
-        // Mix channels to mono for processing
-        const segmentData = new Float32Array(segmentLength);
+        // Preserve all channels (interleaved)
+        const segmentData = new Float32Array(segmentLength * numberOfChannels);
 
-        for (let channel = 0; channel < numberOfChannels; channel++) {
-            const channelData = audioBuffer.getChannelData(channel);
-            for (let j = 0; j < segmentLength; j++) {
-                segmentData[j] += channelData[startSample + j] / numberOfChannels;
+        for (let j = 0; j < segmentLength; j++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                segmentData[j * numberOfChannels + channel] = audioBuffer.getChannelData(channel)[startSample + j];
             }
         }
 
@@ -83,25 +82,33 @@ export function segmentAudio(
  * @param sampleRate - Sample rate
  * @returns Merged AudioBuffer
  */
-export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: true): AudioBuffer;
-export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: false): Float32Array;
-export function mergeSegments(segments: Float32Array[], sampleRate: number): Float32Array;
-export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: boolean = false): AudioBuffer | Float32Array {
+export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: true, channels?: number): AudioBuffer;
+export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: false, channels?: number): Float32Array;
+export function mergeSegments(segments: Float32Array[], sampleRate: number, channels?: number): Float32Array;
+export function mergeSegments(
+    segments: Float32Array[],
+    sampleRate: number,
+    arg3: boolean | number = false,
+    arg4?: number
+): AudioBuffer | Float32Array {
     if (segments.length === 0) {
         throw new Error('Cannot merge empty segments array');
     }
 
+    const returnAudioBuffer = typeof arg3 === 'boolean' ? arg3 : false;
+    const channels = typeof arg3 === 'number' ? arg3 : (arg4 || 2);
+
     // Prepare helper to return correct type
     const finish = (data: Float32Array) => {
-        return returnAudioBuffer ? createAudioBufferFromFloat32(data, sampleRate) : data;
+        return returnAudioBuffer ? createAudioBufferFromFloat32(data, sampleRate, channels) : data;
     };
 
     if (segments.length === 1) {
-        // Single segment, no need to merge
         return finish(segments[0]);
     }
 
-    const crossfadeSamples = Math.floor(CROSSFADE_DURATION * sampleRate);
+    const crossfadeFrames = Math.floor(CROSSFADE_DURATION * sampleRate);
+    const crossfadeSamples = crossfadeFrames * channels;
 
     // Calculate total length
     let totalLength = 0;
@@ -118,16 +125,13 @@ export function mergeSegments(segments: Float32Array[], sampleRate: number, retu
 
     segments.forEach((segment, index) => {
         if (index === 0) {
-            // First segment - copy entirely
             merged.set(segment, writePosition);
             writePosition += segment.length - crossfadeSamples;
         } else if (index === segments.length - 1) {
-            // Last segment - crossfade with previous
-            applyCrossfade(merged, segment, writePosition, crossfadeSamples);
+            applyCrossfade(merged, segment, writePosition, crossfadeFrames, channels);
             writePosition += segment.length;
         } else {
-            // Middle segments - crossfade
-            applyCrossfade(merged, segment, writePosition, crossfadeSamples);
+            applyCrossfade(merged, segment, writePosition, crossfadeFrames, channels);
             writePosition += segment.length - crossfadeSamples;
         }
     });
@@ -142,27 +146,47 @@ function applyCrossfade(
     target: Float32Array,
     source: Float32Array,
     position: number,
-    crossfadeSamples: number
+    crossfadeFrames: number,
+    channels: number
 ): void {
-    // Crossfade region
-    for (let i = 0; i < crossfadeSamples && i < source.length; i++) {
-        const fadeOut = (crossfadeSamples - i) / crossfadeSamples;
-        const fadeIn = i / crossfadeSamples;
-        target[position + i] = target[position + i] * fadeOut + source[i] * fadeIn;
+    const regionSize = crossfadeFrames * channels;
+
+    for (let f = 0; f < crossfadeFrames; f++) {
+        const fadeOut = (crossfadeFrames - f) / crossfadeFrames;
+        const fadeIn = f / crossfadeFrames;
+
+        for (let c = 0; c < channels; c++) {
+            const idx = f * channels + c;
+            if (position + idx < target.length && idx < source.length) {
+                target[position + idx] = target[position + idx] * fadeOut + source[idx] * fadeIn;
+            }
+        }
     }
 
     // Copy remaining samples
-    const remaining = source.subarray(crossfadeSamples);
-    target.set(remaining, position + crossfadeSamples);
+    if (source.length > regionSize) {
+        const remaining = source.subarray(regionSize);
+        if (position + regionSize + remaining.length <= target.length) {
+            target.set(remaining, position + regionSize);
+        }
+    }
 }
 
 /**
  * Create AudioBuffer from Float32Array
  */
-function createAudioBufferFromFloat32(data: Float32Array, sampleRate: number): AudioBuffer {
+function createAudioBufferFromFloat32(data: Float32Array, sampleRate: number, channels: number = 1): AudioBuffer {
     const audioContext = getAudioContext();
-    const audioBuffer = audioContext.createBuffer(1, data.length, sampleRate);
-    audioBuffer.getChannelData(0).set(data);
+    const samplesPerChannel = data.length / channels;
+    const audioBuffer = audioContext.createBuffer(channels, samplesPerChannel, sampleRate);
+
+    for (let c = 0; c < channels; c++) {
+        const channelData = audioBuffer.getChannelData(c);
+        for (let i = 0; i < samplesPerChannel; i++) {
+            channelData[i] = data[i * channels + c];
+        }
+    }
+
     return audioBuffer;
 }
 

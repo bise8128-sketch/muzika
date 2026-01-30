@@ -100,6 +100,7 @@ export default function Home() {
     progress: separationProgress,
     status: separationStatus,
     message: separationMessage,
+    error: separationError,
     result: separationResult,
     reset: resetSeparation
   } = useSeparation();
@@ -151,9 +152,9 @@ export default function Home() {
         return () => clearTimeout(timer);
       }
     } else if (separationStatus === 'error') {
-      console.error("Separation Error", separationMessage);
+      console.error("Separation Error:", separationError);
       setState('upload');
-      alert(`Error: ${separationMessage || 'Unknown error'}`);
+      alert(`Error: ${separationError || 'Unknown error'}`);
     }
   }, [separationStatus, separationResult, separationMessage, autoStartKaraoke, controller]);
 

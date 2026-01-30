@@ -31,7 +31,15 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
             const samples = inputData.length / channels;
             const inputShape = [1, 1, channels, samples];
 
-            const inputTensor = new ort.Tensor('float32', inputData, inputShape);
+            // De-interleave to planar for ONNX
+            const planarData = new Float32Array(inputData.length);
+            for (let c = 0; c < channels; c++) {
+                for (let s = 0; s < samples; s++) {
+                    planarData[c * samples + s] = inputData[s * channels + c];
+                }
+            }
+
+            const inputTensor = new ort.Tensor('float32', planarData, inputShape);
             this.track(inputTensor);
 
             const feeds: Record<string, ort.Tensor> = {};
@@ -51,15 +59,28 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
                 throw new Error(`Inference produced incomplete results.`);
             }
 
-            const vocalsData = vocalsTensor.data as Float32Array;
-            const instrumentalsData = instrumentalTensor.data as Float32Array;
+            // Function to interleave planar output
+            const interleave = (tensor: ort.Tensor) => {
+                const data = tensor.data as Float32Array;
+                const interleaved = new Float32Array(data.length);
+                const samplesPerChannel = data.length / channels;
+                for (let s = 0; s < samplesPerChannel; s++) {
+                    for (let c = 0; c < channels; c++) {
+                        interleaved[s * channels + c] = data[c * samplesPerChannel + s];
+                    }
+                }
+                return interleaved;
+            };
+
+            const vocalsInterleaved = interleave(vocalsTensor);
+            const instrumentalsInterleaved = interleave(instrumentalTensor);
 
             // Copy to buffer pool
-            const vocalsPooled = bufferPool.acquire(vocalsData.length);
-            const instrumentalsPooled = bufferPool.acquire(instrumentalsData.length);
+            const vocalsPooled = bufferPool.acquire(vocalsInterleaved.length);
+            const instrumentalsPooled = bufferPool.acquire(instrumentalsInterleaved.length);
 
-            vocalsPooled.set(vocalsData);
-            instrumentalsPooled.set(instrumentalsData);
+            vocalsPooled.set(vocalsInterleaved);
+            instrumentalsPooled.set(instrumentalsInterleaved);
 
             return {
                 vocals: vocalsPooled,

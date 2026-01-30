@@ -147,8 +147,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // Current 'inference.ts' returns simple Float32Arrays.
             // Let's assume Mono for now as per previous implementation (downmixing).
 
-            const vocalsMerged = mergeSegments(vocalsData, sampleRate);
-            const instrumentalsMerged = mergeSegments(instrumentalsData, sampleRate);
+            const vocalsMerged = mergeSegments(vocalsData, sampleRate, 2);
+            const instrumentalsMerged = mergeSegments(instrumentalsData, sampleRate, 2);
 
             // Phase 7: Cache
             sendProgress({ phase: 'caching', currentSegment: totalSegments, totalSegments, percentage: 95, message: 'Caching results...' });
