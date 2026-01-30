@@ -24,14 +24,13 @@ async function getFFmpeg(): Promise<FFmpeg> {
     }
 
     if (!ffmpegLoaded) {
-        // Use local assets copied via Webpack CopyPlugin
-        // We use absolute URLs from window.origin to avoid Webpack module resolution issues
-        // with blob URLs in some environments.
-        const baseURL = typeof window !== 'undefined' ? window.location.origin : '';
+        // Use CDN URLs to avoid Webpack module resolution issues with local files
+        // Especially problematic in Next.js development mode with ESM modules
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
 
         await ffmpegInstance.load({
-            coreURL: `${baseURL}/ffmpeg/ffmpeg-core.js`,
-            wasmURL: `${baseURL}/ffmpeg/ffmpeg-core.wasm`,
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
         });
 
         ffmpegLoaded = true;
