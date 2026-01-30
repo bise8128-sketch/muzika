@@ -3,40 +3,9 @@
  * WAV and MP3 encoding for browser-based audio export
  */
 
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
 import { applyPitchAndTempo } from './pitchTempo';
 
-// Singleton FFmpeg instance
-let ffmpegInstance: FFmpeg | null = null;
-let ffmpegLoaded = false;
 
-/**
- * Initialize FFmpeg.wasm (singleton)
- */
-async function getFFmpeg(): Promise<FFmpeg> {
-    if (ffmpegInstance && ffmpegLoaded) {
-        return ffmpegInstance;
-    }
-
-    if (!ffmpegInstance) {
-        ffmpegInstance = new FFmpeg();
-    }
-
-    if (!ffmpegLoaded) {
-        // Use local files to avoid Blob URL module resolution issues
-        const baseURL = `${window.location.origin}/ffmpeg`;
-
-        await ffmpegInstance.load({
-            coreURL: `${baseURL}/ffmpeg-core.js`,
-            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
-        });
-
-        ffmpegLoaded = true;
-    }
-
-    return ffmpegInstance;
-}
 
 /**
  * Export AudioBuffer to WAV format
@@ -136,34 +105,46 @@ export async function exportToMP3(
     audioBuffer: AudioBuffer,
     bitrate: number = 320
 ): Promise<Blob> {
-    // First convert to WAV
+    // First convert to WAV (we need raw bytes to send to worker)
     const wavBlob = await exportToWAV(audioBuffer);
+    const wavArrayBuffer = await wavBlob.arrayBuffer();
 
-    // Initialize FFmpeg
-    const ffmpeg = await getFFmpeg();
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('./mp3.worker.ts', import.meta.url));
 
-    // Write WAV to virtual filesystem
-    const inputName = 'input.wav';
-    const outputName = 'output.mp3';
+        worker.onmessage = (e) => {
+            const { type, payload } = e.data;
 
-    await ffmpeg.writeFile(inputName, await fetchFile(wavBlob));
+            if (type === 'INIT_SUCCESS') {
+                // Worker ready, send data
+                worker.postMessage({
+                    type: 'EXPORT',
+                    payload: {
+                        wavData: wavArrayBuffer,
+                        bitrate
+                    }
+                }, [wavArrayBuffer] as any);
+            } else if (type === 'EXPORT_SUCCESS') {
+                worker.terminate();
+                resolve(new Blob([payload], { type: 'audio/mpeg' }));
+            } else if (type === 'ERROR') {
+                worker.terminate();
+                reject(new Error(payload));
+            }
+        };
 
-    // Convert WAV to MP3
-    await ffmpeg.exec([
-        '-i', inputName,
-        '-b:a', `${bitrate}k`,
-        '-ar', '44100', // Sample rate
-        outputName
-    ]);
+        worker.onerror = (err) => {
+            worker.terminate();
+            reject(new Error('Worker error: ' + err.message));
+        };
 
-    // Read output file
-    const data = await ffmpeg.readFile(outputName);
-
-    // Cleanup virtual filesystem
-    await ffmpeg.deleteFile(inputName);
-    await ffmpeg.deleteFile(outputName);
-
-    return new Blob([data as any], { type: 'audio/mpeg' });
+        // Initialize worker with base URL for scripts
+        const baseURL = `${window.location.origin}/ffmpeg/umd`;
+        worker.postMessage({
+            type: 'INIT',
+            payload: { baseURL }
+        });
+    });
 }
 
 /**

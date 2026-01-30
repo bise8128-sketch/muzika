@@ -36,6 +36,19 @@ const nextConfig: NextConfig = {
               return `${context}/public/ffmpeg/[name][ext]`;
             },
           },
+          // Copy UMD builds for Web Worker usage
+          {
+            from: 'node_modules/@ffmpeg/core/dist/umd/*.{js,wasm}',
+            to: ({ context }: { context: string }) => {
+              return `${context}/public/ffmpeg/umd/[name][ext]`;
+            },
+          },
+          {
+            from: 'node_modules/@ffmpeg/ffmpeg/dist/umd/ffmpeg.js',
+            to: ({ context }: { context: string }) => {
+              return `${context}/public/ffmpeg/umd/ffmpeg.js`;
+            },
+          },
         ],
       })
     );
