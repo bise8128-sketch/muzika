@@ -135,21 +135,44 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             Object.values(results).forEach(t => this.track(t));
 
             // 4. Extract Output
-            // Expected: [1, 4, Freq, Frames] (Vocals) ? Or just 1 output with 4 sources?
-            // Assuming 2 specific outputs for Vocals/Inst like MDX.
             const outputNames = session.outputNames;
-            // Similar logic to Waveform: find 'vocal' output
-            const vocalsTensor = results[outputNames.find(n => n.includes('vocal')) || outputNames[0]];
-            const instTensor = results[outputNames.find(n => n.includes('inst')) || outputNames[1]];
+            console.log('[SpectralInferenceStrategy] Model output names:', outputNames);
 
-            if (!vocalsTensor || !instTensor) {
-                // If single output (all sources), we'd need to slice.
-                throw new Error(`Inference produced incomplete results.`);
+            // Robust output mapping
+            let vocalsTensor: ort.Tensor | undefined;
+            let instTensor: ort.Tensor | undefined;
+
+            // Try to find by name
+            const vocalName = outputNames.find(n => n.toLowerCase().includes('vocal'));
+            const instName = outputNames.find(n => n.toLowerCase().includes('inst') || n.toLowerCase().includes('acc'));
+
+            if (vocalName) vocalsTensor = results[vocalName];
+            if (instName) instTensor = results[instName];
+
+            // If still missing, and we have 2 outputs, assume first is target and second is remaining?
+            if (outputNames.length >= 2) {
+                if (!vocalsTensor) vocalsTensor = results[outputNames[0]];
+                if (!instTensor) instTensor = results[outputNames[1]];
+            } else if (outputNames.length === 1) {
+                const singleTensor = results[outputNames[0]];
+                if (outputNames[0].toLowerCase().includes('inst')) {
+                    instTensor = singleTensor;
+                } else {
+                    vocalsTensor = singleTensor;
+                }
+            }
+
+            if (!vocalsTensor && !instTensor) {
+                throw new Error(`Inference produced no compatible results. Outputs: ${outputNames.join(', ')}`);
             }
 
             // 5. ISTFT Reconstruct
             // Function to reconstruct from Tensor [1, 4, F, T] (Stereo Complex)
-            const reconstruct = (tensor: ort.Tensor) => {
+            const reconstruct = (tensor: ort.Tensor | undefined) => {
+                if (!tensor) {
+                    // Return silence if tensor is missing
+                    return new Float32Array(numFrames * this.config.hopLength! * 2);
+                }
                 const data = tensor.data as Float32Array;
                 // De-transpose from [F, T] back to [T, F] for our ISTFT
                 // And separate L/R
