@@ -29,7 +29,7 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
 
         try {
             const samples = inputData.length / channels;
-            const inputShape = [1, channels, samples];
+            const inputShape = [1, 1, channels, samples];
 
             const inputTensor = new ort.Tensor('float32', inputData, inputShape);
             this.track(inputTensor);
