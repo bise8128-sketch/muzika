@@ -62,40 +62,8 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             // Let's assume the model expects: [Batch, Channels * 2 (Real/Imag), Freq, Frames]
             // Channels = 2 (Stereo) -> 4 feature maps.
 
-            const { dims } = stftL;
-            const [numFrames, numFreqs] = dims; // [Time, Freq] from our STFT
-
-            // Construct input tensor [1, 4, Freq, Frames] (or [1, 4, Frames, Freq]?)
-            // PyTorch default is often [B, C, F, T].
-            // Our STFT output is flat row-major [Frame 0, Frame 1...]. 
-            // We need to construct the tensor data correctly.
-
-            const tensorSize = 4 * numFreqs * numFrames;
-            const floatData = new Float32Array(tensorSize);
-
-            // Fill data: Channel 0 (L_Real), 1 (L_Imag), 2 (R_Real), 3 (R_Imag)
-            // Or interleaved? Usually planar for ONNX/PyTorch.
-
-            // STFT output is Magnitude/Phase. We need Real/Imag.
-            // R = Mag * cos(Ph), I = Mag * sin(Ph)
-
-            const fillPlane = (offset: number, mag: Float32Array, ph: Float32Array, isImag: boolean) => {
-                const planeStride = numFreqs * numFrames;
-                for (let i = 0; i < planeStride; i++) {
-                    const r = mag[i] * Math.cos(ph[i]);
-                    const im = mag[i] * Math.sin(ph[i]);
-                    floatData[offset * planeStride + i] = isImag ? im : r;
-                }
-            };
-
-            // 4 Channels: L_Re, L_Im, R_Re, R_Im
-            fillPlane(0, stftL.magnitude, stftL.phase, false);
-            fillPlane(1, stftL.magnitude, stftL.phase, true);
-            fillPlane(2, stftR.magnitude, stftR.phase, false);
-            fillPlane(3, stftR.magnitude, stftR.phase, true);
-
-            const { dims } = stftL;
-            const [numFrames, numFreqs] = dims;
+            const { dims: stftDims } = stftL;
+            const [numFrames, numFreqs] = stftDims; // [Time, Freq] from our STFT
 
             // Handle fixed shapes for models like MDX HQ3
             // These can be passed in ModelConfig or use defaults for HQ3
