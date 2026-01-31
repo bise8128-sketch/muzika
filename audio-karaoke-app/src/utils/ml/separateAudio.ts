@@ -1,4 +1,4 @@
-import { decodeAudioFile } from '@/utils/audio/audioDecoder';
+import { decodeAudioFile, float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
 import { resampleAudio } from '@/utils/audio/audioProcessor';
 import { StreamableBufferManager } from '@/utils/audio/StreamableBufferManager';
 import { getAudioContext } from '@/utils/audio/audioContext';
@@ -29,14 +29,23 @@ export async function separateAudio(
 
     return new Promise(async (resolve, reject) => {
         let worker: Worker | null = null;
+        let bufferManager: StreamableBufferManager | null = null;
 
         // Use model sample rate or default to 44100
         const sampleRate = modelInfo.config?.sampleRate || 44100;
 
-        const bufferManager = new StreamableBufferManager(
-            sampleRate,
-            2 // Assuming stereo output from models
-        );
+        try {
+            // Initialize buffer manager with context
+            const ctx = getAudioContext();
+            bufferManager = new StreamableBufferManager(ctx);
+        } catch (e) {
+            console.warn('[separateAudio] Could not initialize StreamableBufferManager with AudioContext:', e);
+            // We might proceed without buffer manager if we only want separation, 
+            // but the architecture relies on it for reconstruction.
+            // If AudioContext fails, likely everything fails.
+            reject(e);
+            return;
+        }
 
         const cleanup = () => {
             if (signal) {
@@ -46,7 +55,9 @@ export async function separateAudio(
                 worker.terminate();
                 worker = null;
             }
-            bufferManager.clear();
+            if (bufferManager) {
+                bufferManager.reset();
+            }
         };
 
         const handleAbort = () => {
@@ -107,8 +118,14 @@ export async function separateAudio(
                     if (onProgress) onProgress(payload);
                 } else if (type === 'CHUNK_PLAYBACK') {
                     // Accumulate streaming chunks
-                    // payload.vocals and instrumentals are Float32Array
-                    bufferManager.addChunk(payload.vocals, payload.instrumentals);
+                    if (bufferManager) {
+                        bufferManager.addChunk({
+                            vocals: payload.vocals,
+                            instrumentals: payload.instrumentals,
+                            position: payload.position,
+                            sampleRate: processingBuffer.sampleRate
+                        });
+                    }
 
                     if (onChunk) {
                         onChunk({
@@ -122,27 +139,25 @@ export async function separateAudio(
                     try {
                         // If the worker returned full buffers (e.g. from cache), ingest them into manager
                         // payload.vocals is ArrayBuffer (raw bytes of Float32Array)
-                        if (payload.vocals && payload.vocals.byteLength > 0) {
+                        if (payload.vocals && payload.vocals.byteLength > 0 && bufferManager) {
                             console.log('[separateAudio] Ingesting full result from worker/cache');
                             const vFloat = new Float32Array(payload.vocals);
                             const iFloat = new Float32Array(payload.instrumentals);
-                            bufferManager.addChunk(vFloat, iFloat);
+                            // For full file, position is 0
+                            bufferManager.addChunk({
+                                vocals: vFloat,
+                                instrumentals: iFloat,
+                                position: 0,
+                                sampleRate: processingBuffer.sampleRate
+                            });
                         } else {
                             console.log('[separateAudio] Finalizing from streamed chunks');
                         }
 
-                        // Get AudioContext to create final buffers
-                        let ctx: AudioContext;
-                        try {
-                            ctx = getAudioContext();
-                        } catch (e) {
-                            // Fallback if getAudioContext fails or isn't initialized
-                            ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
-                                sampleRate: sampleRate
-                            });
-                        }
-
                         // Reconstruct final AudioBuffers
+                        if (!bufferManager) throw new Error('BufferManager not initialized');
+
+                        const ctx = getAudioContext();
                         const buffers = bufferManager.getAllAudioBuffers(ctx);
 
                         resolve({
@@ -157,6 +172,9 @@ export async function separateAudio(
                     } finally {
                         worker?.terminate();
                         worker = null;
+                        if (signal) {
+                            signal.removeEventListener('abort', handleAbort);
+                        }
                     }
                 } else if (type === 'ERROR') {
                     console.error('[separateAudio] Worker error:', payload.message);
@@ -165,42 +183,69 @@ export async function separateAudio(
                 }
             };
 
-            worker.onerror = (e) => {
-                console.error('[separateAudio] Worker error:', e);
+            worker.onerror = (error) => {
+                console.error('[separateAudio] Worker error event:', error);
                 cleanup();
-                reject(new Error('Worker error'));
+                reject(new Error(`Worker error: ${error.message}`));
             };
 
-            // Start processing with TRANSFERABLE buffers to save memory
-            // This moves the data ownership to the worker
+            // Ensure absolute URL for worker
+            const absoluteModelInfo = {
+                ...modelInfo,
+                url: modelInfo.url ? (modelInfo.url.startsWith('http')
+                    ? modelInfo.url
+                    : `${window.location.origin}${modelInfo.url}`) : ''
+            };
+
             worker.postMessage({
                 type: 'START_SEPARATION',
                 payload: {
-                    file, // File object is cloned
+                    file, // File objects are clonable
                     decodedData: { left, right },
                     sampleRate: processingBuffer.sampleRate,
-                    modelInfo,
+                    modelInfo: absoluteModelInfo,
                     skipCache
                 }
-            }, [left.buffer, right.buffer]);
+            }, [left.buffer, right.buffer]); // Transfer buffers
 
         } catch (error) {
-            console.error('[separateAudio] Error:', error);
+            console.error('Separation failed:', error);
             cleanup();
-            reject(error);
+            reject(new Error(`Audio separation failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
     });
 }
 
+/**
+ * Helper to update progress callback
+ */
 function updateProgress(
     callback: ((progress: ProcessingProgress) => void) | undefined,
     phase: ProcessingProgress['phase'],
-    current: number,
-    total: number,
+    currentSegment: number,
+    totalSegments: number,
     percentage: number,
-    message: string
-) {
+    message?: string
+): void {
     if (callback) {
-        callback({ phase, currentSegment: current, totalSegments: total, percentage, message });
+        callback({
+            phase,
+            currentSegment,
+            totalSegments,
+            percentage: Math.min(100, Math.max(0, percentage)),
+            message,
+        });
     }
+}
+
+/**
+ * Convert ArrayBuffer to AudioBuffer
+ */
+async function arrayBufferToAudioBuffer(
+    arrayBuffer: ArrayBuffer,
+    sampleRate: number
+): Promise<AudioBuffer> {
+    // Convert ArrayBuffer back to Float32Array
+    const float32Data = new Float32Array(arrayBuffer);
+    return float32ArrayToAudioBuffer(float32Data, sampleRate, 2); // Assume stereo
 }
