@@ -31,10 +31,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         description: 'Fine-tuned MDX-Net model specifically for clean vocal extraction, ideal for isolation and karaoke lead vocals.',
         url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Voc_FT.onnx'),
         config: {
-            fftSize: 4096,
+            fftSize: 6144,
             hopLength: 1024,
-            windowSize: 4096,
-            targetFreqs: 2048,
+            windowSize: 6144,
+            targetFreqs: 3072,
             targetFrames: 256
         }
     },
@@ -47,10 +47,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         description: 'Premier model for ultra-clean vocal extraction with minimal artifacts. Preferred by professionals.',
         url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/Kim_Vocal_2.onnx'),
         config: {
-            fftSize: 4096,
+            fftSize: 6144,
             hopLength: 1024,
-            windowSize: 4096,
-            targetFreqs: 2048,
+            windowSize: 6144,
+            targetFreqs: 3072,
             targetFrames: 256
         }
     },
