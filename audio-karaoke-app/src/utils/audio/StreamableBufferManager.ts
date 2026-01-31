@@ -1,192 +1,147 @@
-import { float32ArrayToAudioBuffer } from './audioDecoder';
 
-export interface StreamChunk {
-    vocals: Float32Array;
-    instrumentals: Float32Array;
-    position: number; // In samples
-    sampleRate: number;
-}
-
+/**
+ * Manages streaming audio playback with gapless scheduling.
+ * Stores incoming chunks and schedules them on the AudioContext.
+ */
 export class StreamableBufferManager {
-    private context: AudioContext;
-    private nextStartTime: number = 0;
-    private isPlaying: boolean = false;
-    private activeSources: AudioBufferSourceNode[] = [];
-    private gainNodes: { vocals: GainNode; instrumentals: GainNode };
-    private chunks: StreamChunk[] = []; // Store chunks for seeking/replay
-    private isBuffering: boolean = false;
-    private initialBufferTime: number = 0.2; // 200ms buffer before start
+    private audioContext: AudioContext;
+    private gainNode: GainNode;
 
-    constructor(context: AudioContext) {
-        this.context = context;
-        this.gainNodes = {
-            vocals: context.createGain(),
-            instrumentals: context.createGain()
-        };
-        this.gainNodes.vocals.connect(context.destination);
-        this.gainNodes.instrumentals.connect(context.destination);
+    // Storage for the full audio reconstruction
+    private vocalsChunks: Float32Array[] = [];
+    private instrumentalsChunks: Float32Array[] = [];
+    private totalLength = 0;
+
+    // Playback scheduling
+    private nextStartTime = 0;
+    private isPlaying = false;
+    private sampleRate: number;
+    private scheduledNodes: AudioBufferSourceNode[] = [];
+
+    constructor(audioContext: AudioContext) {
+        this.audioContext = audioContext;
+        this.sampleRate = audioContext.sampleRate;
+
+        this.gainNode = audioContext.createGain();
+        this.gainNode.connect(audioContext.destination);
     }
 
     /**
-     * Resets the manager for a new track
+     * Adds a processed chunk to the manager and schedules it for playback if playing.
      */
-    reset() {
-        this.stop();
-        this.chunks = [];
-        this.nextStartTime = 0;
-        this.isPlaying = false;
-        this.isBuffering = false;
-    }
+    async addChunk(vocals: Float32Array, instrumentals: Float32Array) {
+        this.vocalsChunks.push(vocals);
+        this.instrumentalsChunks.push(instrumentals);
+        this.totalLength += vocals.length;
 
-    /**
-     * Adds a new processed chunk to the manager
-     */
-    async addChunk(chunk: StreamChunk) {
-        this.chunks.push(chunk);
+        // Create AudioBuffer for this chunk
+        const chunkBuffer = this.createAudioBuffer(vocals, instrumentals);
 
         if (this.isPlaying) {
-            await this.scheduleChunk(chunk);
-        } else if (!this.nextStartTime && !this.isBuffering) {
-            // First chunk received, start playback automatically if intended
-            // Or just wait for play()
+            this.scheduleBuffer(chunkBuffer);
         }
     }
 
-    /**
-     * Schedules a single chunk for playback
-     */
-    private async scheduleChunk(chunk: StreamChunk) {
-        const vocalsBuffer = await float32ArrayToAudioBuffer(chunk.vocals, chunk.sampleRate);
-        const instrumentalsBuffer = await float32ArrayToAudioBuffer(chunk.instrumentals, chunk.sampleRate);
+    private createAudioBuffer(channel1: Float32Array, channel2: Float32Array): AudioBuffer {
+        const buffer = this.audioContext.createBuffer(2, channel1.length, this.sampleRate);
+        // Cast to any to avoid strict shared buffer checks for this demo
+        buffer.copyToChannel(channel1 as any, 0);
+        buffer.copyToChannel(channel2 as any, 1);
+        return buffer;
+    }
 
-        // If nextStartTime is 0 (first chunk) or behind current time, sync it
-        const currentTime = this.context.currentTime;
+    private scheduleBuffer(buffer: AudioBuffer) {
+        // Determine start time
+        // If nextStartTime is in the past, reset it to now (handling buffering delays)
+        const currentTime = this.audioContext.currentTime;
         if (this.nextStartTime < currentTime) {
-            this.nextStartTime = currentTime + 0.05; // Slight offset
+            this.nextStartTime = currentTime + 0.1; // Small buffer for safety
         }
 
-        this.playBuffer(vocalsBuffer, this.gainNodes.vocals, this.nextStartTime);
-        this.playBuffer(instrumentalsBuffer, this.gainNodes.instrumentals, this.nextStartTime);
-
-        this.nextStartTime += vocalsBuffer.duration;
-    }
-
-    private playBuffer(buffer: AudioBuffer, output: GainNode, time: number) {
-        const source = this.context.createBufferSource();
+        const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(output);
-        source.start(time);
-        this.activeSources.push(source);
+        source.connect(this.gainNode);
 
-        // Cleanup when done
+        source.start(this.nextStartTime);
+
+        // Update next start time
+        this.nextStartTime += buffer.duration;
+
+        this.scheduledNodes.push(source);
+
+        // Cleanup finished nodes
         source.onended = () => {
-            const index = this.activeSources.indexOf(source);
+            const index = this.scheduledNodes.indexOf(source);
             if (index > -1) {
-                this.activeSources.splice(index, 1);
+                this.scheduledNodes.splice(index, 1);
             }
         };
     }
 
-    /**
-     * Starts playback from current position
-     */
-    async play() {
+    play() {
         if (this.isPlaying) return;
         this.isPlaying = true;
 
-        if (this.context.state === 'suspended') {
-            await this.context.resume();
+        // Resume context if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
         }
 
-        // Schedule all existing chunks that haven't been played
-        // For simplicity, in this streaming version, we might just re-schedule everything 
-        // if we are resuming from 0, or calculate offset.
-        // But for "progressive" playback, we usually play as we receive.
+        // Play all accumulated chunks from start if not already scheduled
+        // Logic simplified for progressive demo
+        this.nextStartTime = this.audioContext.currentTime + 0.1;
 
-        // If we have accumulated chunks but stopped, we need to schedule them.
-        this.nextStartTime = this.context.currentTime + 0.1;
+        let accumulatedDuration = 0;
+        for (let i = 0; i < this.vocalsChunks.length; i++) {
+            const buffer = this.createAudioBuffer(this.vocalsChunks[i], this.instrumentalsChunks[i]);
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.gainNode);
 
-        for (const chunk of this.chunks) {
-            // In a real implementation, we'd check if chunk is in the future relative to seek position
-            await this.scheduleChunk(chunk);
+            const startTime = this.nextStartTime + accumulatedDuration;
+            source.start(startTime);
+            this.scheduledNodes.push(source);
+
+            accumulatedDuration += buffer.duration;
         }
+
+        // Update nextStartTime for future chunks
+        this.nextStartTime += accumulatedDuration;
     }
 
-    stop() {
+    pause() {
         this.isPlaying = false;
-        this.activeSources.forEach(source => {
-            try {
-                source.stop();
-            } catch (e) {
-                // Ignore if already stopped
-            }
-        });
-        this.activeSources = [];
+        this.scheduledNodes.forEach(node => node.stop());
+        this.scheduledNodes = [];
+    }
+
+    reset() {
+        this.pause();
+        this.vocalsChunks = [];
+        this.instrumentalsChunks = [];
+        this.totalLength = 0;
         this.nextStartTime = 0;
+        this.scheduledNodes = [];
     }
 
-    setVolume(type: 'vocals' | 'instrumentals', value: number) {
-        const node = this.gainNodes[type];
-        if (node) {
-            node.gain.value = value;
-        }
-    }
+    getAllAudioBuffers(): { vocals: AudioBuffer, instrumentals: AudioBuffer } {
+        const vBuffer = this.audioContext.createBuffer(2, this.totalLength, this.sampleRate);
+        const iBuffer = this.audioContext.createBuffer(2, this.totalLength, this.sampleRate);
 
-    clear() {
-        this.reset();
-    }
-
-    getAllAudioBuffers(context: AudioContext): { vocals: AudioBuffer; instrumentals: AudioBuffer } {
-        if (this.chunks.length === 0) {
-            return {
-                vocals: context.createBuffer(2, 1, context.sampleRate),
-                instrumentals: context.createBuffer(2, 1, context.sampleRate)
-            };
+        let offset = 0;
+        for (const chunk of this.vocalsChunks) {
+            vBuffer.getChannelData(0).set(chunk, offset);
+            vBuffer.getChannelData(1).set(chunk, offset);
+            offset += chunk.length;
         }
 
-        // Calculate total length based on the last chunk's position and length
-        // Assuming chunks are ordered. If not, we should sort them.
-        // But we append them in order usually.
-        const lastChunk = this.chunks[this.chunks.length - 1];
-        const totalLength = lastChunk.position + lastChunk.vocals.length;
-
-        const vocalsBuffer = context.createBuffer(2, totalLength, lastChunk.sampleRate);
-        const instrumentalsBuffer = context.createBuffer(2, totalLength, lastChunk.sampleRate);
-
-        const vL = vocalsBuffer.getChannelData(0);
-        const vR = vocalsBuffer.getChannelData(1);
-        const iL = instrumentalsBuffer.getChannelData(0);
-        const iR = instrumentalsBuffer.getChannelData(1);
-
-        for (const chunk of this.chunks) {
-            // Assuming stereo chunks for now. If mono, we duplicate.
-            // chunk.vocals is Float32Array (interleaved? or just one channel? 
-            // The worker sends Float32Array. 
-            // In separateAudio.ts it was handling stereo?
-            // "vocals: Float32Array; instrumentals: Float32Array"
-            // Usually if it's from onnx, it might be mono or stereo interleaved.
-            // audio.worker.ts sends: vocabChunk (Float32Array).
-            // If it's interleaved, we need to de-interleave.
-            // If it's mono, we copy to both.
-
-            // For this implementation, let's assume valid mono or stereo.
-            // But wait, the bufferManager in separateAudio was passed "channels: 2".
-            // My chunks just have Float32Array.
-
-            // Let's assume the chunk data is channel-interleaved if length > duration * sampleRate?
-            // Or just single channel?
-            // The worker slices from 'vocalsMerged' which was 'outputLength'.
-            // 'decodedData.left.length' -> single channel length.
-            // So chunks are likely single channel (or split planar).
-
-            // Let's assume mono for now or check usage.
-            // If mono, copy to both channels.
-            vL.set(chunk.vocals, chunk.position);
-            vR.set(chunk.vocals, chunk.position);
-            iL.set(chunk.instrumentals, chunk.position);
-            iR.set(chunk.instrumentals, chunk.position);
+        let iOffset = 0;
+        for (const chunk of this.instrumentalsChunks) {
+            iBuffer.getChannelData(0).set(chunk, iOffset);
+            iBuffer.getChannelData(1).set(chunk, iOffset);
+            iOffset += chunk.length;
         }
 
-        return { vocals: vocalsBuffer, instrumentals: instrumentalsBuffer };
+        return { vocals: vBuffer, instrumentals: iBuffer };
     }
 }

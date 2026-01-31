@@ -119,12 +119,12 @@ export async function separateAudio(
                 } else if (type === 'CHUNK_PLAYBACK') {
                     // Accumulate streaming chunks
                     if (bufferManager) {
-                        bufferManager.addChunk({
-                            vocals: payload.vocals,
-                            instrumentals: payload.instrumentals,
-                            position: payload.position,
-                            sampleRate: processingBuffer.sampleRate
-                        });
+                        bufferManager.addChunk(
+                            payload.vocals,
+                            payload.instrumentals
+                        );
+                        // Enable immediate playback as chunks arrive
+                        bufferManager.play();
                     }
 
                     if (onChunk) {
@@ -144,12 +144,7 @@ export async function separateAudio(
                             const vFloat = new Float32Array(payload.vocals);
                             const iFloat = new Float32Array(payload.instrumentals);
                             // For full file, position is 0
-                            bufferManager.addChunk({
-                                vocals: vFloat,
-                                instrumentals: iFloat,
-                                position: 0,
-                                sampleRate: processingBuffer.sampleRate
-                            });
+                            bufferManager.addChunk(vFloat, iFloat);
                         } else {
                             console.log('[separateAudio] Finalizing from streamed chunks');
                         }
@@ -157,8 +152,7 @@ export async function separateAudio(
                         // Reconstruct final AudioBuffers
                         if (!bufferManager) throw new Error('BufferManager not initialized');
 
-                        const ctx = getAudioContext();
-                        const buffers = bufferManager.getAllAudioBuffers(ctx);
+                        const buffers = bufferManager.getAllAudioBuffers();
 
                         resolve({
                             vocals: buffers.vocals,

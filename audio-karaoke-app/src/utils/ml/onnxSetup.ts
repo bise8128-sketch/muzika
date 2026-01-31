@@ -67,7 +67,14 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
         graphOptimizationLevel: 'all',
         enableCpuMemArena: true,
         enableMemPattern: true,
-        executionMode: 'sequential', // Parallel can cause issues in some envs
+        executionMode: 'sequential',
+        // Optimize memory for fixed batch size of 1
+        freeDimensionOverrides: {
+            // Override symbolic dimensions for better optimization
+            // Common names for batch dimension
+            batch_size: 1,
+            batch: 1,
+        }
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
