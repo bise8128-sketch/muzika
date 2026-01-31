@@ -142,7 +142,7 @@ export function mergeSegments(
 /**
  * Apply crossfade between two audio segments
  */
-function applyCrossfade(
+export function applyCrossfade(
     target: Float32Array,
     source: Float32Array,
     position: number,

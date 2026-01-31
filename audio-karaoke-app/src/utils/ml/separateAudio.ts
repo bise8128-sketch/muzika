@@ -5,7 +5,9 @@ import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 export interface SeparationOptions {
     modelInfo: ModelInfo;
     onProgress?: (progress: ProcessingProgress) => void;
+    onChunk?: (chunk: { vocals: Float32Array; instrumentals: Float32Array; position: number; sampleRate: number }) => void;
     skipCache?: boolean;
+    signal?: AbortSignal;
 }
 
 /**
@@ -19,44 +21,78 @@ export async function separateAudio(
     file: File,
     options: SeparationOptions
 ): Promise<SeparationResult> {
-    const { modelInfo, onProgress, skipCache = false } = options;
+    const { modelInfo, onProgress, onChunk, skipCache = false, signal } = options;
 
     return new Promise(async (resolve, reject) => {
-        try {
-            // Check cache first in main thread to avoid worker overhead if possible?
-            // Actually, we moved cache check to worker. But we CAN check hash here if we want.
-            // Let's stick to the plan: Worker does it all.
+        let worker: Worker | null = null;
 
+        const cleanup = () => {
+            if (signal) {
+                signal.removeEventListener('abort', handleAbort);
+            }
+            if (worker) {
+                worker.terminate();
+                worker = null;
+            }
+        };
+
+        const handleAbort = () => {
+            console.log('[separateAudio] Abort signal received');
+            if (worker) {
+                worker.postMessage({ type: 'ABORT' });
+                // Give worker a moment to clean up if needed, or terminate immediately
+                // For safety and immediate resource release:
+                worker.terminate();
+                worker = null;
+            }
+            reject(new Error('Processing aborted by user'));
+        };
+
+        if (signal) {
+            if (signal.aborted) {
+                return reject(new Error('Processing aborted by user'));
+            }
+            signal.addEventListener('abort', handleAbort);
+        }
+
+        try {
             // Phase 4 (Pre-Worker): Decode Audio
             // We do this in main thread because we have AudioContext
             updateProgress(onProgress, 'decoding', 0, 0, 0, 'Decoding audio file...');
+
+            // Check abort before heavy operation
+            if (signal?.aborted) throw new Error('Processing aborted by user');
+
             const audioBuffer = await decodeAudioFile(file);
 
+            if (signal?.aborted) throw new Error('Processing aborted by user');
+
             // Prepare data for worker
-            // We need to pass raw data.
-            // Current model works in Mono (based on segmentAudio impl).
-            // But we should pass Stereo just in case we upgrade later.
             const channel1 = audioBuffer.getChannelData(0);
             const channel2 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : channel1;
 
-            // Transfer these buffers to worker
-            // Note: getChannelData returns the internal buffer reference in some browsers, copy in others.
-            // Using a copy ensures we don't detach the AudioBuffer's data if we want to keep playing it.
-            // But here we return 'originalAudio', so we might need it.
-            // Safe bet: copy.
             const left = new Float32Array(channel1);
             const right = new Float32Array(channel2);
 
             console.log('[separateAudio] Creating worker...');
-            const worker = new Worker(new URL('./audio.worker.ts', import.meta.url));
+            worker = new Worker(new URL('./audio.worker.ts', import.meta.url));
             console.log('[separateAudio] Worker created successfully');
 
             worker.onmessage = (e) => {
                 const { type, payload } = e.data;
-                console.log('[separateAudio] Worker message received:', type);
+                // console.log('[separateAudio] Worker message received:', type);
 
                 if (type === 'PROGRESS') {
                     if (onProgress) onProgress(payload);
+                } else if (type === 'CHUNK_PLAYBACK') {
+                    if (onChunk) {
+                        onChunk({
+                            vocals: payload.vocals,
+                            instrumentals: payload.instrumentals,
+                            position: payload.position,
+                            sampleRate: audioBuffer.sampleRate
+                        });
+                    }
                 } else if (type === 'COMPLETE') {
                     const { vocals, instrumentals, fileHash, timestamp } = payload;
                     console.log('[separateAudio] Worker completed successfully');
@@ -66,7 +102,7 @@ export async function separateAudio(
                         arrayBufferToAudioBuffer(vocals, audioBuffer.sampleRate),
                         arrayBufferToAudioBuffer(instrumentals, audioBuffer.sampleRate)
                     ]).then(([vocalsBuffer, instrumentalsBuffer]) => {
-                        worker.terminate();
+                        cleanup();
                         resolve({
                             vocals: vocalsBuffer,
                             instrumentals: instrumentalsBuffer,
@@ -76,19 +112,19 @@ export async function separateAudio(
                         });
                     }).catch(err => {
                         console.error('[separateAudio] Error converting buffers:', err);
-                        worker.terminate();
+                        cleanup();
                         reject(err);
                     });
                 } else if (type === 'ERROR') {
                     console.error('[separateAudio] Worker error:', payload.message);
-                    worker.terminate();
+                    cleanup();
                     reject(new Error(payload.message));
                 }
             };
 
             worker.onerror = (error) => {
                 console.error('[separateAudio] Worker error event:', error);
-                worker.terminate();
+                cleanup();
                 reject(new Error(`Worker error: ${error.message}`));
             };
 
@@ -113,6 +149,7 @@ export async function separateAudio(
 
         } catch (error) {
             console.error('Separation failed:', error);
+            cleanup();
             reject(new Error(`Audio separation failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
     });
@@ -151,5 +188,3 @@ async function arrayBufferToAudioBuffer(
     const float32Data = new Float32Array(arrayBuffer);
     return float32ArrayToAudioBuffer(float32Data, sampleRate, 2); // Assume stereo
 }
-
-

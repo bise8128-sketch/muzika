@@ -48,6 +48,7 @@ export function useSeparation() {
             const result = await separateAudio(file, {
                 modelInfo,
                 skipCache,
+                signal: abortControllerRef.current.signal,
                 onProgress: (p) => {
                     setState(s => ({
                         ...s,

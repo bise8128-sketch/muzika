@@ -55,19 +55,24 @@ export async function processAudioInChunks(
     segments: Float32Array[],
     channels: number,
     sampleRate: number,
-    onProgress?: (index: number, total: number) => void
-): Promise<InferenceOutput[]> {
-    const results: InferenceOutput[] = [];
-
+    onProgress?: (index: number, total: number) => void,
+    onChunkComplete?: (chunk: InferenceOutput, index: number) => void,
+    shouldAbort?: () => boolean
+): Promise<void> {
     for (let i = 0; i < segments.length; i++) {
+        if (shouldAbort && shouldAbort()) {
+            throw new Error('Processing aborted by user');
+        }
+
         const segment = segments[i];
 
         if (onProgress) onProgress(i, segments.length);
 
         const result = await engine.processChunk(segment, channels, sampleRate);
-        results.push(result);
-    }
 
-    return results;
+        if (onChunkComplete) {
+            onChunkComplete(result, i);
+        }
+    }
 }
 
