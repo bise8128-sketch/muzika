@@ -1,4 +1,5 @@
 import { decodeAudioFile, float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
+import { resampleAudio } from '@/utils/audio/audioProcessor';
 import type { ModelInfo } from '@/types/model';
 import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 
@@ -63,13 +64,26 @@ export async function separateAudio(
             // Check abort before heavy operation
             if (signal?.aborted) throw new Error('Processing aborted by user');
 
-            const audioBuffer = await decodeAudioFile(file);
+            const decodedBuffer = await decodeAudioFile(file);
+
+            if (signal?.aborted) throw new Error('Processing aborted by user');
+
+            // Resample if model requires a different sample rate
+            let processingBuffer = decodedBuffer;
+            const targetSampleRate = modelInfo.config?.sampleRate;
+
+            if (targetSampleRate && targetSampleRate !== decodedBuffer.sampleRate) {
+                console.log(`[separateAudio] Resampling from ${decodedBuffer.sampleRate} to ${targetSampleRate}`);
+                updateProgress(onProgress, 'decoding', 0, 0, 0, `Resampling audio to ${targetSampleRate}Hz...`);
+                processingBuffer = await resampleAudio(decodedBuffer, targetSampleRate);
+            }
 
             if (signal?.aborted) throw new Error('Processing aborted by user');
 
             // Prepare data for worker
-            const channel1 = audioBuffer.getChannelData(0);
-            const channel2 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : channel1;
+            // Ensure we handle stereo correctly without downmixing
+            const channel1 = processingBuffer.getChannelData(0);
+            const channel2 = processingBuffer.numberOfChannels > 1 ? processingBuffer.getChannelData(1) : channel1;
 
             const left = new Float32Array(channel1);
             const right = new Float32Array(channel2);
@@ -90,7 +104,7 @@ export async function separateAudio(
                             vocals: payload.vocals,
                             instrumentals: payload.instrumentals,
                             position: payload.position,
-                            sampleRate: audioBuffer.sampleRate
+                            sampleRate: processingBuffer.sampleRate
                         });
                     }
                 } else if (type === 'COMPLETE') {
@@ -98,15 +112,16 @@ export async function separateAudio(
                     console.log('[separateAudio] Worker completed successfully');
 
                     // Convert ArrayBuffers back to AudioBuffers
+                    // Use processingBuffer.sampleRate as the result is at that rate
                     Promise.all([
-                        arrayBufferToAudioBuffer(vocals, audioBuffer.sampleRate),
-                        arrayBufferToAudioBuffer(instrumentals, audioBuffer.sampleRate)
+                        arrayBufferToAudioBuffer(vocals, processingBuffer.sampleRate),
+                        arrayBufferToAudioBuffer(instrumentals, processingBuffer.sampleRate)
                     ]).then(([vocalsBuffer, instrumentalsBuffer]) => {
                         cleanup();
                         resolve({
                             vocals: vocalsBuffer,
                             instrumentals: instrumentalsBuffer,
-                            originalAudio: audioBuffer,
+                            originalAudio: decodedBuffer, // Return original for reference/playback if needed
                             timestamp,
                             fileHash
                         });
@@ -141,7 +156,7 @@ export async function separateAudio(
                 payload: {
                     file, // File objects are clonable
                     decodedData: { left, right },
-                    sampleRate: audioBuffer.sampleRate,
+                    sampleRate: processingBuffer.sampleRate,
                     modelInfo: absoluteModelInfo,
                     skipCache
                 }

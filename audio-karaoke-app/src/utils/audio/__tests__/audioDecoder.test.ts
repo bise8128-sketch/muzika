@@ -2,7 +2,7 @@
  * Tests for audio decoder utilities
  */
 
-import { decodeAudioFile, audioBufferToFloat32Array, SUPPORTED_FORMATS } from '../audioDecoder';
+import { decodeAudioFile, SUPPORTED_FORMATS } from '../audioDecoder';
 
 describe('audioDecoder', () => {
     describe('SUPPORTED_FORMATS', () => {
@@ -30,12 +30,4 @@ describe('audioDecoder', () => {
         });
     });
 
-    describe('audioBufferToFloat32Array', () => {
-        // These tests would need mocked AudioBuffer objects
-        // or real audio data to test properly
-
-        it('should exist as a function', () => {
-            expect(typeof audioBufferToFloat32Array).toBe('function');
-        });
-    });
 });

@@ -60,32 +60,6 @@ function isSupportedFileExtension(filename: string): boolean {
 }
 
 /**
- * Convert AudioBuffer to Float32Array (mono)
- * @param audioBuffer - Input AudioBuffer
- * @returns Float32Array with mono audio data
- */
-export function audioBufferToFloat32Array(audioBuffer: AudioBuffer): Float32Array {
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const length = audioBuffer.length;
-
-    if (numberOfChannels === 1) {
-        // Already mono
-        return audioBuffer.getChannelData(0);
-    }
-
-    // Mix down to mono
-    const output = new Float32Array(length);
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-        const channelData = audioBuffer.getChannelData(channel);
-        for (let i = 0; i < length; i++) {
-            output[i] += channelData[i] / numberOfChannels;
-        }
-    }
-
-    return output;
-}
-
-/**
  * Convert AudioBuffer to stereo Float32Array
  * @param audioBuffer - Input AudioBuffer
  * @returns Object with left and right channel data

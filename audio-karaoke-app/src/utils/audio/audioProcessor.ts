@@ -110,31 +110,47 @@ export function mergeSegments(
     const crossfadeFrames = Math.floor(CROSSFADE_DURATION * sampleRate);
     const crossfadeSamples = crossfadeFrames * channels;
 
-    // Calculate total length
-    let totalLength = 0;
-    segments.forEach((segment, index) => {
-        if (index === segments.length - 1) {
-            totalLength += segment.length;
-        } else {
-            totalLength += segment.length - crossfadeSamples;
-        }
-    });
+    // Pre-calculate total buffer size to allocate once
+    // First segment contributes full length, subsequent segments contribute (length - overlap)
+    let totalLength = segments[0].length;
+    for (let i = 1; i < segments.length; i++) {
+        totalLength += segments[i].length - crossfadeSamples;
+    }
 
     const merged = new Float32Array(totalLength);
-    let writePosition = 0;
 
-    segments.forEach((segment, index) => {
-        if (index === 0) {
-            merged.set(segment, writePosition);
-            writePosition += segment.length - crossfadeSamples;
-        } else if (index === segments.length - 1) {
-            applyCrossfade(merged, segment, writePosition, crossfadeFrames, channels);
-            writePosition += segment.length;
-        } else {
-            applyCrossfade(merged, segment, writePosition, crossfadeFrames, channels);
-            writePosition += segment.length - crossfadeSamples;
+    // Copy first segment entirely
+    merged.set(segments[0], 0);
+    let writePosition = segments[0].length;
+
+    // Process subsequent segments
+    for (let i = 1; i < segments.length; i++) {
+        const segment = segments[i];
+
+        // Move write position back to start of overlap
+        writePosition -= crossfadeSamples;
+        const overlapStart = writePosition;
+
+        // Inline optimized crossfade logic
+        // Blends the overlap region (tail of previous + head of current)
+        // Iterates linearly over interleaved samples for better cache locality
+        for (let j = 0; j < crossfadeSamples; j++) {
+            // Calculate frame index from sample index (for interleaved data)
+            const frameIndex = Math.floor(j / channels);
+            const fadeOut = (crossfadeFrames - frameIndex) / crossfadeFrames;
+            const fadeIn = frameIndex / crossfadeFrames;
+
+            // merged[overlapStart + j] has the previous segment's tail sample
+            merged[overlapStart + j] = merged[overlapStart + j] * fadeOut + segment[j] * fadeIn;
         }
-    });
+
+        // Efficiently copy the rest of the segment using .set()
+        const remaining = segment.subarray(crossfadeSamples);
+        merged.set(remaining, overlapStart + crossfadeSamples);
+
+        // Advance write position to the end of the current segment
+        writePosition += crossfadeSamples + remaining.length;
+    }
 
     return finish(merged);
 }
@@ -216,59 +232,25 @@ export function normalizeAudio(data: Float32Array): Float32Array {
 }
 
 /**
- * Convert stereo AudioBuffer to mono
+ * Resample audio to target sample rate using OfflineAudioContext
+ * This provides high-quality native resampling.
  */
-export function stereoToMono(audioBuffer: AudioBuffer): AudioBuffer {
-    const numberOfChannels = audioBuffer.numberOfChannels;
-
-    if (numberOfChannels === 1) {
-        return audioBuffer; // Already mono
-    }
-
-    const audioContext = getAudioContext();
-    const monoBuffer = audioContext.createBuffer(1, audioBuffer.length, audioBuffer.sampleRate);
-    const monoData = monoBuffer.getChannelData(0);
-
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-        const channelData = audioBuffer.getChannelData(channel);
-        for (let i = 0; i < audioBuffer.length; i++) {
-            monoData[i] += channelData[i] / numberOfChannels;
-        }
-    }
-
-    return monoBuffer;
-}
-
-/**
- * Resample audio to target sample rate
- * Note: This is a simple linear interpolation. For production, consider using a proper resampler.
- */
-export function resampleAudio(audioBuffer: AudioBuffer, targetSampleRate: number): AudioBuffer {
+export async function resampleAudio(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
     if (audioBuffer.sampleRate === targetSampleRate) {
         return audioBuffer;
     }
 
-    const audioContext = getAudioContext();
-    const ratio = targetSampleRate / audioBuffer.sampleRate;
-    const newLength = Math.floor(audioBuffer.length * ratio);
-    const numberOfChannels = audioBuffer.numberOfChannels;
+    const newLength = Math.ceil(audioBuffer.duration * targetSampleRate);
+    const offlineCtx = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        newLength,
+        targetSampleRate
+    );
 
-    const resampled = audioContext.createBuffer(numberOfChannels, newLength, targetSampleRate);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start(0);
 
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-        const inputData = audioBuffer.getChannelData(channel);
-        const outputData = resampled.getChannelData(channel);
-
-        for (let i = 0; i < newLength; i++) {
-            const srcIndex = i / ratio;
-            const srcIndexFloor = Math.floor(srcIndex);
-            const srcIndexCeil = Math.min(srcIndexFloor + 1, inputData.length - 1);
-            const fraction = srcIndex - srcIndexFloor;
-
-            // Linear interpolation
-            outputData[i] = inputData[srcIndexFloor] * (1 - fraction) + inputData[srcIndexCeil] * fraction;
-        }
-    }
-
-    return resampled;
+    return await offlineCtx.startRendering();
 }
