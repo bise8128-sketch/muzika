@@ -57,10 +57,10 @@ export async function processAudioInChunks(
     sampleRate: number,
     onProgress?: (index: number, total: number) => void,
     onChunkComplete?: (chunk: InferenceOutput, index: number) => void,
-    shouldAbort?: () => boolean
+    signal?: AbortSignal
 ): Promise<void> {
     for (let i = 0; i < segments.length; i++) {
-        if (shouldAbort && shouldAbort()) {
+        if (signal?.aborted) {
             throw new Error('Processing aborted by user');
         }
 

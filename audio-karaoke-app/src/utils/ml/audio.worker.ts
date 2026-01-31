@@ -274,7 +274,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                         lastSentPosition = safeEnd;
                     }
                 },
-                () => isAborted
+                abortController?.signal
             );
 
             // Send any remaining data (last segment tail)
