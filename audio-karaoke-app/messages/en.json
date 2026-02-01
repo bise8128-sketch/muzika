@@ -18,7 +18,10 @@
         "howItWorks": "How it works",
         "models": "Models",
         "privacy": "Privacy",
-        "footer": "© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4."
+        "footer": "© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.",
+        "vocals": "Vocals",
+        "instrumental": "Instrumental",
+        "original": "Original"
     },
     "AudioUpload": {
         "dropFiles": "Drop them here!",
@@ -47,6 +50,56 @@
         "didYouKnow": "Did you know?",
         "karaokeMode": "You can also use our <span class=\"text-primary font-medium\">Karaoke Mode</span> to sing along with real lyrics and pitch adjustment!",
         "tryKaraoke": "TRY KARAOKE"
+    },
+    "BatchQueue": {
+        "queueTitle": "Queue ({count})",
+        "downloadResults": "Download Results",
+        "removeFromQueue": "Remove from queue"
+    },
+    "ModelManager": {
+        "loading": "Loading model information...",
+        "title": "AI Models",
+        "desc": "Manage local AI models for separation.",
+        "modelStorage": "Model Storage",
+        "audioCache": "Audio Cache",
+        "action": "Action",
+        "clearCache": "Clear Cache",
+        "clearCacheConfirm": "This will delete all processed audio results. Models will be kept. Continue?",
+        "aboutTitle": "About Local Processing",
+        "aboutDesc": "Models are downloaded once and run entirely in your browser using WebGPU. No audio data is ever sent to a server. Larger models provide better quality but require more download time and GPU memory."
+    },
+    "SettingsPanel": {
+        "title": "Settings",
+        "clearCacheConfirm": "Are you sure you want to clear all cached separation results? Models will be kept.",
+        "processingEngine": "Processing Engine",
+        "webGpu": "WebGPU Acceleration",
+        "webGpuDesc": "Faster inference using your GPU",
+        "modelVersion": "Model Version",
+        "audioOutput": "Audio Output",
+        "sampleRate": "Sample Rate",
+        "normalization": "Normalization",
+        "storage": "Storage",
+        "audioCache": "Audio Cache",
+        "modelStorage": "Model Storage",
+        "calculating": "Calculating...",
+        "items": "{size} ({count} items)",
+        "clear": "Clear",
+        "permanent": "Permanent",
+        "version": "Muzika v1.0.0 Stable",
+        "love": "Made with ❤️ for high-quality audio"
+    },
+    "Onboarding": {
+        "step1Title": "Welcome to Muzika",
+        "step1Content": "Experience professional-grade AI audio separation right in your browser. Your files never leave your device.",
+        "step2Title": "Upload & Separate",
+        "step2Content": "Drag and drop any MP3, WAV, or FLAC file. Our AI will split it into clean vocals and instrumentals using your GPU.",
+        "step3Title": "Fine-tune in Settings",
+        "step3Content": "Switch between different AI models and manage your local storage cache in the settings panel.",
+        "step4Title": "Karaoke Mode",
+        "step4Content": "Try our signature Karaoke mode with real-time lyrics, pitch adjustment, and voice recording.",
+        "skip": "Skip",
+        "getStarted": "Get Started",
+        "nextStep": "Next Step"
     },
     "BackendStatus": {
         "backend": "Backend: {status}"

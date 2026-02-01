@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 interface HistoryItem {
     id: string;
@@ -16,6 +17,7 @@ interface HistoryProps {
 }
 
 export const History: React.FC<HistoryProps> = ({ items, onRestore, onClear }) => {
+    const t = useTranslations('History');
     if (items.length === 0) return null;
 
     return (
@@ -25,13 +27,13 @@ export const History: React.FC<HistoryProps> = ({ items, onRestore, onClear }) =
                     <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Recent Sessions
+                    {t('recentSessions')}
                 </h3>
                 <button
                     onClick={onClear}
                     className="text-sm text-muted-foreground hover:text-white transition-colors"
                 >
-                    Clear History
+                    {t('clearHistory')}
                 </button>
             </div>
 

@@ -18,7 +18,10 @@
         "howItWorks": "Kako radi",
         "models": "Modeli",
         "privacy": "Privatnost",
-        "footer": "© 2026 Muzika. Izrađeno uz Next.js, ONNX i Tailwind 4."
+        "footer": "© 2026 Muzika. Izrađeno uz Next.js, ONNX i Tailwind 4.",
+        "vocals": "Vokali",
+        "instrumental": "Instrumental",
+        "original": "Original"
     },
     "AudioUpload": {
         "dropFiles": "Prevuci ih ovdje!",
@@ -47,6 +50,56 @@
         "didYouKnow": "Znali ste da?",
         "karaokeMode": "Također možete koristiti naš <span class=\"text-primary font-medium\">Modus karaokea</span> za pjevanje uz stvarne stihove i podešavanje visine tona!",
         "tryKaraoke": "ISPROBAJ KARAOKE"
+    },
+    "BatchQueue": {
+        "queueTitle": "Red ({count})",
+        "downloadResults": "Preuzmi rezultate",
+        "removeFromQueue": "Ukloni iz reda"
+    },
+    "ModelManager": {
+        "loading": "Učitavanje informacija o modelu...",
+        "title": "AI Modeli",
+        "desc": "Upravljajte lokalnim AI modelima za razdvajanje.",
+        "modelStorage": "Pohrana modela",
+        "audioCache": "Audio predmemorija",
+        "action": "Akcija",
+        "clearCache": "Očisti predmemoriju",
+        "clearCacheConfirm": "Ovo će izbrisati sve obrađene audio rezultate. Modeli će biti zadržani. Nastaviti?",
+        "aboutTitle": "O lokalnoj obradi",
+        "aboutDesc": "Modeli se preuzimaju jednom i pokreću u potpunosti u vašem pregledniku koristeći WebGPU. Audio podaci se nikada ne šalju na server. Veći modeli pružaju bolju kvalitetu, ali zahtijevaju više vremena za preuzimanje i više GPU memorije."
+    },
+    "SettingsPanel": {
+        "title": "Postavke",
+        "clearCacheConfirm": "Jeste li sigurni da želite izbrisati sve predmemorirane rezultate? Modeli će biti zadržani.",
+        "processingEngine": "Procesor obrade",
+        "webGpu": "WebGPU ubrzanje",
+        "webGpuDesc": "Brže zaključivanje koristeći vaš GPU",
+        "modelVersion": "Verzija modela",
+        "audioOutput": "Audio izlaz",
+        "sampleRate": "Brzina uzorkovanja",
+        "normalization": "Normalizacija",
+        "storage": "Pohrana",
+        "audioCache": "Audio predmemorija",
+        "modelStorage": "Pohrana modela",
+        "calculating": "Računanje...",
+        "items": "{size} ({count} stavki)",
+        "clear": "Očisti",
+        "permanent": "Trajno",
+        "version": "Muzika v1.0.0 Stabilno",
+        "love": "Izrađeno s ❤️ za audio visoke kvalitete"
+    },
+    "Onboarding": {
+        "step1Title": "Dobrodošli u Muziku",
+        "step1Content": "Doživite profesionalno AI razdvajanje zvuka direktno u vašem pregledniku. Vaše datoteke nikada ne napuštaju vaš uređaj.",
+        "step2Title": "Učitaj i razdvoji",
+        "step2Content": "Povucite i ispustite bilo koju MP3, WAV ili FLAC datoteku. Naš AI će je podijeliti na čiste vokale i instrumentale koristeći vaš GPU.",
+        "step3Title": "Podesite u postavkama",
+        "step3Content": "Mijenjajte različite AI modele i upravljajte lokalnom pohranom u panelu postavki.",
+        "step4Title": "Modus karaokea",
+        "step4Content": "Isprobajte naš prepoznatljivi Karaoke modus s tekstovima u stvarnom vremenu, podešavanjem visine tona i snimanjem glasa.",
+        "skip": "Preskoči",
+        "getStarted": "Započni",
+        "nextStep": "Sljedeći korak"
     },
     "BackendStatus": {
         "backend": "Backend: {status}"

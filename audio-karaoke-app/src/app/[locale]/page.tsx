@@ -306,9 +306,9 @@ export default function Home() {
         return (
           <ResultsDisplay
             tracks={[
-              { id: 'original', name: 'Original', blob: activeResult?.originalAudio || null },
-              { id: 'vocals', name: 'Vocals', blob: activeResult?.vocals || null },
-              { id: 'instrumental', name: 'Instrumental', blob: activeResult?.instrumentals || null }
+              { id: 'original', name: t('original'), blob: activeResult?.originalAudio || null },
+              { id: 'vocals', name: t('vocals'), blob: activeResult?.vocals || null },
+              { id: 'instrumental', name: t('instrumental'), blob: activeResult?.instrumentals || null }
             ]}
             onDownload={handleDownload}
             onRestart={handleRestart}
