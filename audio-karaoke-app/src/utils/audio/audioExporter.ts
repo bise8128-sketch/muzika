@@ -139,10 +139,10 @@ export async function exportToMP3(
         };
 
         // Initialize worker with base URL for scripts
-        const baseURL = `${window.location.origin}/ffmpeg/umd`;
+        const baseUrl = `${window.location.origin}/ffmpeg/umd`;
         worker.postMessage({
             type: 'INIT',
-            payload: { baseURL }
+            payload: { baseUrl }
         });
     });
 }
