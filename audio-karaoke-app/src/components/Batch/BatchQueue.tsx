@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueueItem } from '@/hooks/useBatchSeparation';
+import { useTranslations } from 'next-intl';
 
 interface BatchQueueProps {
     queue: QueueItem[];
@@ -8,12 +9,13 @@ interface BatchQueueProps {
 }
 
 export const BatchQueue: React.FC<BatchQueueProps> = ({ queue, onRemove, onDownload }) => {
+    const t = useTranslations('BatchQueue');
     if (queue.length === 0) return null;
 
     return (
         <div className="w-full max-w-2xl mx-auto mt-8 space-y-4">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Queue ({queue.length})</h3>
+                <h3 className="text-lg font-bold">{t('queueTitle', { count: queue.length })}</h3>
             </div>
 
             <div className="space-y-3">
@@ -76,7 +78,7 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({ queue, onRemove, onDownl
                                     <button
                                         onClick={() => onDownload(item)}
                                         className="p-2 hover:bg-white/10 rounded-lg text-primary transition-colors"
-                                        title="Download Results"
+                                        title={t('downloadResults')}
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -87,7 +89,7 @@ export const BatchQueue: React.FC<BatchQueueProps> = ({ queue, onRemove, onDownl
                                 <button
                                     onClick={() => onRemove(item.id)}
                                     className="p-2 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
-                                    title="Remove from queue"
+                                    title={t('removeFromQueue')}
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l18 18" />

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LRCData, LyricLine } from '@/types/karaoke';
-import { formatLRCTimestamp, parseLRC } from '@/utils/karaoke/lrcParser';
+import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
+import { useTranslations } from 'next-intl';
 
 interface LyricEditorProps {
     currentTime: number;
@@ -11,6 +12,7 @@ interface LyricEditorProps {
 }
 
 export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, initialLRC }) => {
+    const t = useTranslations('LyricEditor');
     const [rawText, setRawText] = useState('');
     const [lines, setLines] = useState<LyricLine[]>([]);
     const [editMode, setEditMode] = useState<'text' | 'sync'>('text');
@@ -103,7 +105,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     };
 
     const handleClear = () => {
-        if (confirm('Are you sure you want to clear all lyrics?')) {
+        if (confirm(t('clearConfirm'))) {
             setRawText('');
             setLines([]);
         }
@@ -112,7 +114,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     return (
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">Lyric Editor</h2>
+                <h2 className="text-2xl font-bold text-white">{t('title')}</h2>
                 <div className="flex gap-2">
                     {editMode === 'text' && (
                         <>
@@ -123,13 +125,13 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                Paste
+                                {t('paste')}
                             </button>
                             <button
                                 onClick={handleClear}
                                 className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-full text-sm font-medium transition-all"
                             >
-                                Clear
+                                {t('clear')}
                             </button>
                         </>
                     )}
@@ -138,14 +140,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Edit Text
+                        {t('editText')}
                     </button>
                     <button
                         onClick={startSync}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'sync' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
-                        Sync Mode
+                        {t('syncMode')}
                     </button>
                 </div>
             </div>
@@ -155,7 +157,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     value={rawText}
                     onChange={handleTextChange}
                     className="w-full h-[400px] bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-mono focus:ring-2 focus:ring-primary outline-none resize-none"
-                    placeholder="Zalijepite svoje stihove ovdje, jedan red po red..."
+                    placeholder={t('placeholder')}
                 />
             ) : (
                 <div className="space-y-4">
@@ -185,7 +187,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         disabled={activeLineIndex >= lines.length}
                         className="w-full py-6 bg-primary hover:bg-primary/80 disabled:bg-white/5 disabled:text-white/20 text-white font-bold text-xl rounded-2xl transition-all active:scale-95 shadow-lg shadow-primary/20"
                     >
-                        Označi sljedeći red [Space]
+                        {t('markLine')}
                     </button>
                 </div>
             )}
@@ -198,13 +200,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Preuzmi .LRC
-                </button>
-                <button
-                    onClick={handleSave}
-                    className="px-8 py-2 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-all"
-                >
-                    Primijeni na plejer
+                    {t('download')}
                 </button>
             </div>
         </div>

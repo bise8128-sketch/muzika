@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useModels } from '@/hooks/useModels';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
+import { useTranslations } from 'next-intl';
 
 interface SettingsPanelProps {
     isOpen: boolean;
@@ -10,6 +11,7 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, selectedModelId, onModelChange }) => {
+    const t = useTranslations('SettingsPanel');
     const { models: AVAILABLE_MODELS } = useModels();
     const [stats, setStats] = useState<StorageStats | null>(null);
 
@@ -20,7 +22,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
     }, [isOpen]);
 
     const handleClearCache = async () => {
-        if (confirm('Are you sure you want to clear all cached separation results? Models will be kept.')) {
+        if (confirm(t('clearCacheConfirm'))) {
             await clearCache();
             const newStats = await getStorageStats();
             setStats(newStats);
@@ -51,7 +53,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        Settings
+                        {t('title')}
                     </h2>
                     <button
                         onClick={onClose}
@@ -67,12 +69,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                 <div className="space-y-10 overflow-y-auto max-h-[calc(100vh-200px)] pr-2">
                     {/* Engine Settings */}
                     <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Processing Engine</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('processingEngine')}</h3>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
                                 <div>
-                                    <div className="font-semibold mb-1">WebGPU Acceleration</div>
-                                    <div className="text-xs text-muted-foreground">Faster inference using your GPU</div>
+                                    <div className="font-semibold mb-1">{t('webGpu')}</div>
+                                    <div className="text-xs text-muted-foreground">{t('webGpuDesc')}</div>
                                 </div>
                                 <div className="w-12 h-6 rounded-full bg-primary/20 relative cursor-pointer ring-2 ring-primary" role="switch" aria-checked="true">
                                     <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-primary shadow-sm"></div>
@@ -80,7 +82,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                             </div>
 
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <label htmlFor="model-select" className="block font-semibold mb-3">Model Version</label>
+                                <label htmlFor="model-select" className="block font-semibold mb-3">{t('modelVersion')}</label>
                                 <select
                                     id="model-select"
                                     className="w-full bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -99,11 +101,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
 
                     {/* Audio Settings */}
                     <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Audio Output</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('audioOutput')}</h3>
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                 <div className="flex justify-between mb-2">
-                                    <div className="font-semibold">Sample Rate</div>
+                                    <div className="font-semibold">{t('sampleRate')}</div>
                                     <div className="text-xs text-primary font-bold">44.1 kHz</div>
                                 </div>
                                 <input
@@ -115,7 +117,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                             </div>
 
                             <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div className="font-semibold">Normalization</div>
+                                <div className="font-semibold">{t('normalization')}</div>
                                 <button
                                     className="w-12 h-6 rounded-full bg-white/5 relative cursor-pointer border border-white/10"
                                     role="switch"
@@ -130,31 +132,31 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
 
                     {/* Cache Management */}
                     <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Storage</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('storage')}</h3>
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
                                 <div>
-                                    <div className="font-semibold">Audio Cache</div>
+                                    <div className="font-semibold">{t('audioCache')}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        {stats ? `${formatSize(stats.cacheSize)} (${stats.itemCount} items)` : 'Calculating...'}
+                                        {stats ? t('items', { size: formatSize(stats.cacheSize), count: stats.itemCount }) : t('calculating')}
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleClearCache}
                                     className="px-4 py-1.5 rounded-lg border border-destructive/30 text-destructive text-sm hover:bg-destructive/10 transition-all font-medium"
                                 >
-                                    Clear
+                                    {t('clear')}
                                 </button>
                             </div>
 
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
                                 <div>
-                                    <div className="font-semibold">Model Storage</div>
+                                    <div className="font-semibold">{t('modelStorage')}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        {stats ? formatSize(stats.modelSize) : 'Calculating...'}
+                                        {stats ? formatSize(stats.modelSize) : t('calculating')}
                                     </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground uppercase font-bold px-2 py-1 bg-white/5 rounded border border-white/5">Permanent</span>
+                                <span className="text-[10px] text-muted-foreground uppercase font-bold px-2 py-1 bg-white/5 rounded border border-white/5">{t('permanent')}</span>
                             </div>
                         </div>
                     </section>
@@ -162,8 +164,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
 
                 <div className="absolute bottom-8 left-8 right-8">
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 border border-white/5 text-center">
-                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Muzika v1.0.0 Stable</p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-1">Made with ❤️ for high-quality audio</p>
+                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{t('version')}</p>
+                        <p className="text-[10px] text-muted-foreground/50 mt-1">{t('love')}</p>
                     </div>
                 </div>
             </div>

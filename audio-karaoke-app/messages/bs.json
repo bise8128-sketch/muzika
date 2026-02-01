@@ -101,6 +101,55 @@
         "getStarted": "Započni",
         "nextStep": "Sljedeći korak"
     },
+    "EffectsPanel": {
+        "studioEffects": "Studijski efekti",
+        "realTimeProcessing": "DSP obrada zvuka u stvarnom vremenu",
+        "reset": "RESET",
+        "pitchShift": "Promjena visine tona",
+        "semitones": "Polutonova",
+        "tempo": "Tempo",
+        "reverb": "Odjek (Reverb)",
+        "echo": "Eho",
+        "equalizer": "Ekvilajzer",
+        "bass": "Bas",
+        "mid": "Srednji",
+        "treble": "Visoki",
+        "min": "Min",
+        "max": "Max"
+    },
+    "KaraokePlayer": {
+        "uploadLrc": "Učitaj .LRC / .CDG",
+        "createLyrics": "Kreiraj stihove",
+        "recording": "Snimanje",
+        "recordVocals": "Snimi vokale",
+        "stopRecording": "Zaustavi snimanje",
+        "voiceRecorded": "Glas snimljen",
+        "exporting": "Izvoz {progress}%",
+        "video": "Video",
+        "audioDownload": "Preuzmi {format}"
+    },
+    "LyricDisplay": {
+        "noLyrics": "Nema učitanih stihova",
+        "uploadHint": "Učitajte .lrc datoteku ili kreirajte stihove iznad"
+    },
+    "LyricEditor": {
+        "title": "Uređivač stihova",
+        "paste": "Zalijepi",
+        "clear": "Očisti",
+        "editText": "Uredi tekst",
+        "syncMode": "Modus sinkronizacije",
+        "placeholder": "Zalijepite svoje stihove ovdje, jedan red po red...",
+        "markLine": "Označi sljedeći red [Space]",
+        "download": "Preuzmi .LRC",
+        "clearConfirm": "Jeste li sigurni da želite obrisati sve stihove?"
+    },
+    "PlayerControls": {
+        "nowPlaying": "Sada se reprodukuje",
+        "track": "Razdvojeni audio zapis",
+        "instrumental": "Instrumental",
+        "mix": "Miks (Vokali ↔ Instrumental)",
+        "vocals": "Vokali"
+    },
     "BackendStatus": {
         "backend": "Backend: {status}"
     }

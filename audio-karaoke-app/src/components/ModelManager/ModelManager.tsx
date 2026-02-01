@@ -4,8 +4,10 @@ import { getAllModels } from '@/utils/storage/modelStorage';
 import { ModelCard } from './ModelCard';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
 import { ModelInfo } from '@/types/model';
+import { useTranslations } from 'next-intl';
 
 export const ModelManager: React.FC = () => {
+    const t = useTranslations('ModelManager');
     const { models: AVAILABLE_MODELS } = useModels();
     const [downloadedModels, setDownloadedModels] = useState<string[]>([]);
     const [stats, setStats] = useState<StorageStats | null>(null);
@@ -32,33 +34,33 @@ export const ModelManager: React.FC = () => {
     }, []);
 
     const handleClearCache = async () => {
-        if (confirm('This will delete all processed audio results. Models will be kept. Continue?')) {
+        if (confirm(t('clearCacheConfirm'))) {
             await clearCache();
             await refreshData();
         }
     };
 
     if (isLoading) {
-        return <div className="p-8 text-center text-zinc-500">Loading model information...</div>;
+        return <div className="p-8 text-center text-zinc-500">{t('loading')}</div>;
     }
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6 bg-black/20 rounded-xl border border-white/5 backdrop-blur-sm">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-white mb-1">AI Models</h2>
-                    <p className="text-zinc-400 text-sm">Manage local AI models for separation.</p>
+                    <h2 className="text-2xl font-bold text-white mb-1">{t('title')}</h2>
+                    <p className="text-zinc-400 text-sm">{t('desc')}</p>
                 </div>
 
                 {stats && (
                     <div className="flex gap-4 text-xs bg-black/40 px-4 py-2 rounded-lg border border-white/5">
                         <div className="flex flex-col">
-                            <span className="text-zinc-500 uppercase tracking-wider font-semibold text-[10px]">Model Storage</span>
+                            <span className="text-zinc-500 uppercase tracking-wider font-semibold text-[10px]">{t('modelStorage')}</span>
                             <span className="text-white font-mono">{formatSize(stats.modelSize)}</span>
                         </div>
                         <div className="w-px bg-white/10" />
                         <div className="flex flex-col">
-                            <span className="text-zinc-500 uppercase tracking-wider font-semibold text-[10px]">Audio Cache</span>
+                            <span className="text-zinc-500 uppercase tracking-wider font-semibold text-[10px]">{t('audioCache')}</span>
                             <span className="text-white font-mono">{formatSize(stats.cacheSize)}</span>
                         </div>
                         <div className="w-px bg-white/10" />
@@ -67,8 +69,8 @@ export const ModelManager: React.FC = () => {
                             className="flex flex-col items-start hover:text-rose-400 transition-colors group"
                             disabled={stats.cacheSize === 0}
                         >
-                            <span className="text-zinc-500 group-hover:text-rose-400 uppercase tracking-wider font-semibold text-[10px]">Action</span>
-                            <span className="underline decoration-zinc-700 underline-offset-2">Clear Cache</span>
+                            <span className="text-zinc-500 group-hover:text-rose-400 uppercase tracking-wider font-semibold text-[10px]">{t('action')}</span>
+                            <span className="underline decoration-zinc-700 underline-offset-2">{t('clearCache')}</span>
                         </button>
                     </div>
                 )}
@@ -92,11 +94,9 @@ export const ModelManager: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                        <p className="font-semibold mb-1">About Local Processing</p>
+                        <p className="font-semibold mb-1">{t('aboutTitle')}</p>
                         <p className="opacity-80">
-                            Models are downloaded once and run entirely in your browser using WebGPU.
-                            No audio data is ever sent to a server. Larger models provide better quality
-                            but require more download time and GPU memory.
+                            {t('aboutDesc')}
                         </p>
                     </div>
                 </div>

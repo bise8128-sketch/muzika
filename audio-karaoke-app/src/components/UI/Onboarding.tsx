@@ -1,29 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface Step {
-    title: string;
-    content: string;
-    target?: string; // CSS selector for highlighting (future enhancement)
+    titleKey: string;
+    contentKey: string;
+    target?: string;
 }
 
 const STEPS: Step[] = [
     {
-        title: "Welcome to Muzika",
-        content: "Experience professional-grade AI audio separation right in your browser. Your files never leave your device."
+        titleKey: "step1Title",
+        contentKey: "step1Content"
     },
     {
-        title: "Upload & Separate",
-        content: "Drag and drop any MP3, WAV, or FLAC file. Our AI will split it into clean vocals and instrumentals using your GPU."
+        titleKey: "step2Title",
+        contentKey: "step2Content"
     },
     {
-        title: "Fine-tune in Settings",
-        content: "Switch between different AI models and manage your local storage cache in the settings panel."
+        titleKey: "step3Title",
+        contentKey: "step3Content"
     },
     {
-        title: "Karaoke Mode",
-        content: "Try our signature Karaoke mode with real-time lyrics, pitch adjustment, and voice recording."
+        titleKey: "step4Title",
+        contentKey: "step4Content"
     }
 ];
 
@@ -33,6 +34,7 @@ interface OnboardingProps {
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ forceShow = false, onClose }) => {
+    const t = useTranslations('Onboarding');
     const [isVisible, setIsVisible] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -87,9 +89,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ forceShow = false, onClo
                         ))}
                     </div>
 
-                    <h3 className="text-3xl font-black tracking-tight mb-4">{step.title}</h3>
+                    <h3 className="text-3xl font-black tracking-tight mb-4">{t(step.titleKey as any)}</h3>
                     <p className="text-muted-foreground text-lg leading-relaxed mb-10">
-                        {step.content}
+                        {t(step.contentKey as any)}
                     </p>
 
                     <div className="flex items-center justify-between gap-4">
@@ -97,13 +99,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ forceShow = false, onClo
                             onClick={complete}
                             className="text-white/40 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest"
                         >
-                            Skip
+                            {t('skip')}
                         </button>
                         <button
                             onClick={handleNext}
                             className="px-10 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-all"
                         >
-                            {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next Step'}
+                            {currentStep === STEPS.length - 1 ? t('getStarted') : t('nextStep')}
                         </button>
                     </div>
                 </div>

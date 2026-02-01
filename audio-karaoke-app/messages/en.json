@@ -101,6 +101,55 @@
         "getStarted": "Get Started",
         "nextStep": "Next Step"
     },
+    "EffectsPanel": {
+        "studioEffects": "Studio Effects",
+        "realTimeProcessing": "Real-time DSP audio processing",
+        "reset": "RESET",
+        "pitchShift": "Pitch Shift",
+        "semitones": "Semitones",
+        "tempo": "Tempo",
+        "reverb": "Reverb",
+        "echo": "Echo",
+        "equalizer": "Equalizer",
+        "bass": "Bass",
+        "mid": "Mid",
+        "treble": "Treble",
+        "min": "Min",
+        "max": "Max"
+    },
+    "KaraokePlayer": {
+        "uploadLrc": "Upload .LRC / .CDG",
+        "createLyrics": "Create Lyrics",
+        "recording": "Recording",
+        "recordVocals": "Record Vocals",
+        "stopRecording": "Stop Recording",
+        "voiceRecorded": "Voice recorded",
+        "exporting": "Exporting {progress}%",
+        "video": "Video",
+        "audioDownload": "Download {format}"
+    },
+    "LyricDisplay": {
+        "noLyrics": "No lyrics loaded",
+        "uploadHint": "Upload an .lrc file or create some above"
+    },
+    "LyricEditor": {
+        "title": "Lyric Editor",
+        "paste": "Paste",
+        "clear": "Clear",
+        "editText": "Edit Text",
+        "syncMode": "Sync Mode",
+        "placeholder": "Paste your lyrics here, one line per row...",
+        "markLine": "Mark next line [Space]",
+        "download": "Download .LRC",
+        "clearConfirm": "Are you sure you want to clear all lyrics?"
+    },
+    "PlayerControls": {
+        "nowPlaying": "Now Playing",
+        "track": "Separated audio track",
+        "instrumental": "Instrumental",
+        "mix": "Mix (Vocals ↔ Instrumental)",
+        "vocals": "Vocals"
+    },
     "BackendStatus": {
         "backend": "Backend: {status}"
     }

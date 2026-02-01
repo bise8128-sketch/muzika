@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
 import { LRCData } from '@/types/karaoke';
+import { useTranslations } from 'next-intl';
 
 export type LyricTheme = 'modern' | 'neon' | 'classic' | 'retro';
 
@@ -52,6 +53,7 @@ const THEME_STYLES: Record<LyricTheme, {
 };
 
 export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime, theme = 'modern' }) => {
+    const t = useTranslations('LyricDisplay');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -84,8 +86,8 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                 </div>
-                <p className="font-medium text-lg text-white">No lyrics loaded</p>
-                <p className="text-sm opacity-60">Upload an .lrc file or create some above</p>
+                <p className="font-medium text-lg text-white">{t('noLyrics')}</p>
+                <p className="text-sm opacity-60">{t('uploadHint')}</p>
             </div>
         );
     }
@@ -102,18 +104,20 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
             {lyrics.lines.map((line, index) => {
                 const isActive = index === currentLineIndex;
                 const isPast = index < currentLineIndex;
+                const isFuture = index > currentLineIndex;
 
                 return (
                     <div
-                        key={`${line.startTime}-${index}`}
+                        key={index}
                         ref={(el) => { lineRefs.current[index] = el; }}
-                        className={`
-                            text-center transition-all duration-500 ease-out font-bold tracking-tight
-                            ${isActive ? style.active : isPast ? style.past : style.future}
+                        className={`text-center font-bold transition-all duration-500 ease-out transform
+                            ${isActive ? style.active : ''}
+                            ${isPast ? style.past : ''}
+                            ${isFuture ? style.future : ''}
                         `}
                     >
                         <span className={isActive ? style.gradient : ''}>
-                            {line.text || '♪'}
+                            {line.text}
                         </span>
                     </div>
                 );

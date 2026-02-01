@@ -18,12 +18,14 @@ import { VideoExporter } from '@/utils/audio/videoExport';
 import { CDGRenderer } from './CDGRenderer';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { exportAudio, renderProcessedAudio } from '@/utils/audio/audioExporter';
+import { useTranslations } from 'next-intl';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
 }
 
 export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
+    const t = useTranslations('KaraokePlayer');
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const playback = usePlayback(controller);
 
@@ -330,14 +332,14 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                             <label className="cursor-pointer group-hover:bg-black/20 transition-colors">
                                 <input type="file" accept=".lrc,.cdg" onChange={handleLRCUpload} className="hidden" />
                                 <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 hover:bg-white/20 transition-all text-white">
-                                    Upload .LRC / .CDG
+                                    {t('uploadLrc')}
                                 </div>
                             </label>
                             <button
                                 onClick={() => setShowEditor(true)}
                                 className="bg-primary/20 backdrop-blur-md px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/30 transition-all text-white"
                             >
-                                Create Lyrics
+                                {t('createLyrics')}
                             </button>
                         </div>
                     </div>
@@ -388,7 +390,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 {recorder.isRecording && (
                     <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-500/20 text-red-500 px-3 py-1 rounded-full border border-red-500/30 animate-pulse font-bold text-xs uppercase tracking-widest">
                         <div className="w-2 h-2 bg-red-500 rounded-full" />
-                        Recording
+                        {t('recording')}
                     </div>
                 )}
             </div>
@@ -419,7 +421,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                             </svg>
-                            Record Vocals
+                            {t('recordVocals')}
                         </button>
                     ) : (
                         <button
@@ -429,13 +431,13 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
                             </svg>
-                            Stop Recording
+                            {t('stopRecording')}
                         </button>
                     )}
 
                     {recorder.recordedBuffer && (
                         <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/10">
-                            <span className="text-white/60 text-sm">Voice recorded</span>
+                            <span className="text-white/60 text-sm">{t('voiceRecorded')}</span>
                             <button
                                 onClick={recorder.clearRecording}
                                 className="text-white/40 hover:text-red-400 transition-colors"
@@ -488,14 +490,14 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                                 {isExporting ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                        Exporting {Math.round(exportProgress * 100)}%
+                                        {t('exporting', { progress: Math.round(exportProgress * 100) })}
                                     </>
                                 ) : (
                                     <>
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                         </svg>
-                                        Video
+                                        {t('video')}
                                     </>
                                 )}
                             </button>

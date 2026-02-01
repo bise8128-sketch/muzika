@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 interface PlayerControlsProps {
     isPlaying: boolean;
@@ -32,6 +33,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onInstrumentalVolumeChange,
     onBalanceChange,
 }) => {
+    const t = useTranslations('PlayerControls');
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
@@ -78,8 +80,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         )}
                     </button>
                     <div className="hidden md:block">
-                        <h4 className="text-sm font-medium text-gray-300">Sada se reprodukuje</h4>
-                        <p className="text-xs text-gray-500">Razdvojeni audio zapis</p>
+                        <h4 className="text-sm font-medium text-gray-300">{t('nowPlaying')}</h4>
+                        <p className="text-xs text-gray-500">{t('track')}</p>
                     </div>
                 </div>
 
@@ -88,9 +90,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     {/* Crossfader Balance */}
                     <div className="px-4">
                         <div className="flex justify-between mb-1 text-[10px] font-bold uppercase tracking-tighter text-gray-400">
-                            <span>Instrumental</span>
-                            <span>Miks (Vokali ↔ Instrumental)</span>
-                            <span>Vokali</span>
+                            <span>{t('instrumental')}</span>
+                            <span>{t('mix')}</span>
+                            <span>{t('vocals')}</span>
                         </div>
                         <input
                             type="range"
@@ -98,54 +100,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                             max={1}
                             step={0.01}
                             value={vocalsVolume / (vocalsVolume + instrumentalVolume || 1)}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (onBalanceChange) onBalanceChange(val);
-                            }}
-                            className="w-full h-2 bg-gradient-to-r from-pink-500 via-purple-500 to-purple-400 rounded-lg appearance-none cursor-pointer"
+                            onChange={(e) => onBalanceChange?.(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
                         />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-8 justify-end w-full sm:w-auto">
-                        {/* Glasnoća vokala */}
-                        <div className="flex-1 max-w-[200px]">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                                    Vokali
-                                </span>
-                                <span className="text-xs text-gray-500">{Math.round(vocalsVolume * 100)}%</span>
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={vocalsVolume}
-                                onChange={(e) => onVocalsVolumeChange(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
-                            />
-                        </div>
-
-                        {/* Glasnoća instrumentala */}
-                        <div className="flex-1 max-w-[200px]">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-pink-400 uppercase tracking-wider flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-pink-400"></span>
-                                    Instrumental
-                                </span>
-                                <span className="text-xs text-gray-500">{Math.round(instrumentalVolume * 100)}%</span>
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={instrumentalVolume}
-                                onChange={(e) => onInstrumentalVolumeChange(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-400"
-                            />
-                        </div>
                     </div>
                 </div>
             </div>
