@@ -1,0 +1,54 @@
+{
+    "HomePage": {
+        "title": "Separate your music <br /> <span class=\"text-gradient\">with AI precision.</span>",
+        "subtitle": "Professional vocal and instrumental separation directly in your browser. No accounts, no servers, just quality.",
+        "activeModel": "Active Model: {modelName}",
+        "loadingKaraoke": "Loading Karaoke Player...",
+        "preparingResults": "Preparing results...",
+        "loadingModelManager": "Loading Model Manager...",
+        "separatingAudio": "Separating Audio...",
+        "runningModels": "Running AI models locally on your GPU",
+        "status": "Status: {status}",
+        "backToResults": "Back to Results",
+        "backToHome": "Back to Home",
+        "back": "Back",
+        "clearAll": "Clear All",
+        "startBatch": "Start Batch",
+        "processing": "Processing...",
+        "howItWorks": "How it works",
+        "models": "Models",
+        "privacy": "Privacy",
+        "footer": "© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4."
+    },
+    "AudioUpload": {
+        "dropFiles": "Drop them here!",
+        "selectFiles": "Select Audio Files",
+        "dragDrop": "Drag and drop your MP3/WAV files, or click to browse. Secure and local.",
+        "autoStart": "Start Singing Automatically",
+        "whyMuzika": "Why Muzika?",
+        "private": "Private",
+        "privateDesc": "No servers involved",
+        "fast": "Fast",
+        "fastDesc": "GPU accelerated",
+        "free": "Free",
+        "freeDesc": "Open source",
+        "errorFormat": "Unsupported file format: {name}. Please upload MP3, WAV or FLAC.",
+        "errorSize": "File {name} is too large. Max size is 50MB."
+    },
+    "History": {
+        "recentSessions": "Recent Sessions",
+        "clearHistory": "Clear History"
+    },
+    "ResultsDisplay": {
+        "separationComplete": "Separation Complete",
+        "readyForDownload": "Your tracks are ready for download.",
+        "processAnother": "Process Another",
+        "originalQuality": "Original quality restored",
+        "didYouKnow": "Did you know?",
+        "karaokeMode": "You can also use our <span class=\"text-primary font-medium\">Karaoke Mode</span> to sing along with real lyrics and pitch adjustment!",
+        "tryKaraoke": "TRY KARAOKE"
+    },
+    "BackendStatus": {
+        "backend": "Backend: {status}"
+    }
+}

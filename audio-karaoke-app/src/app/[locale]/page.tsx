@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
@@ -14,6 +15,7 @@ import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
 import { useModels } from '@/hooks/useModels';
+import LanguageSwitcher from '@/components/UI/LanguageSwitcher';
 
 const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
   loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Karaoke Player...</div>,
@@ -46,6 +48,7 @@ type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'ba
 
 // Backend Status Component
 function BackendStatus() {
+  const t = useTranslations('BackendStatus');
   const [status, setStatus] = useState<'online' | 'error' | 'loading'>('loading');
 
   useEffect(() => {
@@ -74,13 +77,14 @@ function BackendStatus() {
           'bg-amber-500 animate-pulse'
         }`} />
       <span className={status === 'error' ? 'text-rose-400' : 'text-muted-foreground'}>
-        Backend: {status}
+        {t('backend', { status })}
       </span>
     </div>
   );
 }
 
 export default function Home() {
+  const t = useTranslations('HomePage');
   const { models: AVAILABLE_MODELS } = useModels();
   const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
@@ -278,14 +282,14 @@ export default function Home() {
                 {Math.round(separationProgress)}%
               </div>
             </div>
-            <h2 className="text-3xl font-bold mb-4 text-gradient">Separating Audio...</h2>
+            <h2 className="text-3xl font-bold mb-4 text-gradient">{t('separatingAudio')}</h2>
             <p className="text-muted-foreground animate-pulse">
-              {separationMessage || 'Running AI models locally on your GPU'}
+              {separationMessage || t('runningModels')}
             </p>
 
             <div className="mt-12 space-y-2 max-w-sm mx-auto">
               <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">
-                <span>Status: {separationStatus}</span>
+                <span>{t('status', { status: separationStatus })}</span>
               </div>
               <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <div
@@ -322,7 +326,7 @@ export default function Home() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to Results
+              {t('backToResults')}
             </button>
             {controller && <KaraokePlayer controller={controller} />}
           </div>
@@ -338,7 +342,7 @@ export default function Home() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to Home
+              {t('backToHome')}
             </button>
             <ModelManager />
           </div>
@@ -349,7 +353,7 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
             <div className="flex justify-between items-center mb-6">
               <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
-                <span>←</span> Back
+                <span>←</span> {t('back')}
               </button>
               <div className="space-x-4">
                 <button
@@ -357,7 +361,7 @@ export default function Home() {
                   disabled={batch.isProcessing}
                   className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
                 >
-                  Clear All
+                  {t('clearAll')}
                 </button>
                 <button
                   onClick={() => {
@@ -367,7 +371,7 @@ export default function Home() {
                   disabled={batch.isProcessing || batch.queue.length === 0}
                   className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
                 >
-                  {batch.isProcessing ? 'Processing...' : 'Start Batch'}
+                  {batch.isProcessing ? t('processing') : t('startBatch')}
                 </button>
               </div>
             </div>
@@ -388,21 +392,22 @@ export default function Home() {
           <div className="flex items-center gap-3 cursor-pointer group" onClick={handleRestart}>
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
               </svg>
             </div>
             <span className="text-2xl font-black tracking-tighter">MUZIKA</span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
+            <LanguageSwitcher />
             <button
               onClick={() => setShowHelp(true)}
               className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
             >
-              How it works
+              {t('howItWorks')}
             </button>
-            <button onClick={() => setState('models')} className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Models</button>
-            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">Privacy</a>
+            <button onClick={() => setState('models')} className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">{t('models')}</button>
+            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">{t('privacy')}</a>
 
             <BackendStatus />
 
@@ -423,14 +428,12 @@ export default function Home() {
         {state === 'upload' && (
           <header className="text-center max-w-3xl mx-auto mb-16 space-y-6">
             <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest animate-float">
-              Active Model: {AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown'}
+              {t('activeModel', { modelName: AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown' })}
             </div>
-            <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-tight">
-              Separate your music <br />
-              <span className="text-gradient">with AI precision.</span>
+            <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-tight" dangerouslySetInnerHTML={{ __html: t.raw('title') }}>
             </h1>
             <p className="text-xl text-muted-foreground max-w-xl mx-auto">
-              Professional vocal and instrumental separation directly in your browser. No accounts, no servers, just quality.
+              {t('subtitle')}
             </p>
           </header>
         )}
@@ -452,7 +455,7 @@ export default function Home() {
       />
 
       <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
-        <p>© 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.</p>
+        <p>{t('footer')}</p>
       </footer>
     </div>
   );

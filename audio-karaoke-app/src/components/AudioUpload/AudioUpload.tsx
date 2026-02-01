@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface AudioUploadProps {
     onUpload: (files: File[]) => void;
@@ -15,6 +16,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     autoStartKaraoke = false,
     onAutoStartToggle
 }) => {
+    const t = useTranslations('AudioUpload');
     const [isDragging, setIsDragging] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -25,11 +27,11 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
 
         for (const file of files) {
             if (!validTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && !file.name.endsWith('.flac')) {
-                setError(`Nepodržan format datoteke: ${file.name}. Molimo učitajte MP3, WAV ili FLAC.`);
+                setError(t('errorFormat', { name: file.name }));
                 return false;
             }
             if (file.size > maxSize) {
-                setError(`Datoteka ${file.name} je prevelika. Maksimalna veličina je 50MB.`);
+                setError(t('errorSize', { name: file.name }));
                 return false;
             }
         }
@@ -117,10 +119,10 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     </div>
 
                     <h3 className="text-2xl font-bold mb-2 group-hover:text-gradient transition-all">
-                        {isDragging ? 'Drop them here!' : 'Select Audio Files'}
+                        {isDragging ? t('dropFiles') : t('selectFiles')}
                     </h3>
                     <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
-                        Drag and drop your MP3/WAV files, or click to browse. Secure and local.
+                        {t('dragDrop')}
                     </p>
 
                     <div className="flex gap-4 justify-center items-center text-sm font-medium">
@@ -150,7 +152,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                             <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 peer-checked:left-5"></div>
                         </div>
                         <span className="text-sm font-medium text-gray-400 group-hover:text-gray-300 transition-colors">
-                            Start Singing Automatically
+                            {t('autoStart')}
                         </span>
                     </label>
                 </div>
@@ -166,17 +168,17 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
             )}
 
             <div className="mt-12 space-y-4">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider text-center">Why Muzika?</h4>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider text-center">{t('whyMuzika')}</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[
-                        { tag: '🔒', title: 'Private', desc: 'No servers involved' },
-                        { tag: '⚡', title: 'Fast', desc: 'GPU accelerated' },
-                        { tag: '✨', title: 'Free', desc: 'Open source' }
+                        { tag: '🔒', title: 'private', desc: 'privateDesc' },
+                        { tag: '⚡', title: 'fast', desc: 'fastDesc' },
+                        { tag: '✨', title: 'free', desc: 'freeDesc' }
                     ].map((item, i) => (
                         <div key={i} className="glass-card p-4 rounded-2xl text-center group hover:border-primary/30 transition-all">
                             <div className="text-2xl mb-2">{item.tag}</div>
-                            <div className="font-semibold text-sm">{item.title}</div>
-                            <div className="text-xs text-muted-foreground">{item.desc}</div>
+                            <div className="font-semibold text-sm">{t(item.title as any)}</div>
+                            <div className="text-xs text-muted-foreground">{t(item.desc as any)}</div>
                         </div>
                     ))}
                 </div>

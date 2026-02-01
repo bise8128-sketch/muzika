@@ -1,0 +1,54 @@
+{
+    "HomePage": {
+        "title": "Razdvojite svoju muziku <br /> <span class=\"text-gradient\">uz AI preciznost.</span>",
+        "subtitle": "Profesionalno razdvajanje vokala i instrumentala direktno u pregledniku. Bez računa, bez servera, samo kvalitet.",
+        "activeModel": "Aktivni model: {modelName}",
+        "loadingKaraoke": "Učitavanje Karaoke playera...",
+        "preparingResults": "Pripremanje rezultata...",
+        "loadingModelManager": "Učitavanje upravitelja modela...",
+        "separatingAudio": "Razdvajanje zvuka...",
+        "runningModels": "Pokretanje AI modela lokalno na vašem GPU",
+        "status": "Status: {status}",
+        "backToResults": "Nazad na rezultate",
+        "backToHome": "Nazad na početnu",
+        "back": "Nazad",
+        "clearAll": "Očisti sve",
+        "startBatch": "Započni grupno",
+        "processing": "Obrađuje se...",
+        "howItWorks": "Kako radi",
+        "models": "Modeli",
+        "privacy": "Privatnost",
+        "footer": "© 2026 Muzika. Izrađeno uz Next.js, ONNX i Tailwind 4."
+    },
+    "AudioUpload": {
+        "dropFiles": "Prevuci ih ovdje!",
+        "selectFiles": "Odaberi audio datoteke",
+        "dragDrop": "Prevuci i ispusti MP3/WAV datoteke, ili klikni za pretragu. Sigurno i lokalno.",
+        "autoStart": "Započni pjevanje automatski",
+        "whyMuzika": "Zašto Muzika?",
+        "private": "Privatno",
+        "privateDesc": "Nema servera",
+        "fast": "Brzo",
+        "fastDesc": "GPU ubrzano",
+        "free": "Besplatno",
+        "freeDesc": "Otvoreni kod",
+        "errorFormat": "Nepodržan format datoteke: {name}. Molimo učitajte MP3, WAV ili FLAC.",
+        "errorSize": "Datoteka {name} je prevelika. Maksimalna veličina je 50MB."
+    },
+    "History": {
+        "recentSessions": "Nedavne sesije",
+        "clearHistory": "Očisti historiju"
+    },
+    "ResultsDisplay": {
+        "separationComplete": "Razdvajanje završeno",
+        "readyForDownload": "Vaše trake su spremne za preuzimanje.",
+        "processAnother": "Obradi drugu",
+        "originalQuality": "Originalna kvaliteta vraćena",
+        "didYouKnow": "Znali ste da?",
+        "karaokeMode": "Također možete koristiti naš <span class=\"text-primary font-medium\">Modus karaokea</span> za pjevanje uz stvarne stihove i podešavanje visine tona!",
+        "tryKaraoke": "ISPROBAJ KARAOKE"
+    },
+    "BackendStatus": {
+        "backend": "Backend: {status}"
+    }
+}
