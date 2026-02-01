@@ -38,6 +38,23 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     // In workers, we might need a full URL to avoid relative path issues
     const wasmPath = typeof self !== 'undefined' && self.location ? `${self.location.origin}/wasm/` : '/wasm/';
 
+    console.log('[onnxSetup] Computed WASM path:', wasmPath);
+
+    // Diagnostic: Check if we can fetch the JSEP file
+    try {
+        const checkUrl = `${wasmPath}ort-wasm-simd-threaded.jsep.mjs`;
+        console.log('[onnxSetup] Diagnostic: Attempting to fetch', checkUrl);
+        const response = await fetch(checkUrl, { method: 'HEAD' });
+        console.log(`[onnxSetup] Diagnostic fetch status: ${response.status} ${response.statusText}`);
+        console.log('[onnxSetup] Diagnostic Content-Type:', response.headers.get('content-type'));
+
+        if (!response.ok) {
+            console.error('[onnxSetup] Diagnostic: File not accessible. This is likely the cause of the "Failed to fetch dynamically imported module" error.');
+        }
+    } catch (e) {
+        console.error('[onnxSetup] Diagnostic fetch failed:', e);
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.wasmPaths = wasmPath;
     console.log('[onnxSetup] WASM paths set to:', (ort as any).env.wasm.wasmPaths);

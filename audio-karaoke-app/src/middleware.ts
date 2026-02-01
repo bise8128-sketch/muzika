@@ -8,7 +8,7 @@ export default function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Handle API routes and static files separately (skip intl)
-    if (pathname.startsWith('/api') || pathname.match(/\.(png|jpg|jpeg|svg|css|js|ico|json)$/)) {
+    if (pathname.startsWith('/api') || pathname.match(/\.(png|jpg|jpeg|svg|css|js|mjs|wasm|ico|json|map|mp3|wav)$/)) {
         const response = NextResponse.next();
         addSecurityHeaders(response, request);
         return response;
