@@ -159,3 +159,54 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* --- Premium Karaoke Display Styles (New) --- */
+
+/* Premium Typography: Accessible, wide-set font */
+.font-karaoke-display {
+  font-family: 'Open Sans', 'Lato', system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  /* Ensuring high-contrast */
+}
+
+/* Responsive Scaling: clamp(MinSize, ViewportScale, MaxSize) */
+/* Min size: 2rem (32px), Scale: 8vw, Max size: 5rem (80px) */
+.text-responsive-karaoke {
+  font-size: clamp(2rem, 8vw, 5rem);
+}
+
+/* High-contrast Text Effect: Text stroke + drop-shadow */
+.text-karaoke-effect {
+  /* High contrast shadow for readability */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    0 0 15px rgba(255, 255, 255, 0.4);
+  /* Subtle glow */
+  -webkit-text-stroke: 1px black;
+}
+
+/* --- Thematic Backgrounds Utility (New) --- */
+
+/* Animated gradient background for a modern/thematic feel */
+.bg-animated-gradient {
+  background: linear-gradient(-45deg, #1d1b32, #110d21, #0a0814, #1d1b32);
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}

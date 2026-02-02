@@ -24,28 +24,28 @@ const THEME_STYLES: Record<LyricTheme, {
 }> = {
     modern: {
         container: 'space-y-8 py-32',
-        active: 'text-4xl md:text-5xl text-white scale-100 opacity-100 py-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]',
+        active: 'text-responsive-karaoke text-white scale-100 opacity-100 py-4 text-karaoke-effect',
         past: 'text-2xl text-white/40 blur-[1px] scale-95',
         future: 'text-2xl text-white/20 blur-[2px] scale-90',
         gradient: 'text-gradient'
     },
     neon: {
         container: 'space-y-6 py-24',
-        active: 'text-4xl md:text-5xl text-cyan-400 scale-105 opacity-100 py-4 drop-shadow-[0_0_20px_rgba(34,211,238,0.8)] [text-shadow:0_0_10px_#22d3ee]',
+        active: 'text-responsive-karaoke text-cyan-400 scale-105 opacity-100 py-4 text-karaoke-effect',
         past: 'text-2xl text-pink-500/30 blur-[0.5px] scale-95',
         future: 'text-2xl text-cyan-500/20 blur-[1px] scale-90',
         gradient: 'bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500'
     },
     classic: {
         container: 'space-y-4 py-20',
-        active: 'text-3xl md:text-4xl text-yellow-400 scale-100 opacity-100 py-2 [text-shadow:2px_2px_0_#000]',
+        active: 'text-responsive-karaoke text-yellow-400 scale-100 opacity-100 py-2 text-karaoke-effect',
         past: 'text-2xl text-white/60 scale-100 [text-shadow:1px_1px_0_#000]',
         future: 'text-2xl text-white/40 scale-100 [text-shadow:1px_1px_0_#000]',
         gradient: ''
     },
     retro: {
         container: 'space-y-2 py-16 font-mono',
-        active: 'text-3xl text-green-500 scale-100 opacity-100 py-1 [text-shadow:0_0_5px_#22c55e]',
+        active: 'text-responsive-karaoke text-green-500 scale-100 opacity-100 py-1 text-karaoke-effect',
         past: 'text-xl text-green-900 scale-100',
         future: 'text-xl text-green-900/40 scale-100',
         gradient: ''
@@ -59,22 +59,84 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
 
     const style = THEME_STYLES[theme];
 
-    const currentLineIndex = useMemo(() => {
-        if (!lyrics) return -1;
-        return lyrics.lines.findIndex(
+    const currentTiming = useMemo(() => {
+        if (!lyrics) return { lineIndex: -1, wordIndex: -1 };
+
+        const lineIndex = lyrics.lines.findIndex(
             (line, index) => {
                 const nextLine = lyrics.lines[index + 1];
                 return currentTime >= line.startTime && (nextLine ? currentTime < nextLine.startTime : true);
             }
         );
+
+        if (lineIndex === -1) return { lineIndex: -1, wordIndex: -1 };
+
+        const activeLine = lyrics.lines[lineIndex];
+        let wordIndex = -1;
+
+        if (activeLine.words && activeLine.words.length > 0) {
+            wordIndex = activeLine.words.findIndex(
+                (word, index) => {
+                    const nextWord = activeLine.words![index + 1];
+                    return currentTime >= word.startTime && (nextWord ? currentTime < nextWord.startTime : true);
+                }
+            );
+            // Keep the last word highlighted if we passed the start time of the last word but haven't moved to next line
+            if (wordIndex === -1 && currentTime > activeLine.words[activeLine.words.length - 1].startTime) {
+                wordIndex = activeLine.words.length - 1;
+            }
+        }
+
+        return { lineIndex, wordIndex };
     }, [lyrics, currentTime]);
+
+    const currentLineIndex = currentTiming.lineIndex;
+    const currentWordIndex = currentTiming.wordIndex;
+
+    // Easing function for smooth scroll (easeOutExpo)
+    const easeOutExpo = (t: number) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+    const scrollToActiveLine = (lineElement: HTMLDivElement | null) => {
+        const container = scrollContainerRef.current;
+        if (!lineElement || !container) return;
+
+        const containerHeight = container.clientHeight;
+        const lineTop = lineElement.offsetTop;
+        const lineHeight = lineElement.offsetHeight;
+
+        // Target: Center the line then shift up to be at ~1/3 of view
+        const targetScrollTop = lineTop - (containerHeight / 3) + (lineHeight / 2);
+
+        const startScrollTop = container.scrollTop;
+        const distance = targetScrollTop - startScrollTop;
+
+        if (Math.abs(distance) < 5) {
+            container.scrollTop = targetScrollTop;
+            return;
+        }
+
+        const duration = 100; // 100ms transition
+        let startTime: number | null = null;
+
+        const step = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const easedProgress = easeOutExpo(progress);
+
+            container.scrollTop = startScrollTop + distance * easedProgress;
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        };
+
+        requestAnimationFrame(step);
+    };
 
     useEffect(() => {
         if (currentLineIndex !== -1 && lineRefs.current[currentLineIndex]) {
-            lineRefs.current[currentLineIndex]?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-            });
+            scrollToActiveLine(lineRefs.current[currentLineIndex]);
         }
     }, [currentLineIndex]);
 
@@ -93,35 +155,60 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
     }
 
     return (
-        <div
-            ref={scrollContainerRef}
-            className={`h-[400px] overflow-y-auto px-8 no-scrollbar ${style.container}`}
-            style={{
-                maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
-                WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)'
-            }}
-        >
-            {lyrics.lines.map((line, index) => {
-                const isActive = index === currentLineIndex;
-                const isPast = index < currentLineIndex;
-                const isFuture = index > currentLineIndex;
+        <div className={`relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl bg-black/50`}>
+            {/* Thematic Background Layer: Blurred and Animated Gradient */}
+            <div className="absolute inset-0 bg-animated-gradient backdrop-blur-3xl z-0 opacity-70" />
 
-                return (
-                    <div
-                        key={index}
-                        ref={(el) => { lineRefs.current[index] = el; }}
-                        className={`text-center font-bold transition-all duration-500 ease-out transform
+            {/* Lyric Content Layer */}
+            <div
+                ref={scrollContainerRef}
+                className={`absolute inset-0 overflow-y-auto px-8 no-scrollbar z-10 ${style.container} font-karaoke-display`}
+                style={{
+                    maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)'
+                }}
+            >
+                {lyrics.lines.map((line, index) => {
+                    const isActive = index === currentLineIndex;
+                    const isPast = index < currentLineIndex;
+                    const isFuture = index > currentLineIndex;
+
+                    return (
+                        <div
+                            key={index}
+                            ref={(el) => { lineRefs.current[index] = el; }}
+                            className={`text-center font-bold transition-all duration-500 ease-out transform
                             ${isActive ? style.active : ''}
                             ${isPast ? style.past : ''}
                             ${isFuture ? style.future : ''}
                         `}
-                    >
-                        <span className={isActive ? style.gradient : ''}>
-                            {line.text}
-                        </span>
-                    </div>
-                );
-            })}
+                        >
+                            {isActive && line.words && line.words.length > 0 ? (
+                                <div className="inline-flex flex-wrap justify-center gap-x-[0.25em]">
+                                    {line.words.map((word, wIndex) => {
+                                        const isWordActive = wIndex === currentWordIndex;
+                                        const isWordPast = wIndex < currentWordIndex;
+
+                                        return (
+                                            <span
+                                                key={wIndex}
+                                                className={`transition-all duration-100 inline-block ${isWordActive || isWordPast ? style.gradient : 'opacity-70'
+                                                    } ${isWordActive ? 'scale-110 origin-bottom' : ''}`}
+                                            >
+                                                {word.text}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <span className={isActive ? style.gradient : ''}>
+                                    {line.text}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };
