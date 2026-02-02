@@ -115,7 +115,7 @@ const nextConfig: NextConfig = {
       },
       // Cache ONNX models and WASM files for 1 year
       {
-        source: "/public/models/:path*",
+        source: "/models/:path*",
         headers: [
           {
             key: "Cache-Control",
@@ -124,7 +124,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/public/wasm/:path*",
+        source: "/wasm/:path*",
         headers: [
           {
             key: "Cache-Control",
