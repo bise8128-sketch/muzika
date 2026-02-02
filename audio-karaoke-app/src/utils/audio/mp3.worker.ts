@@ -26,8 +26,6 @@ self.onmessage = async (e) => {
             // Import UMD scripts (bypass Webpack)
             // @ts-ignore
             importScripts(`${baseUrl}/ffmpeg.js`);
-            // @ts-ignore
-            importScripts(`${baseUrl}/ffmpeg-core.js`);
 
             // Initialize FFmpeg
             ffmpeg = new FFmpeg.FFmpeg();
@@ -35,7 +33,6 @@ self.onmessage = async (e) => {
             await ffmpeg.load({
                 coreURL: `${baseUrl}/ffmpeg-core.js`,
                 wasmURL: `${baseUrl}/ffmpeg-core.wasm`,
-                workerURL: `${baseUrl}/ffmpeg-core.worker.js`, // Some versions have this
             });
 
             self.postMessage({ type: 'INIT_SUCCESS' });
