@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useMemo } from 'react';
-import { LRCData } from '@/types/karaoke';
+import { LRCData, VisualSettings } from '@/types/karaoke';
 import { useTranslations } from 'next-intl';
 
 export type LyricTheme = 'modern' | 'neon' | 'classic' | 'retro';
@@ -13,6 +13,7 @@ interface LyricDisplayProps {
     lyrics: LRCData | null;
     currentTime: number;
     theme?: LyricTheme;
+    visualSettings?: VisualSettings;
 }
 
 const THEME_STYLES: Record<LyricTheme, {
@@ -24,40 +25,50 @@ const THEME_STYLES: Record<LyricTheme, {
 }> = {
     modern: {
         container: 'space-y-8 py-32',
-        active: 'text-responsive-karaoke text-white scale-100 opacity-100 py-4 text-karaoke-effect',
+        active: 'scale-110 opacity-100 py-4 text-karaoke-effect',
         past: 'text-2xl text-white/40 blur-[1px] scale-95',
         future: 'text-2xl text-white/20 blur-[2px] scale-90',
         gradient: 'text-gradient'
     },
     neon: {
         container: 'space-y-6 py-24',
-        active: 'text-responsive-karaoke text-cyan-400 scale-105 opacity-100 py-4 text-karaoke-effect',
+        active: 'scale-105 opacity-100 py-4 text-karaoke-effect',
         past: 'text-2xl text-pink-500/30 blur-[0.5px] scale-95',
         future: 'text-2xl text-cyan-500/20 blur-[1px] scale-90',
         gradient: 'bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500'
     },
     classic: {
         container: 'space-y-4 py-20',
-        active: 'text-responsive-karaoke text-yellow-400 scale-100 opacity-100 py-2 text-karaoke-effect',
+        active: 'scale-100 opacity-100 py-2 text-karaoke-effect',
         past: 'text-2xl text-white/60 scale-100 [text-shadow:1px_1px_0_#000]',
         future: 'text-2xl text-white/40 scale-100 [text-shadow:1px_1px_0_#000]',
         gradient: ''
     },
     retro: {
         container: 'space-y-2 py-16 font-mono',
-        active: 'text-responsive-karaoke text-green-500 scale-100 opacity-100 py-1 text-karaoke-effect',
+        active: 'scale-100 opacity-100 py-1 text-karaoke-effect',
         past: 'text-xl text-green-900 scale-100',
         future: 'text-xl text-green-900/40 scale-100',
         gradient: ''
     }
 };
 
-export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime, theme = 'modern' }) => {
+export const LyricDisplay: React.FC<LyricDisplayProps> = ({ 
+    lyrics, 
+    currentTime, 
+    theme = 'modern',
+    visualSettings
+}) => {
     const t = useTranslations('LyricDisplay');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const style = THEME_STYLES[theme];
+
+    // Calculate effective time with offset
+    const effectiveTime = useMemo(() => {
+        return currentTime + ((visualSettings?.offset || 0) / 1000);
+    }, [currentTime, visualSettings?.offset]);
 
     const currentTiming = useMemo(() => {
         if (!lyrics) return { lineIndex: -1, wordIndex: -1 };
@@ -65,7 +76,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
         const lineIndex = lyrics.lines.findIndex(
             (line, index) => {
                 const nextLine = lyrics.lines[index + 1];
-                return currentTime >= line.startTime && (nextLine ? currentTime < nextLine.startTime : true);
+                return effectiveTime >= line.startTime && (nextLine ? effectiveTime < nextLine.startTime : true);
             }
         );
 
@@ -78,20 +89,42 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
             wordIndex = activeLine.words.findIndex(
                 (word, index) => {
                     const nextWord = activeLine.words![index + 1];
-                    return currentTime >= word.startTime && (nextWord ? currentTime < nextWord.startTime : true);
+                    return effectiveTime >= word.startTime && (nextWord ? effectiveTime < nextWord.startTime : true);
                 }
             );
             // Keep the last word highlighted if we passed the start time of the last word but haven't moved to next line
-            if (wordIndex === -1 && currentTime > activeLine.words[activeLine.words.length - 1].startTime) {
+            if (wordIndex === -1 && effectiveTime > activeLine.words[activeLine.words.length - 1].startTime) {
                 wordIndex = activeLine.words.length - 1;
             }
         }
 
         return { lineIndex, wordIndex };
-    }, [lyrics, currentTime]);
+    }, [lyrics, effectiveTime]);
 
     const currentLineIndex = currentTiming.lineIndex;
     const currentWordIndex = currentTiming.wordIndex;
+
+    // Helper to get font size class
+    const getFontSizeClass = (size?: string, isActive: boolean = false) => {
+        if (!isActive) return '';
+        switch (size) {
+            case 'sm': return 'text-xl md:text-2xl';
+            case 'lg': return 'text-4xl md:text-5xl';
+            case 'xl': return 'text-5xl md:text-7xl';
+            case 'base':
+            default: return 'text-3xl md:text-4xl';
+        }
+    };
+
+    // Helper to get font weight class
+    const getFontWeightClass = (weight?: string) => {
+        switch (weight) {
+            case 'normal': return 'font-normal';
+            case 'extrabold': return 'font-extrabold';
+            case 'bold':
+            default: return 'font-bold';
+        }
+    };
 
     // Easing function for smooth scroll (easeOutExpo)
     const easeOutExpo = (t: number) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
@@ -173,15 +206,22 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
                     const isPast = index < currentLineIndex;
                     const isFuture = index > currentLineIndex;
 
+                    // Dynamic styles based on visual settings
+                    const fontSizeClass = isActive ? getFontSizeClass(visualSettings?.fontSize, true) : '';
+                    const fontWeightClass = isActive ? getFontWeightClass(visualSettings?.fontWeight) : '';
+                    const shadowStyle = isActive && visualSettings?.textShadow ? { textShadow: '2px 2px 4px rgba(0,0,0,0.8)' } : {};
+                    const colorClass = isActive && visualSettings?.highlightColor ? visualSettings.highlightColor : '';
+
                     return (
                         <div
                             key={index}
                             ref={(el) => { lineRefs.current[index] = el; }}
-                            className={`text-center font-bold transition-all duration-500 ease-out transform
-                            ${isActive ? style.active : ''}
+                            className={`text-center transition-all duration-500 ease-out transform
+                            ${isActive ? `${style.active} ${fontSizeClass} ${fontWeightClass} ${colorClass}` : ''}
                             ${isPast ? style.past : ''}
                             ${isFuture ? style.future : ''}
                         `}
+                            style={shadowStyle}
                         >
                             {isActive && line.words && line.words.length > 0 ? (
                                 <div className="inline-flex flex-wrap justify-center gap-x-[0.25em]">
@@ -192,8 +232,9 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
                                         return (
                                             <span
                                                 key={wIndex}
-                                                className={`transition-all duration-100 inline-block ${isWordActive || isWordPast ? style.gradient : 'opacity-70'
-                                                    } ${isWordActive ? 'scale-110 origin-bottom' : ''}`}
+                                                className={`transition-all duration-100 inline-block ${
+                                                    isWordActive || isWordPast ? (colorClass || style.gradient) : 'opacity-70'
+                                                } ${isWordActive ? 'scale-110 origin-bottom' : ''}`}
                                             >
                                                 {word.text}
                                             </span>
@@ -201,9 +242,16 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({ lyrics, currentTime,
                                     })}
                                 </div>
                             ) : (
-                                <span className={isActive ? style.gradient : ''}>
+                                <span className={isActive ? (colorClass || style.gradient) : ''}>
                                     {line.text}
                                 </span>
+                            )}
+                            
+                            {/* Dual Text Rendering */}
+                            {visualSettings?.showDualText && line.translation && (
+                                <div className={`mt-2 text-lg md:text-xl opacity-80 ${isActive ? 'text-white' : 'text-white/40'}`}>
+                                    {line.translation}
+                                </div>
                             )}
                         </div>
                     );

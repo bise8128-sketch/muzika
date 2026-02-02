@@ -6,6 +6,7 @@ export interface LyricLine {
     startTime: number; // In seconds
     endTime: number;   // In seconds
     text: string;
+    translation?: string; // Translated text
     words?: LyricWord[]; // Optional word-level timing
 }
 
@@ -13,6 +14,15 @@ export interface LyricWord {
     startTime: number;
     endTime: number;
     text: string;
+}
+
+export interface VisualSettings {
+    highlightColor: string;
+    fontSize: 'sm' | 'base' | 'lg' | 'xl';
+    fontWeight: 'normal' | 'bold' | 'extrabold';
+    textShadow: boolean;
+    offset: number; // In milliseconds
+    showDualText: boolean;
 }
 
 export interface LRCData {

@@ -2,15 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useModels } from '@/hooks/useModels';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
 import { useTranslations } from 'next-intl';
+import { VisualSettings } from '@/types/karaoke';
 
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedModelId: string;
-    onModelChange: (modelId: string) => void;
+    selectedModelId?: string;
+    onModelChange?: (modelId: string) => void;
+    visualSettings?: VisualSettings;
+    onVisualSettingsChange?: (settings: VisualSettings) => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, selectedModelId, onModelChange }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({
+    isOpen,
+    onClose,
+    selectedModelId,
+    onModelChange,
+    visualSettings,
+    onVisualSettingsChange
+}) => {
     const t = useTranslations('SettingsPanel');
     const { models: AVAILABLE_MODELS } = useModels();
     const [stats, setStats] = useState<StorageStats | null>(null);
@@ -29,6 +39,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
         }
     };
 
+    const handleVisualChange = (key: keyof VisualSettings, value: any) => {
+        if (onVisualSettingsChange && visualSettings) {
+            onVisualSettingsChange({
+                ...visualSettings,
+                [key]: value
+            });
+        }
+    };
+
     return (
         <>
             {/* Backdrop */}
@@ -41,14 +60,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
             {/* Panel */}
             <div
                 className={`
-                    fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-white/10 z-[60] shadow-2xl transition-transform duration-500 ease-out p-8
+                    fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-white/10 z-[60] shadow-2xl transition-transform duration-500 ease-out p-8 flex flex-col
                     ${isOpen ? 'translate-x-0' : 'translate-x-full'}
                 `}
                 role="dialog"
                 aria-labelledby="settings-title"
             >
-                <div className="flex justify-between items-center mb-10">
-                    <h2 id="settings-title" className="text-2xl font-bold flex items-center gap-3">
+                <div className="flex justify-between items-center mb-8 shrink-0">
+                    <h2 id="settings-title" className="text-2xl font-bold flex items-center gap-3 text-white">
                         <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -57,47 +76,149 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-white/5 transition-colors"
+                        className="p-2 rounded-full hover:bg-white/5 transition-colors text-white"
                         aria-label="Close settings"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l18 18" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <div className="space-y-10 overflow-y-auto max-h-[calc(100vh-200px)] pr-2">
-                    {/* Engine Settings */}
-                    <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('processingEngine')}</h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div>
-                                    <div className="font-semibold mb-1">{t('webGpu')}</div>
-                                    <div className="text-xs text-muted-foreground">{t('webGpuDesc')}</div>
+                <div className="flex-1 overflow-y-auto pr-2 space-y-10">
+                    {/* Visual Settings Section */}
+                    {visualSettings && (
+                        <section>
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('visualSettings')}</h3>
+                            <div className="space-y-4">
+                                {/* Highlight Color */}
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <label className="block text-sm text-gray-400 mb-3">{t('highlightColor')}</label>
+                                    <div className="flex gap-3 flex-wrap">
+                                        {['text-yellow-400', 'text-cyan-400', 'text-green-500', 'text-pink-500', 'text-white'].map((color) => (
+                                            <button
+                                                key={color}
+                                                onClick={() => handleVisualChange('highlightColor', color)}
+                                                className={`w-8 h-8 rounded-full border-2 transition-all ${visualSettings.highlightColor === color ? 'border-white scale-110 ring-2 ring-primary/50' : 'border-transparent opacity-60 hover:opacity-100'} ${color.replace('text-', 'bg-')}`}
+                                                title={color}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="w-12 h-6 rounded-full bg-primary/20 relative cursor-pointer ring-2 ring-primary" role="switch" aria-checked="true">
-                                    <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-primary shadow-sm"></div>
-                                </div>
-                            </div>
 
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <label htmlFor="model-select" className="block font-semibold mb-3">{t('modelVersion')}</label>
-                                <select
-                                    id="model-select"
-                                    className="w-full bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    value={selectedModelId}
-                                    onChange={(e) => onModelChange(e.target.value)}
-                                >
-                                    {AVAILABLE_MODELS.map(model => (
-                                        <option key={model.id} value={model.id}>
-                                            {model.name} {model.description ? ` - ${model.description}` : ''}
-                                        </option>
-                                    ))}
-                                </select>
+                                {/* Typography */}
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontSize')}</label>
+                                        <div className="flex bg-black/20 rounded-lg p-1">
+                                            {(['sm', 'base', 'lg', 'xl'] as const).map((size) => (
+                                                <button
+                                                    key={size}
+                                                    onClick={() => handleVisualChange('fontSize', size)}
+                                                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${visualSettings.fontSize === size ? 'bg-white/20 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                                >
+                                                    {size.toUpperCase()}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontWeight')}</label>
+                                        <div className="flex bg-black/20 rounded-lg p-1">
+                                            {(['normal', 'bold', 'extrabold'] as const).map((weight) => (
+                                                <button
+                                                    key={weight}
+                                                    onClick={() => handleVisualChange('fontWeight', weight)}
+                                                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${visualSettings.fontWeight === weight ? 'bg-white/20 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                                >
+                                                    {weight === 'extrabold' ? 'Heavy' : weight.charAt(0).toUpperCase() + weight.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Toggles */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                                        <label className="text-sm font-semibold text-white">{t('textShadow')}</label>
+                                        <button
+                                            onClick={() => handleVisualChange('textShadow', !visualSettings.textShadow)}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.textShadow ? 'bg-primary' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${visualSettings.textShadow ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                                        <label className="text-sm font-semibold text-white">{t('showDualText')}</label>
+                                        <button
+                                            onClick={() => handleVisualChange('showDualText', !visualSettings.showDualText)}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.showDualText ? 'bg-primary' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${visualSettings.showDualText ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Offset Adjustment */}
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <div className="flex justify-between mb-4">
+                                        <label className="text-sm font-semibold text-white">{t('lyricOffset')}</label>
+                                        <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">{(visualSettings.offset / 1000).toFixed(1)}s</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="-5000"
+                                        max="5000"
+                                        step="100"
+                                        value={visualSettings.offset}
+                                        onChange={(e) => handleVisualChange('offset', parseInt(e.target.value))}
+                                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-gray-500 mt-2 font-mono">
+                                        <span>-5s</span>
+                                        <span>0s</span>
+                                        <span>+5s</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
+
+                    {/* Processing Engine Settings */}
+                    {selectedModelId && onModelChange && (
+                        <section>
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('processingEngine')}</h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <div>
+                                        <div className="font-semibold text-white">{t('webGpu')}</div>
+                                        <div className="text-xs text-muted-foreground">{t('webGpuDesc')}</div>
+                                    </div>
+                                    <div className="w-12 h-6 rounded-full bg-primary/20 relative cursor-pointer ring-2 ring-primary" role="switch" aria-checked="true">
+                                        <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-primary shadow-sm"></div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <label htmlFor="model-select" className="block font-semibold mb-3 text-white">{t('modelVersion')}</label>
+                                    <select
+                                        id="model-select"
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        value={selectedModelId}
+                                        onChange={(e) => onModelChange(e.target.value)}
+                                    >
+                                        {AVAILABLE_MODELS.map(model => (
+                                            <option key={model.id} value={model.id} className="bg-gray-900">
+                                                {model.name} {model.description ? ` - ${model.description}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Audio Settings */}
                     <section>
@@ -105,7 +226,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                 <div className="flex justify-between mb-2">
-                                    <div className="font-semibold">{t('sampleRate')}</div>
+                                    <div className="font-semibold text-white">{t('sampleRate')}</div>
                                     <div className="text-xs text-primary font-bold">44.1 kHz</div>
                                 </div>
                                 <input
@@ -117,7 +238,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                             </div>
 
                             <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div className="font-semibold">{t('normalization')}</div>
+                                <div className="font-semibold text-white">{t('normalization')}</div>
                                 <button
                                     className="w-12 h-6 rounded-full bg-white/5 relative cursor-pointer border border-white/10"
                                     role="switch"
@@ -136,7 +257,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
                                 <div>
-                                    <div className="font-semibold">{t('audioCache')}</div>
+                                    <div className="font-semibold text-white">{t('audioCache')}</div>
                                     <div className="text-xs text-muted-foreground">
                                         {stats ? t('items', { size: formatSize(stats.cacheSize), count: stats.itemCount }) : t('calculating')}
                                     </div>
@@ -151,7 +272,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
 
                             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
                                 <div>
-                                    <div className="font-semibold">{t('modelStorage')}</div>
+                                    <div className="font-semibold text-white">{t('modelStorage')}</div>
                                     <div className="text-xs text-muted-foreground">
                                         {stats ? formatSize(stats.modelSize) : t('calculating')}
                                     </div>
@@ -162,11 +283,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                     </section>
                 </div>
 
-                <div className="absolute bottom-8 left-8 right-8">
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 border border-white/5 text-center">
-                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{t('version')}</p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-1">{t('love')}</p>
-                    </div>
+                <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{t('version')} 1.2.0</p>
+                     <p className="text-[10px] text-muted-foreground/50 mt-1">{t('love')}</p>
                 </div>
             </div>
         </>
