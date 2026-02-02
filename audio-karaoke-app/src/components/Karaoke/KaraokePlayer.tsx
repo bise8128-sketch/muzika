@@ -30,6 +30,116 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const playback = usePlayback(controller);
 
+    // Worker State
+    const workerRef = useRef<Worker | null>(null);
+    const [lyricState, setLyricState] = useState({ lineIndex: -1, wordIndex: -1 });
+    const isCanvasTransferredRef = useRef(false);
+
+    // Initialize Worker
+    useEffect(() => {
+        workerRef.current = new Worker(new URL('../../workers/karaokeEngine.worker.ts', import.meta.url));
+        
+        workerRef.current.onmessage = (e) => {
+            const { type, payload } = e.data;
+            if (type === 'LYRIC_UPDATE') {
+                setLyricState({
+                    lineIndex: payload.lineIndex,
+                    wordIndex: payload.wordIndex
+                });
+            }
+        };
+
+        return () => {
+            workerRef.current?.terminate();
+        };
+    }, []);
+
+    // Sync Worker with Controller
+    useEffect(() => {
+        if (!workerRef.current || !controller) return;
+
+        const handlePlay = () => workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: controller.getCurrentTime() } });
+        const handlePause = () => workerRef.current?.postMessage({ type: 'PAUSE' });
+        const handleSeek = (data: { currentTime: number }) => {
+             // For seek, we can send PLAY with new time if playing, or SYNC if paused
+             // But simpler is to just send SYNC_TIME
+             workerRef.current?.postMessage({ type: 'SYNC_TIME', payload: { currentTime: data.currentTime } });
+             if (controller.getIsPlaying()) {
+                 workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: data.currentTime } });
+             }
+        };
+        // Time update from controller (sync drift check)
+        const handleTimeUpdate = (data: { currentTime: number }) => {
+            // Optional: Send sync occasionally if needed, but 'play' command handles most.
+            // Maybe sync on large drifts?
+        };
+
+        controller.on('play', handlePlay);
+        controller.on('pause', handlePause);
+        controller.on('seeked' as any, handleSeek); // Assuming seek event exists or we use timeupdate
+        
+        // Manual hook for seek since PlaybackController might not emit 'seeked' specifically
+        // But usePlayback's seek function calls controller.setCurrentTime
+        
+        return () => {
+            controller.off('play', handlePlay);
+            controller.off('pause', handlePause);
+            controller.off('seeked' as any, handleSeek);
+        };
+    }, [controller]);
+
+    // Send Data to Worker
+    useEffect(() => {
+        if (!workerRef.current) return;
+        
+        // Reset lyric state when song changes
+        setLyricState({ lineIndex: -1, wordIndex: -1 });
+
+        workerRef.current.postMessage({
+            type: 'INIT_ENGINE',
+            payload: {
+                lrcData: lyrics,
+                visualSettings
+            }
+        });
+    }, [lyrics, visualSettings]);
+
+    const handleCanvasReady = (canvas: HTMLCanvasElement) => {
+        if (!workerRef.current || isCanvasTransferredRef.current) return;
+        
+        try {
+            const offscreen = canvas.transferControlToOffscreen();
+            workerRef.current.postMessage({
+                type: 'INIT_ENGINE',
+                payload: {
+                    cdgData: cdgData,
+                    canvas: offscreen
+                }
+            }, [offscreen]);
+            isCanvasTransferredRef.current = true;
+        } catch (e) {
+            console.error("Failed to transfer canvas control:", e);
+        }
+    };
+    
+    // If cdgData changes but canvas is already transferred, update worker
+    useEffect(() => {
+        if (!cdgData) {
+            isCanvasTransferredRef.current = false;
+            return;
+        }
+
+        if (workerRef.current && isCanvasTransferredRef.current) {
+             workerRef.current.postMessage({
+                type: 'INIT_ENGINE',
+                payload: {
+                    cdgData: cdgData
+                }
+            });
+        }
+    }, [cdgData]);
+
+
     // Stanje efekata
     const [pitch, setPitch] = useState(0);
     const [tempo, setTempo] = useState(1.0);
@@ -309,7 +419,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 <div className={`relative z-10 w-full flex flex-col items-center transition-all duration-700 ${isStageMode ? 'scale-125' : ''}`}>
                     {cdgData && (
                         <div className="mb-4 scale-150 transform">
-                            <CDGRenderer cdgData={cdgData} currentTime={playback.currentTime} />
+                            <CDGRenderer onCanvasReady={handleCanvasReady} />
                         </div>
                     )}
 
@@ -334,7 +444,8 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     ) : (
                         <LyricDisplay
                             lyrics={lyrics}
-                            currentTime={playback.currentTime}
+                            currentLineIndex={lyricState.lineIndex}
+                            currentWordIndex={lyricState.wordIndex}
                             theme={theme}
                             visualSettings={visualSettings}
                         />

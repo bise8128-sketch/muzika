@@ -24,12 +24,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const t = useTranslations('SettingsPanel');
     const { models: AVAILABLE_MODELS } = useModels();
     const [stats, setStats] = useState<StorageStats | null>(null);
+    const [localModelId, setLocalModelId] = useState(selectedModelId || '');
 
     useEffect(() => {
         if (isOpen) {
             getStorageStats().then(setStats);
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (selectedModelId) {
+            setLocalModelId(selectedModelId);
+        } else if (!localModelId && AVAILABLE_MODELS.length > 0) {
+            setLocalModelId(AVAILABLE_MODELS[0].id);
+        }
+    }, [selectedModelId, AVAILABLE_MODELS, localModelId]);
+
+    const handleModelChange = (id: string) => {
+        setLocalModelId(id);
+        if (onModelChange) {
+            onModelChange(id);
+        }
+    };
 
     const handleClearCache = async () => {
         if (confirm(t('clearCacheConfirm'))) {
@@ -89,11 +105,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     {/* Visual Settings Section */}
                     {visualSettings && (
                         <section>
-                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('visualSettings')}</h3>
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('visualSettings') || "Visual Settings"}</h3>
                             <div className="space-y-4">
                                 {/* Highlight Color */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                    <label className="block text-sm text-gray-400 mb-3">{t('highlightColor')}</label>
+                                    <label className="block text-sm text-gray-400 mb-3">{t('highlightColor') || "Highlight Color"}</label>
                                     <div className="flex gap-3 flex-wrap">
                                         {['text-yellow-400', 'text-cyan-400', 'text-green-500', 'text-pink-500', 'text-white'].map((color) => (
                                             <button
@@ -109,7 +125,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Typography */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">{t('fontSize')}</label>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontSize') || "Font Size"}</label>
                                         <div className="flex bg-black/20 rounded-lg p-1">
                                             {(['sm', 'base', 'lg', 'xl'] as const).map((size) => (
                                                 <button
@@ -123,7 +139,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">{t('fontWeight')}</label>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontWeight') || "Font Weight"}</label>
                                         <div className="flex bg-black/20 rounded-lg p-1">
                                             {(['normal', 'bold', 'extrabold'] as const).map((weight) => (
                                                 <button
@@ -141,7 +157,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Toggles */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <label className="text-sm font-semibold text-white">{t('textShadow')}</label>
+                                        <label className="text-sm font-semibold text-white">{t('textShadow') || "Text Shadow"}</label>
                                         <button
                                             onClick={() => handleVisualChange('textShadow', !visualSettings.textShadow)}
                                             className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.textShadow ? 'bg-primary' : 'bg-white/10'}`}
@@ -151,7 +167,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     </div>
 
                                     <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <label className="text-sm font-semibold text-white">{t('showDualText')}</label>
+                                        <label className="text-sm font-semibold text-white">{t('showDualText') || "Show Dual Text"}</label>
                                         <button
                                             onClick={() => handleVisualChange('showDualText', !visualSettings.showDualText)}
                                             className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.showDualText ? 'bg-primary' : 'bg-white/10'}`}
@@ -164,7 +180,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Offset Adjustment */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                     <div className="flex justify-between mb-4">
-                                        <label className="text-sm font-semibold text-white">{t('lyricOffset')}</label>
+                                        <label className="text-sm font-semibold text-white">{t('lyricOffset') || "Lyric Offset"}</label>
                                         <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">{(visualSettings.offset / 1000).toFixed(1)}s</span>
                                     </div>
                                     <input
@@ -186,106 +202,37 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         </section>
                     )}
 
-                    {/* Processing Engine Settings */}
-                    {selectedModelId && onModelChange && (
-                        <section>
-                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('processingEngine')}</h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                    <div>
-                                        <div className="font-semibold text-white">{t('webGpu')}</div>
-                                        <div className="text-xs text-muted-foreground">{t('webGpuDesc')}</div>
-                                    </div>
-                                    <div className="w-12 h-6 rounded-full bg-primary/20 relative cursor-pointer ring-2 ring-primary" role="switch" aria-checked="true">
-                                        <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-primary shadow-sm"></div>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                    <label htmlFor="model-select" className="block font-semibold mb-3 text-white">{t('modelVersion')}</label>
-                                    <select
-                                        id="model-select"
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        value={selectedModelId}
-                                        onChange={(e) => onModelChange(e.target.value)}
-                                    >
-                                        {AVAILABLE_MODELS.map(model => (
-                                            <option key={model.id} value={model.id} className="bg-gray-900">
-                                                {model.name} {model.description ? ` - ${model.description}` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Audio Settings */}
+                    {/* Engine Settings */}
                     <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('audioOutput')}</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('processingEngine')}</h3>
                         <div className="space-y-4">
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div className="flex justify-between mb-2">
-                                    <div className="font-semibold text-white">{t('sampleRate')}</div>
-                                    <div className="text-xs text-primary font-bold">44.1 kHz</div>
-                                </div>
-                                <input
-                                    type="range"
-                                    aria-label="Sample rate"
-                                    className="w-full accent-primary bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer"
-                                    min="22050" max="48000" step="100" defaultValue="44100"
-                                />
-                            </div>
-
                             <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div className="font-semibold text-white">{t('normalization')}</div>
-                                <button
-                                    className="w-12 h-6 rounded-full bg-white/5 relative cursor-pointer border border-white/10"
-                                    role="switch"
-                                    aria-checked="false"
-                                    aria-label="Toggle normalization"
+                                <div>
+                                    <div className="font-semibold text-white">{t('webGpu')}</div>
+                                    <div className="text-xs text-muted-foreground">{t('webGpuDesc')}</div>
+                                </div>
+                                <div className="w-12 h-6 rounded-full bg-primary/20 relative cursor-pointer ring-2 ring-primary" role="switch" aria-checked="true">
+                                    <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-primary shadow-sm"></div>
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                <label htmlFor="model-select" className="block font-semibold mb-3 text-white">{t('modelVersion')}</label>
+                                <select
+                                    id="model-select"
+                                    className="w-full bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-white"
+                                    value={localModelId}
+                                    onChange={(e) => handleModelChange(e.target.value)}
                                 >
-                                    <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white/20"></div>
-                                </button>
+                                    {AVAILABLE_MODELS.map(model => (
+                                        <option key={model.id} value={model.id}>
+                                            {model.name} {model.description ? ` - ${model.description}` : ''}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </section>
-
-                    {/* Cache Management */}
-                    <section>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('storage')}</h3>
-                        <div className="space-y-4">
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
-                                <div>
-                                    <div className="font-semibold text-white">{t('audioCache')}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {stats ? t('items', { size: formatSize(stats.cacheSize), count: stats.itemCount }) : t('calculating')}
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleClearCache}
-                                    className="px-4 py-1.5 rounded-lg border border-destructive/30 text-destructive text-sm hover:bg-destructive/10 transition-all font-medium"
-                                >
-                                    {t('clear')}
-                                </button>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
-                                <div>
-                                    <div className="font-semibold text-white">{t('modelStorage')}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {stats ? formatSize(stats.modelSize) : t('calculating')}
-                                    </div>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground uppercase font-bold px-2 py-1 bg-white/5 rounded border border-white/5">{t('permanent')}</span>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-white/10 text-center">
-                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{t('version')} 1.2.0</p>
-                     <p className="text-[10px] text-muted-foreground/50 mt-1">{t('love')}</p>
                 </div>
             </div>
         </>
