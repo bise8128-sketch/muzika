@@ -124,7 +124,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/wasm/:path*",
+        source: "/wasm/:path*.wasm",
         headers: [
           {
             key: "Cache-Control",
@@ -133,6 +133,19 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Type",
             value: "application/wasm",
+          },
+        ],
+      },
+      {
+        source: "/wasm/:path*.mjs",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          {
+            key: "Content-Type",
+            value: "text/javascript",
           },
         ],
       },
