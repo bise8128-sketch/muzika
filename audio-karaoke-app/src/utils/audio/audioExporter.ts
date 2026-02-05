@@ -138,8 +138,12 @@ export async function exportToMP3(
             reject(new Error('Worker error: ' + err.message));
         };
 
-        // Initialize worker with base URL for scripts
-        const baseUrl = `${window.location.origin}/ffmpeg/umd`;
+        // Initialize worker with base URL for scripts (computed in main thread, not worker)
+        // FIX: Determine baseUrl in main thread context where window is available
+        const baseUrl = typeof window !== 'undefined'
+            ? `${window.location.origin}/ffmpeg/umd`
+            : '/ffmpeg/umd'; // Fallback for SSR
+
         worker.postMessage({
             type: 'INIT',
             payload: { baseUrl }
@@ -153,6 +157,12 @@ export async function exportToMP3(
  * @param filename - Filename for download
  */
 export function downloadBlob(blob: Blob, filename: string): void {
+    // FIX: Add client-side check to prevent SSR issues
+    if (typeof document === 'undefined') {
+        console.warn('downloadBlob called in non-browser environment');
+        return;
+    }
+
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
