@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react';
 import { ModelInfo } from '@/types/model';
 import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/app/api/models/route';
+import { checkONNXSupport } from '@/utils/ml/onnxSetup';
 
 export function useModels() {
     const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [recommendedModelId, setRecommendedModelId] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchModels() {
@@ -26,8 +28,21 @@ export function useModels() {
             }
         }
 
+        async function determineRecommendation() {
+            const support = await checkONNXSupport();
+            if (support.isLowEnd) {
+                // Recommend the lightest model for low-end devices
+                // In our route.ts, mdx-net-inst-v1 is the default and reasonably light
+                setRecommendedModelId('mdx-net-inst-v1');
+            } else {
+                // Recommend a higher quality model for powerful devices
+                setRecommendedModelId('kim-vocal-2');
+            }
+        }
+
         fetchModels();
+        determineRecommendation();
     }, []);
 
-    return { models, isLoading, error };
+    return { models, isLoading, error, recommendedModelId };
 }

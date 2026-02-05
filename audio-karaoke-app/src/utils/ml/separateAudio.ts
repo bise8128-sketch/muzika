@@ -175,6 +175,12 @@ export async function separateAudio(
                             fileHash: payload.fileHash,
                             timestamp: payload.timestamp
                         });
+
+                        // Proactive memory cleanup
+                        if (payload) {
+                            (payload as any).vocals = null;
+                            (payload as any).instrumentals = null;
+                        }
                     } catch (err) {
                         reject(new Error('Failed to reconstruct audio buffers: ' + (err as Error).message));
                     } finally {

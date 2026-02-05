@@ -47,8 +47,8 @@ export class InferenceEngine {
 }
 
 /**
- * Processes an array of audio segments sequentially.
- * Used for batch processing long audio files.
+ * Processes an array of audio segments.
+ * Uses a pipelined approach to maximize throughput.
  */
 export async function processAudioInChunks(
     engine: InferenceEngine,
@@ -59,6 +59,9 @@ export async function processAudioInChunks(
     onChunkComplete?: (chunk: InferenceOutput, index: number) => void,
     signal?: AbortSignal
 ): Promise<void> {
+    // Pipeline: Track the promise of the last post-processing task
+    let previousPostProcessing = Promise.resolve();
+
     for (let i = 0; i < segments.length; i++) {
         if (signal?.aborted) {
             throw new Error('Processing aborted by user');
@@ -68,11 +71,20 @@ export async function processAudioInChunks(
 
         if (onProgress) onProgress(i, segments.length);
 
+        // 1. Inference (Heavy GPU/CPU work)
         const result = await engine.processChunk(segment, channels, sampleRate);
 
+        // 2. Post-processing (Reconstruction, postMessage)
+        // We do NOT await this before starting the next inference
         if (onChunkComplete) {
-            onChunkComplete(result, i);
+            // Wait for previous post-processing to maintain order, 
+            // but the loop continues to start the next engine.processChunk
+            previousPostProcessing = previousPostProcessing.then(() => {
+                onChunkComplete(result, i);
+            });
         }
     }
-}
 
+    // Ensure all post-processing is finished before returning
+    await previousPostProcessing;
+}
