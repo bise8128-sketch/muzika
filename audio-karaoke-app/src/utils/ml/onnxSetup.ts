@@ -34,9 +34,15 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     const hasWebGPU = await checkWebGPUSupport();
     console.log('[onnxSetup] Setting up ONNX Runtime...');
 
-    // Suppress "Unknown CPU vendor" warnings by setting log level to error
+    // Set log level based on environment or settings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ort as any).env.logLevel = 'error';
+    const isDev = process.env.NODE_ENV === 'development';
+    (ort as any).env.logLevel = isDev ? 'verbose' : 'error';
+
+    // Enable WebGPU profiling in development
+    if (hasWebGPU) {
+        (ort as any).env.webgpu.profiling = isDev ? 'verbose' : 'off';
+    }
 
     // Configure WASM paths to point to our public/wasm directory
     // In workers, we might need a full URL to avoid relative path issues
@@ -64,8 +70,14 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     console.log('[onnxSetup] WASM paths set to:', (ort as any).env.wasm.wasmPaths);
 
     // Enable SIMD for better performance on CPU fallback
+    // Check for crossOriginIsolated for multi-threading
+    const isIsolated = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ort as any).env.wasm.numThreads = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+    (ort as any).env.wasm.numThreads = isIsolated && typeof navigator !== 'undefined'
+        ? Math.min(navigator.hardwareConcurrency || 4, 8) // Cap at 8 for better efficiency
+        : 1;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (ort as any).env.wasm.simd = true;
 
