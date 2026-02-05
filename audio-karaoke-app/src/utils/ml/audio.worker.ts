@@ -9,6 +9,17 @@ import { loadModel } from './modelManager';
 import { processAudioInChunks, InferenceEngine } from './inference';
 import type { ModelInfo } from '@/types/model';
 import type { ProcessingProgress } from '@/types/audio';
+import { bufferPool } from '../audio/bufferPool';
+
+/**
+ * Metrics returned from the separation process
+ */
+export interface SeparationMetrics {
+    ttfa: number;
+    totalTime: number;
+    numSegments: number;
+    averageInferenceTime?: number;
+}
 
 // Define worker message types
 export type WorkerMessage =
@@ -26,7 +37,7 @@ export interface SeparationRequest {
 export type WorkerResponse =
     | { type: 'PROGRESS'; payload: ProcessingProgress }
     | { type: 'CHUNK_PLAYBACK'; payload: { vocals: Float32Array; instrumentals: Float32Array; position: number } }
-    | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: any } }
+    | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: SeparationMetrics } }
     | { type: 'ERROR'; payload: { message: string } };
 
 // Helper to send progress
@@ -237,6 +248,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                             instrumentalsTail = instrumentals.slice(safeLen);
                         }
                     }
+
+                    // Release the original pooled buffers back to the pool
+                    // chunkResult.vocals and chunkResult.instrumentals were acquired from bufferPool in strategies
+                    bufferPool.release(vocals);
+                    bufferPool.release(instrumentals);
                 },
                 abortController.signal
             );
@@ -251,7 +267,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             // Collect metrics
             const ttfaEntry = performance.getEntriesByName('time-to-first-audio')[0];
-            const metrics = {
+            const metrics: SeparationMetrics = {
                 ttfa: ttfaEntry?.duration || 0,
                 totalTime: performance.now() - performance.getEntriesByName('start-separation')[0].startTime,
                 numSegments: totalSegments

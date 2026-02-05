@@ -7,19 +7,20 @@ import { getAudioContext } from './audioContext';
 import type { AudioSegment } from '@/types/audio';
 
 /**
- * Default segment duration in seconds
+ * Default segment duration in seconds. 
+ * Reduced from 30s to 15s for better Time To First Audio (TTFA).
  */
-const DEFAULT_SEGMENT_DURATION = 30;
+const DEFAULT_SEGMENT_DURATION = 15;
 
 /**
- * Crossfade duration in seconds
+ * Crossfade duration in seconds for Overlap-Add technique
  */
-const CROSSFADE_DURATION = 0.5;
+const CROSSFADE_DURATION = 1.0;
 
 /**
  * Segment audio into chunks for processing
  * @param audioBuffer - Input AudioBuffer
- * @param segmentDuration - Duration of each segment in seconds (default: 30s)
+ * @param segmentDuration - Duration of each segment in seconds (default: 15s)
  * @returns Array of audio segments
  */
 export interface SimpleAudioBuffer {
@@ -33,7 +34,7 @@ export interface SimpleAudioBuffer {
 /**
  * Segment audio into chunks for processing
  * @param audioBuffer - Input AudioBuffer or compatible interface
- * @param segmentDuration - Duration of each segment in seconds (default: 30s)
+ * @param segmentDuration - Duration of each segment in seconds (default: 15s)
  * @returns Array of audio segments
  */
 export function segmentAudio(
@@ -53,6 +54,7 @@ export function segmentAudio(
 
     for (let i = 0; i < numSegments; i++) {
         const startSample = i * segmentSamples;
+        // Each segment (except the last) has an overlap with the NEXT segment
         const endSample = Math.min((i + 1) * segmentSamples + overlapSamples, audioBuffer.length);
         const segmentLength = endSample - startSample;
 
@@ -133,22 +135,18 @@ export function mergeSegments(
 
         // Inline optimized crossfade logic
         // Blends the overlap region (tail of previous + head of current)
-        // Iterates linearly over interleaved samples for better cache locality
         for (let j = 0; j < crossfadeSamples; j++) {
-            // Calculate frame index from sample index (for interleaved data)
             const frameIndex = Math.floor(j / channels);
             const fadeOut = (crossfadeFrames - frameIndex) / crossfadeFrames;
             const fadeIn = frameIndex / crossfadeFrames;
 
-            // merged[overlapStart + j] has the previous segment's tail sample
             merged[overlapStart + j] = merged[overlapStart + j] * fadeOut + segment[j] * fadeIn;
         }
 
-        // Efficiently copy the rest of the segment using .set()
+        // Efficiently copy the rest of the segment
         const remaining = segment.subarray(crossfadeSamples);
         merged.set(remaining, overlapStart + crossfadeSamples);
 
-        // Advance write position to the end of the current segment
         writePosition += crossfadeSamples + remaining.length;
     }
 
@@ -156,7 +154,7 @@ export function mergeSegments(
 }
 
 /**
- * Apply crossfade between two audio segments
+ * Apply crossfade between two audio segments (used in streaming)
  */
 export function applyCrossfade(
     target: Float32Array,
@@ -208,8 +206,6 @@ function createAudioBufferFromFloat32(data: Float32Array, sampleRate: number, ch
 
 /**
  * Normalize audio to prevent clipping
- * @param data - Audio data
- * @returns Normalized audio data
  */
 export function normalizeAudio(data: Float32Array): Float32Array {
     let max = 0;
@@ -233,7 +229,6 @@ export function normalizeAudio(data: Float32Array): Float32Array {
 
 /**
  * Resample audio to target sample rate using OfflineAudioContext
- * This provides high-quality native resampling.
  */
 export async function resampleAudio(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
     if (audioBuffer.sampleRate === targetSampleRate) {

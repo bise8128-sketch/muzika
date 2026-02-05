@@ -123,11 +123,21 @@ export async function checkONNXSupport() {
     const webgpu = await checkWebGPUSupport();
     const threads = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 1 : 1;
 
+    // Check for low-end device indicators
+    // deviceMemory is in GB. threads < 4 is another indicator.
+    // userAgent check for mobile devices.
+    const isLowEnd = typeof navigator !== 'undefined' && (
+        ((navigator as any).deviceMemory && (navigator as any).deviceMemory < 4) ||
+        threads < 4 ||
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    );
+
     return {
         webgpu,
         wasm: true, // Always true if script loaded
         threads,
         simd: true, // We attempt to enable it
         platform: typeof navigator !== 'undefined' ? navigator.platform : 'unknown',
+        isLowEnd
     };
 }
