@@ -390,34 +390,45 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen selection:bg-primary/30">
-      <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-white/5">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleRestart}>
+    <div className="min-h-screen selection:bg-primary/30 flex flex-col">
+      <nav className="sticky top-0 z-40 glass border-b border-white/5 h-20 shrink-0">
+        <div className="container mx-auto px-6 h-full flex items-center justify-between">
+          <button
+            type="button"
+            className="flex items-center gap-3 group focus-ring rounded-xl p-1"
+            onClick={handleRestart}
+            aria-label="Go to home"
+          >
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
               </svg>
             </div>
             <span className="text-2xl font-black tracking-tighter">MUZIKA</span>
-          </div>
+          </button>
 
           <div className="hidden md:flex items-center gap-8">
             <LanguageSwitcher />
             <button
               onClick={() => setShowHelp(true)}
-              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
             >
               {t('howItWorks')}
             </button>
-            <button onClick={() => setState('models')} className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">{t('models')}</button>
-            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">{t('privacy')}</a>
+            <button
+              onClick={() => setState('models')}
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
+            >
+              {t('models')}
+            </button>
+            <a href="#" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1">{t('privacy')}</a>
 
             <BackendStatus />
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5 transition-all"
+              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5 transition-all focus-ring"
+              aria-label="Open settings"
             >
               <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -428,15 +439,15 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="container mx-auto px-6 pt-32 pb-20">
+      <main className="container mx-auto px-6 py-12 md:py-20 flex-1">
         {state === 'upload' && (
-          <header className="text-center max-w-3xl mx-auto mb-16 space-y-6">
+          <header className="text-center max-w-3xl mx-auto mb-16 space-y-6 animate-in fade-in slide-in-from-top-4 duration-1000">
             <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest animate-float">
               {t('activeModel', { modelName: AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown' })}
             </div>
-            <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-tight" dangerouslySetInnerHTML={{ __html: t.raw('title') }}>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight" dangerouslySetInnerHTML={{ __html: t.raw('title') }}>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-xl mx-auto">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
               {t('subtitle')}
             </p>
           </header>
@@ -458,7 +469,7 @@ export default function Home() {
         onClose={() => setShowHelp(false)}
       />
 
-      <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground">
+      <footer className="py-12 border-t border-white/5 text-center text-sm text-muted-foreground shrink-0">
         <p>{t('footer')}</p>
       </footer>
     </div>
