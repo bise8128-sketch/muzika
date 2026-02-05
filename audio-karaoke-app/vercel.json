@@ -3,9 +3,6 @@
     "outputDirectory": ".next",
     "installCommand": "npm install",
     "framework": "nextjs",
-    "env": {
-        "NEXT_PUBLIC_API_URL": "@next-public-api-url"
-    },
     "headers": [
         {
             "source": "/:path*",
@@ -57,8 +54,8 @@
     ],
     "functions": {
         "src/app/api/**": {
-            "maxDuration": 300,
-            "memory": 3008
+            "maxDuration": 60,
+            "memory": 2048
         }
     }
 }
