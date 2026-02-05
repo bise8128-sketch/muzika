@@ -24,12 +24,34 @@ self.onmessage = async (e) => {
             }
 
             // Shim document for ffmpeg.js UMD build which expects it
+            console.log('[MP3 Worker] Initializing FFmpeg with baseUrl:', baseUrl);
+
+            const docShim = {
+                baseURI: self.location.href,
+                currentScript: null,
+                getElementsByTagName: () => [],
+                createElement: () => ({}),
+                head: {},
+                body: {}
+            };
+
+            // Aggressively shim document in all possible global scopes
             if (typeof (self as any).document === 'undefined') {
-                (self as any).document = {
-                    baseURI: self.location.href,
-                    currentScript: null,
-                    getElementsByTagName: () => []
-                };
+                console.log('[MP3 Worker] Shimming self.document');
+                (self as any).document = docShim;
+            }
+
+            if (typeof (globalThis as any).document === 'undefined') {
+                console.log('[MP3 Worker] Shimming globalThis.document');
+                (globalThis as any).document = docShim;
+            }
+
+            // Verify shim
+            try {
+                // @ts-ignore
+                console.log('[MP3 Worker] Document check:', document.baseURI);
+            } catch (e) {
+                console.error('[MP3 Worker] Document check failed:', e);
             }
 
             // Import UMD scripts (bypass Webpack)
@@ -42,10 +64,14 @@ self.onmessage = async (e) => {
 
             ffmpeg = new FFmpegLib.FFmpeg();
 
+            console.log('[MP3 Worker] FFmpeg initialized, loading core...');
+
             await ffmpeg.load({
                 coreURL: `${baseUrl}/ffmpeg-core.js`,
                 wasmURL: `${baseUrl}/ffmpeg-core.wasm`,
             });
+
+            console.log('[MP3 Worker] FFmpeg core loaded successfully');
 
             self.postMessage({ type: 'INIT_SUCCESS' });
         } catch (error: any) {
