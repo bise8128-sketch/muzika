@@ -71,11 +71,15 @@ function BackendStatus() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold uppercase tracking-widest">
-      <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-        status === 'error' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
-          'bg-amber-500 animate-pulse'
-        }`} />
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-white/10">
+      <div
+        role="status"
+        aria-label={status === 'online' ? 'System Online' : status === 'error' ? 'System Error' : 'System Loading'}
+        className={`w-2 h-2 rounded-full transition-all duration-500 ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+          status === 'error' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
+            'bg-amber-500 animate-pulse'
+          }`}
+      />
       <span className={status === 'error' ? 'text-rose-400' : 'text-muted-foreground'}>
         {t('backend', { status })}
       </span>
