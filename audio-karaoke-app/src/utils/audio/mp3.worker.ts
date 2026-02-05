@@ -23,12 +23,24 @@ self.onmessage = async (e) => {
                 return;
             }
 
+            // Shim document for ffmpeg.js UMD build which expects it
+            if (typeof (self as any).document === 'undefined') {
+                (self as any).document = {
+                    baseURI: self.location.href,
+                    currentScript: null,
+                    getElementsByTagName: () => []
+                };
+            }
+
             // Import UMD scripts (bypass Webpack)
             // @ts-ignore
             importScripts(`${baseUrl}/ffmpeg.js`);
 
-            // Initialize FFmpeg
-            ffmpeg = new FFmpeg.FFmpeg();
+            // Initialize FFmpeg (handle different export names)
+            const FFmpegLib = (self as any).FFmpeg || (self as any).FFmpegWASM;
+            if (!FFmpegLib) throw new Error('FFmpeg library not found in global scope');
+
+            ffmpeg = new FFmpegLib.FFmpeg();
 
             await ffmpeg.load({
                 coreURL: `${baseUrl}/ffmpeg-core.js`,
