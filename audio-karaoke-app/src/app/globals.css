@@ -12,7 +12,7 @@
   --secondary: #1e1e2e;
   --secondary-foreground: #ffffff;
   --muted: #1e1e2e;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #d1d1d6; /* Improved contrast from #a1a1aa */
   --accent: #ec4899;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
@@ -21,6 +21,9 @@
   --input: #27272a;
   --ring: #d8b4fe;
   --radius: 1rem;
+  
+  /* Layout Constants */
+  --header-height: 5rem;
 }
 
 @theme inline {
@@ -47,18 +50,13 @@
 
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-float: float 3s ease-in-out infinite;
+  
+  --spacing-header: var(--header-height);
 }
 
 @keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 body {
@@ -66,33 +64,35 @@ body {
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
-/* Glassmorphism Utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* Base Component Classes */
+@layer components {
+  .glass {
+    @apply bg-white/3 backdrop-blur-xl border border-white/10;
+  }
 
-.glass-card {
-  background: rgba(15, 15, 15, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
+  .glass-card {
+    @apply bg-zinc-900/60 backdrop-blur-2xl border border-white/5 shadow-2xl;
+  }
 
-.text-gradient {
-  background: linear-gradient(to right, #a855f7, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  .text-gradient {
+    @apply bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent;
+  }
+  
+  .interactive-scale {
+    @apply transition-transform duration-200 active:scale-95;
+  }
+
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -116,7 +116,7 @@ body {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 5px;
   outline: none;
-  opacity: 0.7;
+  opacity: 0.8;
   transition: opacity .2s;
 }
 
@@ -138,7 +138,7 @@ body {
 }
 
 .range-premium::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 .range-premium::-moz-range-thumb {
@@ -160,37 +160,25 @@ body {
   scrollbar-width: none;
 }
 
-/* --- Premium Karaoke Display Styles (New) --- */
-
-/* Premium Typography: Accessible, wide-set font */
+/* Karaoke Display Styles */
 .font-karaoke-display {
-  font-family: 'Open Sans', 'Lato', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-weight: 800;
-  /* Ensuring high-contrast */
 }
 
-/* Responsive Scaling: clamp(MinSize, ViewportScale, MaxSize) */
-/* Min size: 2rem (32px), Scale: 8vw, Max size: 5rem (80px) */
 .text-responsive-karaoke {
-  font-size: clamp(2rem, 8vw, 5rem);
+  font-size: clamp(1.5rem, 7vw, 4.5rem);
 }
 
-/* High-contrast Text Effect: Text stroke + drop-shadow */
 .text-karaoke-effect {
-  /* High contrast shadow for readability */
   text-shadow:
     -1px -1px 0 #000,
     1px -1px 0 #000,
     -1px 1px 0 #000,
     1px 1px 0 #000,
-    0 0 15px rgba(255, 255, 255, 0.4);
-  /* Subtle glow */
-  -webkit-text-stroke: 1px black;
+    0 0 20px rgba(0, 0, 0, 0.8);
 }
 
-/* --- Thematic Backgrounds Utility (New) --- */
-
-/* Animated gradient background for a modern/thematic feel */
 .bg-animated-gradient {
   background: linear-gradient(-45deg, #1d1b32, #110d21, #0a0814, #1d1b32);
   background-size: 400% 400%;
@@ -198,15 +186,7 @@ body {
 }
 
 @keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
