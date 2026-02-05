@@ -5,24 +5,21 @@
 
 // Simple circular buffer for handling tempo changes
 class CircularBuffer {
-    private buffer: Float32Array;
-    private writeIndex: number = 0;
-    private readIndex: number = 0;
-    private size: number;
-
-    constructor(size: number) {
+    constructor(size) {
         this.size = size;
         this.buffer = new Float32Array(size);
+        this.writeIndex = 0;
+        this.readIndex = 0;
     }
 
-    write(data: Float32Array): void {
+    write(data) {
         for (let i = 0; i < data.length; i++) {
             this.buffer[this.writeIndex] = data[i];
             this.writeIndex = (this.writeIndex + 1) % this.size;
         }
     }
 
-    read(length: number): Float32Array {
+    read(length) {
         const output = new Float32Array(length);
         for (let i = 0; i < length; i++) {
             output[i] = this.buffer[this.readIndex];
@@ -31,7 +28,7 @@ class CircularBuffer {
         return output;
     }
 
-    available(): number {
+    available() {
         if (this.writeIndex >= this.readIndex) {
             return this.writeIndex - this.readIndex;
         }
@@ -43,17 +40,14 @@ class CircularBuffer {
  * PitchTempoProcessor - AudioWorkletProcessor for real-time pitch/tempo manipulation
  */
 class PitchTempoProcessor extends AudioWorkletProcessor {
-    private leftBuffer: CircularBuffer;
-    private rightBuffer: CircularBuffer;
-    private pitch: number = 1.0;
-    private tempo: number = 1.0;
-    private phase: number = 0;
-
     constructor() {
         super();
         // Initialize buffers (8192 samples should be enough for most use cases)
         this.leftBuffer = new CircularBuffer(8192);
         this.rightBuffer = new CircularBuffer(8192);
+        this.pitch = 1.0;
+        this.tempo = 1.0;
+        this.phase = 0;
 
         // Listen for parameter updates from main thread
         this.port.onmessage = (event) => {
@@ -70,11 +64,7 @@ class PitchTempoProcessor extends AudioWorkletProcessor {
         };
     }
 
-    process(
-        inputs: Float32Array[][],
-        outputs: Float32Array[][],
-        parameters: Record<string, Float32Array>
-    ): boolean {
+    process(inputs, outputs, parameters) {
         const input = inputs[0];
         const output = outputs[0];
 
