@@ -48,9 +48,9 @@ NEXT_PUBLIC_API_URL = https://muzika.vercel.app/api
 NEXT_PUBLIC_ANALYTICS_ID = (your analytics ID if using GA or Plausible)
 ```
 
-3. Select which environments: **Production**, **Preview**, **Development**
+1. Select which environments: **Production**, **Preview**, **Development**
 
-4. Click **Save**
+2. Click **Save**
 
 ### Option B: Set via `.env.local` (Development Only)
 
@@ -73,6 +73,7 @@ NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
 2. Your default domain is auto-assigned: `https://muzika-xxxxx.vercel.app`
 
 To add a custom domain:
+
 ```
 1. Click "Add" → "Add Domain"
 2. Enter your domain (e.g., muzika.example.com)
@@ -128,6 +129,7 @@ To add a custom domain:
 ### 2. CORS & Headers
 
 Vercel respects headers in `vercel.json` and `next.config.ts`:
+
 - ✅ COOP/COEP headers: ✓ Configured
 - ✅ Security headers: ✓ Configured
 - ✅ CSP: ✓ Configured
@@ -159,6 +161,7 @@ Vercel respects headers in `vercel.json` and `next.config.ts`:
 ### Edge Functions (Advanced)
 
 If using API routes, they auto-scale on Vercel:
+
 - **Hobby**: 60s timeout
 - **Pro**: 300s timeout
 - **Enterprise**: Custom
@@ -181,11 +184,13 @@ git push origin main
 ### Manual Deployments
 
 Via Vercel CLI:
+
 ```bash
 vercel --prod
 ```
 
 Via Dashboard:
+
 1. Go to **Deployments**
 2. Click **"⋮"** (three dots) on any deployment
 3. Click **"Redeploy"**
@@ -228,6 +233,7 @@ Via Dashboard:
 | Caching | ✓ (IndexedDB) | ✓ |
 
 **If models exceed 100MB and you're on Hobby plan**, either:
+
 1. Upgrade to Pro ($20/month)
 2. Host models on external CDN
 3. Use INT8 quantization to reduce size
@@ -239,12 +245,14 @@ Via Dashboard:
 ### 1. Preview Deployments
 
 Every pull request gets a preview URL:
+
 - Automatically deployed
 - Merged to production on PR approval
 
 ### 2. Rollbacks
 
 To revert to a previous deployment:
+
 1. Go to **Deployments**
 2. Click on a previous deployment
 3. Click **"⋮"** → **"Promote to Production"**
@@ -252,6 +260,7 @@ To revert to a previous deployment:
 ### 3. Environment-Specific Variables
 
 Set different values for **Production**, **Preview**, **Development**:
+
 1. Go to **Settings** → **Environment Variables**
 2. Select environment from dropdown
 3. Set variable
@@ -259,6 +268,7 @@ Set different values for **Production**, **Preview**, **Development**:
 ### 4. Redirects & Rewrites
 
 Add to `vercel.json`:
+
 ```json
 {
   "redirects": [
@@ -275,26 +285,41 @@ Add to `vercel.json`:
 
 ## 📞 Support & Troubleshooting
 
+### Deployment Summary
+
+The application is configured for Vercel deployment with the following key settings:
+
+- **Project ID**: `prj_bnExRQJCqvmTzcwXLQ6DcoGgWUfQ`
+- **Framework**: Next.js
+- **Root Directory**: `audio-karaoke-app/`
+- **Build Command**: `next build`
+- **Output Directory**: `.next`
+- **Headers**: COOP/COEP enabled for WebGPU/WASM support.
+
 ### Common Issues
 
 **Issue**: Deployment fails with "vercel.json not found"
+
 - **Solution**: Ensure `vercel.json` is in root directory (`audio-karaoke-app/`)
 
 **Issue**: Build timeout (>1 hour)
+
 - **Solution**: Check for infinite loops, heavy dependencies, or large files
 
 **Issue**: WebGPU errors in production
+
 - **Solution**: Verify COOP/COEP headers in `vercel.json` are set correctly
 
 **Issue**: Models not loading (Hobby plan)
+
 - **Solution**: Models must be < 100MB. Upgrade to Pro or use CDN.
 
 ### Getting Help
 
-- **Vercel Status**: https://www.vercelstatus.com/
-- **Vercel Support**: https://vercel.com/support
-- **Documentation**: https://vercel.com/docs
-- **Community**: https://github.com/vercel/next.js/discussions
+- **Vercel Status**: <https://www.vercelstatus.com/>
+- **Vercel Support**: <https://vercel.com/support>
+- **Documentation**: <https://vercel.com/docs>
+- **Community**: <https://github.com/vercel/next.js/discussions>
 
 ---
 
