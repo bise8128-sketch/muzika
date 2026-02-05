@@ -158,12 +158,12 @@ export async function exportToMP3(
  */
 export function downloadBlob(blob: Blob, filename: string): void {
     // FIX: Add client-side check to prevent SSR issues
-    if (typeof document === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
         console.warn('downloadBlob called in non-browser environment');
         return;
     }
 
-    const url = URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = filename;
@@ -175,7 +175,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
 
     // Cleanup object URL after a short delay
     setTimeout(() => {
-        URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(url);
     }, 100);
 }
 

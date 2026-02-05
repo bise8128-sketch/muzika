@@ -85,6 +85,13 @@
         "items": "{size} ({count} items)",
         "clear": "Clear",
         "permanent": "Permanent",
+        "visualSettings": "Visual Settings",
+        "highlightColor": "Highlight Color",
+        "fontSize": "Font Size",
+        "fontWeight": "Font Weight",
+        "textShadow": "Text Shadow",
+        "showDualText": "Show Dual Text",
+        "lyricOffset": "Lyric Offset",
         "version": "Muzika v1.0.0 Stable",
         "love": "Made with ❤️ for high-quality audio"
     },

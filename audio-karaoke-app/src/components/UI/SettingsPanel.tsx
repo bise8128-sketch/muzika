@@ -105,11 +105,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     {/* Visual Settings Section */}
                     {visualSettings && (
                         <section>
-                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('visualSettings') || "Visual Settings"}</h3>
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('visualSettings')}</h3>
                             <div className="space-y-4">
                                 {/* Highlight Color */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                    <label className="block text-sm text-gray-400 mb-3">{t('highlightColor') || "Highlight Color"}</label>
+                                    <label className="block text-sm text-gray-400 mb-3">{t('highlightColor')}</label>
                                     <div className="flex gap-3 flex-wrap">
                                         {['text-yellow-400', 'text-cyan-400', 'text-green-500', 'text-pink-500', 'text-white'].map((color) => (
                                             <button
@@ -125,7 +125,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Typography */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">{t('fontSize') || "Font Size"}</label>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontSize')}</label>
                                         <div className="flex bg-black/20 rounded-lg p-1">
                                             {(['sm', 'base', 'lg', 'xl'] as const).map((size) => (
                                                 <button
@@ -139,7 +139,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-2">{t('fontWeight') || "Font Weight"}</label>
+                                        <label className="block text-sm text-gray-400 mb-2">{t('fontWeight')}</label>
                                         <div className="flex bg-black/20 rounded-lg p-1">
                                             {(['normal', 'bold', 'extrabold'] as const).map((weight) => (
                                                 <button
@@ -157,7 +157,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Toggles */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <label className="text-sm font-semibold text-white">{t('textShadow') || "Text Shadow"}</label>
+                                        <label className="text-sm font-semibold text-white">{t('textShadow')}</label>
                                         <button
                                             onClick={() => handleVisualChange('textShadow', !visualSettings.textShadow)}
                                             className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.textShadow ? 'bg-primary' : 'bg-white/10'}`}
@@ -167,7 +167,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     </div>
 
                                     <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <label className="text-sm font-semibold text-white">{t('showDualText') || "Show Dual Text"}</label>
+                                        <label className="text-sm font-semibold text-white">{t('showDualText')}</label>
                                         <button
                                             onClick={() => handleVisualChange('showDualText', !visualSettings.showDualText)}
                                             className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.showDualText ? 'bg-primary' : 'bg-white/10'}`}
@@ -180,7 +180,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 {/* Offset Adjustment */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                     <div className="flex justify-between mb-4">
-                                        <label className="text-sm font-semibold text-white">{t('lyricOffset') || "Lyric Offset"}</label>
+                                        <label className="text-sm font-semibold text-white">{t('lyricOffset')}</label>
                                         <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">{(visualSettings.offset / 1000).toFixed(1)}s</span>
                                     </div>
                                     <input

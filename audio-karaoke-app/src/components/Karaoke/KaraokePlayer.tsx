@@ -334,12 +334,12 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             });
 
             const blob = await exporter.export((p) => setExportProgress(p));
-            const url = URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'karaoke.webm';
             a.click();
-            URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Export failed:', error);
         } finally {
