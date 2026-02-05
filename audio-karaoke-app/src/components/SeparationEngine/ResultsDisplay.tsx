@@ -45,7 +45,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
             {/* Comparison Player Section */}
             <ComparisonPlayer tracks={tracks} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {displayTracks.map((track) => (
                     <div key={track.id} className="glass-card p-6 rounded-3xl group hover:border-primary/20 transition-all relative overflow-hidden">
                         <div className="relative z-10">
@@ -70,11 +70,11 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                             </div>
 
                             {/* Fake Waveform for visual polish */}
-                            <div className="h-16 flex items-center gap-1 mb-8 opacity-40">
+                            <div className="h-16 flex items-baseline gap-1 mb-8 opacity-40">
                                 {Array.from({ length: 40 }).map((_, i) => (
                                     <div
                                         key={i}
-                                        className="flex-1 bg-gradient-to-t from-primary/50 to-accent/50 rounded-full"
+                                        className={`flex-1 rounded-full transition-all duration-500 ${track.id === 'vocals' ? 'bg-purple-500' : 'bg-pink-500'}`}
                                         style={{ height: `${20 + Math.random() * 80}%` }}
                                     ></div>
                                 ))}
@@ -83,7 +83,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => onDownload(track, 'wav')}
-                                    className="flex-1 px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 focus-ring interactive-scale"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -92,7 +92,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                                 </button>
                                 <button
                                     onClick={() => onDownload(track, 'mp3')}
-                                    className="flex-1 px-4 py-3 rounded-xl glass hover:bg-white/10 text-white font-semibold transition-all flex items-center justify-center gap-2 border border-white/5"
+                                    className="flex-1 px-4 py-3 rounded-xl glass hover:bg-white/10 text-white font-bold transition-all flex items-center justify-center gap-2 border border-white/5 focus-ring interactive-scale"
                                 >
                                     MP3
                                 </button>

@@ -387,7 +387,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [playback]);
 
     return (
-        <div className={`flex flex-col gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
+        <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
             {/* Stage Mode Toggle (Always visible in stage mode) */}
             {isStageMode && (
                 <button
@@ -395,17 +395,18 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         setIsStageMode(false);
                         saveSettings({ stageModeEnabled: false });
                     }}
-                    className="absolute top-8 left-8 z-[110] p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all"
+                    className="absolute top-4 md:top-8 left-4 md:left-8 z-[110] p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring"
                     title="Exit Stage Mode (F)"
+                    aria-label="Exit Stage Mode"
                 >
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             )}
 
             {/* Visualizer and Lyrics Area */}
-            <div className={`relative bg-black/40 rounded-3xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-8 group transition-all duration-700 ${isStageMode ? 'flex-1 aspect-auto border-none bg-transparent' : 'aspect-video md:aspect-[21/9]'
+            <div className={`relative bg-zinc-950/60 rounded-3xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-6 md:p-8 group transition-all duration-700 ${isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-transparent' : 'aspect-[4/3] md:aspect-[21/9]'
                 }`}>
                 {/* Background Visualizer */}
                 <canvas
@@ -456,15 +457,15 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 {!lyrics && !cdgData && !showEditor && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                         <div className="flex gap-4">
-                            <label className="cursor-pointer group-hover:bg-black/20 transition-colors">
-                                <input type="file" accept=".lrc,.cdg" onChange={handleLRCUpload} className="hidden" />
-                                <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 hover:bg-white/20 transition-all text-white">
+                            <label className="cursor-pointer focus-ring rounded-full">
+                                <input type="file" accept=".lrc,.cdg" onChange={handleLRCUpload} className="sr-only" />
+                                <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 hover:bg-white/20 transition-all text-white font-bold text-sm uppercase tracking-wider">
                                     {t('uploadLrc')}
                                 </div>
                             </label>
                             <button
                                 onClick={() => setShowEditor(true)}
-                                className="bg-primary/20 backdrop-blur-md px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/30 transition-all text-white"
+                                className="bg-primary/20 backdrop-blur-md px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/30 transition-all text-white font-bold text-sm uppercase tracking-wider focus-ring"
                             >
                                 {t('createLyrics')}
                             </button>
