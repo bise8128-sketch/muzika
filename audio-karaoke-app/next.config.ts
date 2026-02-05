@@ -8,7 +8,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   compress: true,
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
-  allowedDevOrigins: ['http://192.168.2.190:3000'],
+  allowedDevOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.2.190:3000'],
   outputFileTracingRoot: '../../',
 
   // Webpack configuration (backward compatibility)
@@ -109,7 +109,7 @@ const nextConfig: NextConfig = {
           // Allow WASM execution with Content-Security-Policy
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' 'unsafe-inline' blob: https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://github.com https://githubusercontent.com https://huggingface.co https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;",
+            value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' 'unsafe-inline' blob: https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ws: wss: https://github.com https://githubusercontent.com https://huggingface.co https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;",
           },
         ],
       },

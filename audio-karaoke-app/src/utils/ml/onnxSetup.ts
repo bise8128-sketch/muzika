@@ -9,14 +9,25 @@ export async function checkWebGPUSupport(): Promise<boolean> {
         return false;
     }
     try {
+        console.log('[WebGPU] Requesting high-performance adapter...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const adapter = await (navigator as any).gpu.requestAdapter({
+        let adapter = await (navigator as any).gpu.requestAdapter({
             powerPreference: 'high-performance'
         });
 
+        if (!adapter) {
+            console.warn('[WebGPU] High-performance adapter not found, trying default...');
+            adapter = await (navigator as any).gpu.requestAdapter();
+        }
+
         if (adapter) {
             const info = await adapter.requestAdapterInfo();
-            console.log(`[WebGPU] Adapter found: ${info.vendor} ${info.architecture}`);
+            console.log(`[WebGPU] Adapter found: ${info.vendor} ${info.architecture} (${info.description})`);
+
+            // Check for required features if any specific ones are known to be needed
+            console.log('[WebGPU] Adapter features:', Array.from((adapter as any).features));
+        } else {
+            console.error('[WebGPU] No GPU adapter found at all.');
         }
 
         return !!adapter;
