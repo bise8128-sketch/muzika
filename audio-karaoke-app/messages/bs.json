@@ -152,5 +152,8 @@
     },
     "BackendStatus": {
         "backend": "Backend: {status}"
+    },
+    "LyricDisplay": {
+        "waitingForLyrics": "Čekanje na stihove..."
     }
 }

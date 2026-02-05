@@ -152,5 +152,8 @@
     },
     "BackendStatus": {
         "backend": "Backend: {status}"
+    },
+    "LyricDisplay": {
+        "waitingForLyrics": "Waiting for lyrics..."
     }
 }
