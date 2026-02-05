@@ -2,21 +2,27 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { useModels } from '@/hooks/useModels';
 
 interface AudioUploadProps {
     onUpload: (files: File[]) => void;
     isLoading?: boolean;
     autoStartKaraoke?: boolean;
     onAutoStartToggle?: (value: boolean) => void;
+    selectedModelId: string;
+    onModelChange: (id: string) => void;
 }
 
 export const AudioUpload: React.FC<AudioUploadProps> = ({
     onUpload,
     isLoading,
     autoStartKaraoke = false,
-    onAutoStartToggle
+    onAutoStartToggle,
+    selectedModelId,
+    onModelChange
 }) => {
     const t = useTranslations('AudioUpload');
+    const { models } = useModels();
     const [isDragging, setIsDragging] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
