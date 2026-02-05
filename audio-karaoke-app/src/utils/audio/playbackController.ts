@@ -14,8 +14,9 @@ const BUFFER_SIZE = 4096;
 
 export class PlaybackController {
     private audioContext: AudioContext;
-    private scriptNode: ScriptProcessorNode | null = null;
+    private bufferSources: AudioBufferSourceNode[] = [];
     private processor: RealtimeAudioProcessor;
+    private workletNode: AudioWorkletNode | null = null;
 
     // Effects
     private reverbNode: ConvolverNode;
@@ -49,14 +50,12 @@ export class PlaybackController {
     private pitch: number = 0; // Semitones
     private tempo: number = 1.0; // Rate
 
-    // Buffer overflow handling - stores excess samples from SoundTouch processing
-    private leftoverLeft: Float32Array | null = null;
-    private leftoverRight: Float32Array | null = null;
-    private leftoverIndex: number = 0;
-
     constructor() {
         this.audioContext = getAudioContext();
         this.processor = new RealtimeAudioProcessor(this.audioContext.sampleRate);
+
+        // Initialize AudioWorklet processor
+        this.initializeAudioWorklet();
 
         // Initialize Effects Graph
         this.reverbNode = this.audioContext.createConvolver();
@@ -134,6 +133,23 @@ export class PlaybackController {
         this.trebleNode.connect(this.masterGain);
 
         this.createImpulseResponse();
+    }
+
+    private async initializeAudioWorklet() {
+        try {
+            await this.processor.initialize(this.audioContext);
+            this.workletNode = this.processor.getNode();
+
+            // Connect worklet to effects chain if available
+            if (this.workletNode) {
+                // Will connect sources through worklet during playback
+                this.workletNode.connect(this.masterGain);
+                this.workletNode.connect(this.reverbNode);
+                this.workletNode.connect(this.echoNode);
+            }
+        } catch (error) {
+            console.warn('AudioWorklet initialization failed, using direct playback:', error);
+        }
     }
 
     private createImpulseResponse() {
@@ -272,18 +288,62 @@ export class PlaybackController {
             this.isPlaying = true;
             this.isPaused = false;
 
-            // Create ScriptProcessor
-            this.scriptNode = this.audioContext.createScriptProcessor(BUFFER_SIZE, 2, 2);
-            this.scriptNode.onaudioprocess = this.handleAudioProcess.bind(this);
+            // Stop any existing sources
+            this.stopAllSources();
 
-            // Connect Master Graph
-            // ScriptNode -> MasterGain (Dry)
-            this.scriptNode.connect(this.masterGain);
+            // Create buffer sources for each track
+            const currentTime = this.getCurrentTime();
+            const destination = this.workletNode || this.masterGain;
 
-            // ScriptNode -> Effects
-            this.scriptNode.connect(this.reverbNode);
-            this.scriptNode.connect(this.echoNode);
+            this.audioBuffers.forEach((buffer, index) => {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
 
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = this.trackVolumes[index] || 1.0;
+
+                source.connect(gainNode);
+                gainNode.connect(destination);
+
+                // If no worklet, also connect to effects
+                if (!this.workletNode) {
+                    gainNode.connect(this.reverbNode);
+                    gainNode.connect(this.echoNode);
+                }
+
+                source.start(0, currentTime);
+                source.onended = () => {
+                    if (this.isPlaying) {
+                        this.stop();
+                        this.emit('ended');
+                    }
+                };
+
+                this.bufferSources.push(source);
+                this.gainNodes[index] = gainNode;
+            });
+
+            // Handle voice buffer if present
+            if (this.voiceBuffer && this.voiceVolume > 0) {
+                const voiceSource = this.audioContext.createBufferSource();
+                voiceSource.buffer = this.voiceBuffer;
+
+                const voiceGain = this.audioContext.createGain();
+                voiceGain.gain.value = this.voiceVolume;
+
+                voiceSource.connect(voiceGain);
+                voiceGain.connect(destination);
+
+                if (!this.workletNode) {
+                    voiceGain.connect(this.reverbNode);
+                    voiceGain.connect(this.echoNode);
+                }
+
+                voiceSource.start(0, currentTime);
+                this.bufferSources.push(voiceSource);
+            }
+
+            this.startTime = this.audioContext.currentTime - currentTime;
             this.startTimeUpdateLoop();
             this.emit('play');
         }
@@ -295,7 +355,9 @@ export class PlaybackController {
     pause(): void {
         if (!this.isPlaying) return;
 
-        this.disconnectScriptNode();
+        // Store current time for resume
+        this.playHead = Math.floor(this.getCurrentTime() * this.audioContext.sampleRate);
+        this.stopAllSources();
         this.isPlaying = false;
         this.isPaused = true;
         this.stopTimeUpdateLoop();
@@ -306,16 +368,11 @@ export class PlaybackController {
      * Stop playback and reset
      */
     stop(): void {
-        this.disconnectScriptNode();
+        this.stopAllSources();
         this.isPlaying = false;
         this.isPaused = false;
         this.playHead = 0;
         this.processor.reset();
-
-        // Clear leftover buffers
-        this.leftoverLeft = null;
-        this.leftoverRight = null;
-        this.leftoverIndex = 0;
 
         // Re-apply settings after reset
         this.processor.setPitchSemitones(this.pitch);
@@ -325,18 +382,25 @@ export class PlaybackController {
         this.emit('stop');
     }
 
-    private disconnectScriptNode() {
-        if (this.scriptNode) {
-            this.scriptNode.disconnect();
-            this.scriptNode.onaudioprocess = null;
-            this.scriptNode = null;
-        }
+    private stopAllSources() {
+        this.bufferSources.forEach(source => {
+            try {
+                source.stop();
+                source.disconnect();
+            } catch (e) {
+                // Source may already be stopped
+            }
+        });
+        this.bufferSources = [];
     }
 
     /**
-     * Audio Processing Loop
+     * Audio Processing Loop - DEPRECATED
+     * This method is no longer used with AudioWorklet-based processing
+     * Kept for backward compatibility but does nothing
      */
     private handleAudioProcess(e: AudioProcessingEvent) {
+        // No longer used - AudioWorklet handles processing automatically
         if (!this.isPlaying) return;
 
         const outputL = e.outputBuffer.getChannelData(0);
@@ -545,7 +609,9 @@ export class PlaybackController {
     }
 
     getCurrentTime(): number {
-        if (this.audioBuffers.length > 0) {
+        if (this.isPlaying && this.startTime > 0) {
+            return this.audioContext.currentTime - this.startTime;
+        } else if (this.audioBuffers.length > 0) {
             return this.playHead / this.audioContext.sampleRate;
         }
         return 0;
@@ -604,5 +670,6 @@ export class PlaybackController {
         this.stop();
         this.listeners.clear();
         this.audioBuffers = [];
+        this.processor.dispose();
     }
 }

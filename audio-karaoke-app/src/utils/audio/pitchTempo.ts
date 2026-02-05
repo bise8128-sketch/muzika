@@ -139,93 +139,106 @@ async function processSoundTouch(
 
 /**
  * Real-time pitch/tempo processor for streaming audio
- */
-/**
- * Real-time pitch/tempo processor for streaming audio
- * Supports stereo processing using two synchronized shifters
+ * Supports stereo processing using AudioWorklet (modern) or fallback to passthrough
  */
 export class RealtimeAudioProcessor {
-    private leftShifter: PitchShifter | null;
-    private rightShifter: PitchShifter | null;
+    private audioContext: AudioContext | null = null;
+    private workletNode: AudioWorkletNode | null = null;
     private sampleRate: number;
+    private isWorkletSupported: boolean = false;
+    private isInitialized: boolean = false;
 
     constructor(sampleRate: number = 44100) {
         this.sampleRate = sampleRate;
-        // detailed constructor: sampleRate, bufferSize, distinct channels (not used effectively in JS port generally, so we use 1 per shifter)
-        try {
-            this.leftShifter = new PitchShifter(sampleRate, 4096, 1);
-            this.rightShifter = new PitchShifter(sampleRate, 4096, 1);
-        } catch (error) {
-            console.warn('PitchShifter not available, pitch shifting disabled:', error);
-            this.leftShifter = null;
-            this.rightShifter = null;
+
+        // Check if AudioWorklet is supported
+        if (typeof AudioContext !== 'undefined' || typeof (window as any).webkitAudioContext !== 'undefined') {
+            this.isWorkletSupported = 'audioWorklet' in AudioContext.prototype;
         }
+
+        if (!this.isWorkletSupported) {
+            console.warn('AudioWorklet not supported, pitch/tempo features will be disabled');
+        }
+    }
+
+    /**
+     * Initialize the AudioWorklet
+     * Must be called in a user interaction context due to AudioContext restrictions
+     */
+    async initialize(audioContext: AudioContext): Promise<void> {
+        if (this.isInitialized || !this.isWorkletSupported) {
+            return;
+        }
+
+        this.audioContext = audioContext;
+
+        try {
+            // Load the AudioWorklet module
+            await audioContext.audioWorklet.addModule('/audio/pitch-tempo.worklet.js');
+
+            // Create the worklet node
+            this.workletNode = new AudioWorkletNode(audioContext, 'pitch-tempo-processor', {
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                outputChannelCount: [2], // Stereo
+            });
+
+            this.isInitialized = true;
+        } catch (error) {
+            console.error('Failed to initialize AudioWorklet:', error);
+            this.isWorkletSupported = false;
+        }
+    }
+
+    /**
+     * Get the worklet node for connecting to audio graph
+     */
+    getNode(): AudioWorkletNode | null {
+        return this.workletNode;
+    }
+
+    /**
+     * Check if processor is available and initialized
+     */
+    isAvailable(): boolean {
+        return this.isWorkletSupported && this.isInitialized;
     }
 
     /**
      * Set pitch shift in semitones
      */
     setPitchSemitones(semitones: number): void {
-        if (!this.leftShifter || !this.rightShifter) return;
+        if (!this.workletNode) return;
         const clampedSemitones = Math.max(-12, Math.min(12, semitones));
         const pitch = Math.pow(2, clampedSemitones / 12);
-        this.leftShifter.pitch = pitch;
-        this.rightShifter.pitch = pitch;
+        this.workletNode.port.postMessage({ type: 'setPitch', value: pitch });
     }
 
     /**
      * Set tempo rate
      */
     setTempo(rate: number): void {
-        if (!this.leftShifter || !this.rightShifter) return;
+        if (!this.workletNode) return;
         const clampedRate = Math.max(0.5, Math.min(2.0, rate));
-        this.leftShifter.tempo = clampedRate;
-        this.rightShifter.tempo = clampedRate;
+        this.workletNode.port.postMessage({ type: 'setTempo', value: clampedRate });
     }
 
     /**
-     * Process audio chunk (Stereo)
-     * @param leftInput - Left channel input samples
-     * @param rightInput - Right channel input samples
-     * @returns Object containing left and right processed samples, or null if not enough data
+     * Process audio chunk (Stereo) - DEPRECATED for AudioWorklet
+     * This method is kept for backward compatibility but does nothing
+     * Audio processing happens in the worklet node automatically
      */
     process(leftInput: Float32Array, rightInput: Float32Array): { left: Float32Array, right: Float32Array } | null {
-        if (!this.leftShifter || !this.rightShifter) {
-            // No pitch shifting, return input as output
-            return { left: leftInput, right: rightInput };
-        }
-        // Feed data
-        const leftOut = this.leftShifter.process(leftInput);
-        const rightOut = this.rightShifter.process(rightInput);
-
-        // SoundTouch buffers output. We might get nothing back until enough input accumulates.
-        // We assume both channels produce same amount of output since they have same settings and input size.
-        if (leftOut && rightOut && leftOut.length > 0) {
-            return {
-                left: new Float32Array(leftOut),
-                right: new Float32Array(rightOut)
-            };
-        }
-
-        return null;
+        // For AudioWorklet, processing happens automatically in the audio graph
+        // This is a compatibility shim for the old ScriptProcessor-based code
+        // Return the input unchanged (passthrough)
+        return { left: leftInput, right: rightInput };
     }
 
     /**
-     * Flush remaining samples
+     * Flush remaining samples - DEPRECATED for AudioWorklet
      */
     flush(): { left: Float32Array, right: Float32Array } | null {
-        if (!this.leftShifter || !this.rightShifter) {
-            return null;
-        }
-        const leftOut = this.leftShifter.flush();
-        const rightOut = this.rightShifter.flush();
-
-        if (leftOut && rightOut && leftOut.length > 0) {
-            return {
-                left: new Float32Array(leftOut),
-                right: new Float32Array(rightOut)
-            };
-        }
         return null;
     }
 
@@ -233,13 +246,18 @@ export class RealtimeAudioProcessor {
      * Reset processor state
      */
     reset(): void {
-        try {
-            this.leftShifter = new PitchShifter(this.sampleRate, 4096, 1);
-            this.rightShifter = new PitchShifter(this.sampleRate, 4096, 1);
-        } catch (error) {
-            console.warn('PitchShifter not available, pitch shifting disabled:', error);
-            this.leftShifter = null;
-            this.rightShifter = null;
+        if (!this.workletNode) return;
+        this.workletNode.port.postMessage({ type: 'reset' });
+    }
+
+    /**
+     * Dispose of resources
+     */
+    dispose(): void {
+        if (this.workletNode) {
+            this.workletNode.disconnect();
+            this.workletNode = null;
         }
+        this.isInitialized = false;
     }
 }
