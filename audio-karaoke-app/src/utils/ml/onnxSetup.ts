@@ -34,6 +34,10 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     const hasWebGPU = await checkWebGPUSupport();
     console.log('[onnxSetup] Setting up ONNX Runtime...');
 
+    // Suppress "Unknown CPU vendor" warnings by setting log level to error
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ort as any).env.logLevel = 'error';
+
     // Configure WASM paths to point to our public/wasm directory
     // In workers, we might need a full URL to avoid relative path issues
     const wasmPath = typeof self !== 'undefined' && self.location ? `${self.location.origin}/wasm/` : '/wasm/';
