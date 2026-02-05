@@ -16,49 +16,67 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [solos, setSolos] = useState<Record<string, boolean>>({});
+    const [isClient, setIsClient] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // We'll use a local controller for comparison playback
     const controllerRef = useRef<PlaybackController | null>(null);
 
+    // Client-side only rendering
     useEffect(() => {
-        const controller = new PlaybackController();
-        controllerRef.current = controller;
+        setIsClient(true);
+    }, []);
 
-        const loadTracks = async () => {
-            const validTracks: { buffer: AudioBuffer, id: string }[] = [];
+    useEffect(() => {
+        // Only run in client-side environment
+        if (!isClient) return;
 
-            for (const track of tracks) {
-                if (track.blob instanceof AudioBuffer) {
-                    validTracks.push({ buffer: track.blob, id: track.id });
-                } else if (track.blob instanceof Blob) {
-                    const arrayBuffer = await track.blob.arrayBuffer();
-                    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                    const decoded = await audioContext.decodeAudioData(arrayBuffer);
-                    validTracks.push({ buffer: decoded, id: track.id });
+        try {
+            const controller = new PlaybackController();
+            controllerRef.current = controller;
+
+            const loadTracks = async () => {
+                const validTracks: { buffer: AudioBuffer, id: string }[] = [];
+
+                for (const track of tracks) {
+                    if (track.blob instanceof AudioBuffer) {
+                        validTracks.push({ buffer: track.blob, id: track.id });
+                    } else if (track.blob instanceof Blob) {
+                        const arrayBuffer = await track.blob.arrayBuffer();
+                        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const decoded = await audioContext.decodeAudioData(arrayBuffer);
+                        validTracks.push({ buffer: decoded, id: track.id });
+                    }
                 }
-            }
 
-            if (validTracks.length > 0) {
-                controller.setAudioBuffers(validTracks.map(t => t.buffer));
-                setDuration(validTracks[0].buffer.duration);
-                // Store valid track IDs to map volume controls correctly
-                (controller as any)._validTrackIds = validTracks.map(t => t.id);
-            }
-        };
+                if (validTracks.length > 0) {
+                    controller.setAudioBuffers(validTracks.map(t => t.buffer));
+                    setDuration(validTracks[0].buffer.duration);
+                    // Store valid track IDs to map volume controls correctly
+                    (controller as any)._validTrackIds = validTracks.map(t => t.id);
+                }
+            };
 
-        loadTracks();
+            loadTracks().catch(err => {
+                console.error('Failed to load tracks:', err);
+                setError('Failed to load audio tracks');
+            });
 
-        const interval = setInterval(() => {
-            if (controllerRef.current) {
-                setCurrentTime(controllerRef.current.getCurrentTime());
-            }
-        }, 100);
+            const interval = setInterval(() => {
+                if (controllerRef.current) {
+                    setCurrentTime(controllerRef.current.getCurrentTime());
+                }
+            }, 100);
 
-        return () => {
-            clearInterval(interval);
-            controller.dispose();
-        };
-    }, [tracks]);
+            return () => {
+                clearInterval(interval);
+                controller.dispose();
+            };
+        } catch (err) {
+            console.error('Failed to initialize PlaybackController:', err);
+            setError('Audio playback not supported');
+        }
+    }, [tracks, isClient]);
 
     const handlePlayPause = () => {
         if (!controllerRef.current) return;
@@ -98,6 +116,20 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
         const secs = Math.floor(time % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
+
+    // Don't render on server-side
+    if (!isClient) {
+        return null;
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="glass-card p-6 rounded-3xl border-red-500/20 bg-red-500/5 mb-8">
+                <p className="text-red-500">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="glass-card p-6 rounded-3xl border-primary/20 bg-primary/5 mb-8">
