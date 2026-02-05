@@ -232,14 +232,15 @@ const processLyrics = (time: number) => {
     if (lineIndex !== -1) {
         let wordIndex = -1;
         const activeLine = context.lrcData.lines[lineIndex];
+        const words = activeLine.words;
         
-        if (activeLine.words && activeLine.words.length > 0) {
-            wordIndex = activeLine.words.findIndex((word: any, index: number) => {
-                const nextWord = activeLine.words[index + 1];
+        if (words && words.length > 0) {
+            wordIndex = words.findIndex((word: any, index: number) => {
+                const nextWord = words[index + 1];
                 return effectiveTime >= word.startTime && (nextWord ? effectiveTime < nextWord.startTime : true);
             });
-             if (wordIndex === -1 && effectiveTime > activeLine.words[activeLine.words.length - 1].startTime) {
-                wordIndex = activeLine.words.length - 1;
+             if (wordIndex === -1 && effectiveTime > words[words.length - 1].startTime) {
+                wordIndex = words.length - 1;
             }
         }
 
