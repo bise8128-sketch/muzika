@@ -26,7 +26,7 @@ export interface SeparationRequest {
 export type WorkerResponse =
     | { type: 'PROGRESS'; payload: ProcessingProgress }
     | { type: 'CHUNK_PLAYBACK'; payload: { vocals: Float32Array; instrumentals: Float32Array; position: number } }
-    | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number } }
+    | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: any } }
     | { type: 'ERROR'; payload: { message: string } };
 
 // Helper to send progress
@@ -147,6 +147,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // 1024 samples is usually enough for smooth transition.
             const crossfadeFrames = 1024;
 
+            performance.mark('start-separation');
+
             await processAudioInChunks(
                 engine,
                 segments.map(s => s.data),
@@ -163,10 +165,23 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     });
                 },
                 (chunkResult, index) => {
+                    // Record performance mark for chunk completion
+                    performance.mark(`chunk-${index}-complete`);
+
                     const vocals = chunkResult.vocals;
                     const instrumentals = chunkResult.instrumentals;
 
                     if (index === 0) {
+                        // Mark Time To First Audio (TTFA)
+                        performance.mark('ttfa');
+                        try {
+                            performance.measure('time-to-first-audio', 'start-separation', 'ttfa');
+                            const ttfaMeasure = performance.getEntriesByName('time-to-first-audio')[0];
+                            console.log(`[audio.worker] TTFA: ${ttfaMeasure.duration.toFixed(2)}ms`);
+                        } catch (e) {
+                            console.warn('[audio.worker] performance.measure failed:', e);
+                        }
+
                         // First segment
                         // The valid part is up to (length - crossfade)
                         const safeLen = vocals.length - crossfadeFrames;
@@ -234,6 +249,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             engine.dispose();
 
+            // Collect metrics
+            const ttfaEntry = performance.getEntriesByName('time-to-first-audio')[0];
+            const metrics = {
+                ttfa: ttfaEntry?.duration || 0,
+                totalTime: performance.now() - performance.getEntriesByName('start-separation')[0].startTime,
+                numSegments: totalSegments
+            };
+
             // Send empty buffers as complete signal
             self.postMessage({
                 type: 'COMPLETE',
@@ -241,7 +264,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     vocals: new ArrayBuffer(0),
                     instrumentals: new ArrayBuffer(0),
                     fileHash,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    metrics
                 }
             });
 
