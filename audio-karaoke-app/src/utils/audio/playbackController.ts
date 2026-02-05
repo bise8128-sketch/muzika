@@ -50,6 +50,11 @@ export class PlaybackController {
     private pitch: number = 0; // Semitones
     private tempo: number = 1.0; // Rate
 
+    // Leftover samples for SoundTouch processing (deprecated logic)
+    private leftoverLeft: Float32Array | null = null;
+    private leftoverRight: Float32Array | null = null;
+    private leftoverIndex: number = 0;
+
     constructor() {
         this.audioContext = getAudioContext();
         this.processor = new RealtimeAudioProcessor(this.audioContext.sampleRate);

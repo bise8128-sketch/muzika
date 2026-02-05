@@ -54,8 +54,8 @@ const THEME_STYLES: Record<LyricTheme, {
     }
 };
 
-export const LyricDisplay: React.FC<LyricDisplayProps> = ({ 
-    lyrics, 
+export const LyricDisplay: React.FC<LyricDisplayProps> = ({
+    lyrics,
     currentLineIndex,
     currentWordIndex,
     theme = 'modern',
@@ -86,11 +86,11 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     }
 
     return (
-        <div 
+        <div
             ref={scrollContainerRef}
             className={`h-full overflow-y-auto no-scrollbar mask-gradient transition-all duration-500 ${style.container}`}
-            style={{ 
-                fontSize: visualSettings?.fontSize === 'large' ? '1.25rem' : visualSettings?.fontSize === 'small' ? '0.875rem' : '1rem',
+            style={{
+                fontSize: (visualSettings?.fontSize === 'lg' || visualSettings?.fontSize === 'xl') ? '1.25rem' : visualSettings?.fontSize === 'sm' ? '0.875rem' : '1rem',
                 fontWeight: visualSettings?.fontWeight || 'bold'
             }}
         >
@@ -111,15 +111,15 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                 {line.words.map((word, wIndex) => {
                                     const isWordActive = wIndex === currentWordIndex;
                                     const isWordPast = wIndex < currentWordIndex;
-                                    
+
                                     // Highlight past words and current word
-                                    const wordColor = (isWordPast || isWordActive) 
+                                    const wordColor = (isWordPast || isWordActive)
                                         ? (visualSettings?.highlightColor || 'text-yellow-400')
                                         : 'text-white';
-                                    
+
                                     return (
-                                        <span 
-                                            key={wIndex} 
+                                        <span
+                                            key={wIndex}
                                             className={`inline-block transition-colors duration-200 mr-1 ${wordColor}`}
                                         >
                                             {word.text}
@@ -132,7 +132,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                 {line.text}
                             </p>
                         )}
-                        
+
                         {/* Dual Text (Translation/Romanization) */}
                         {visualSettings?.showDualText && line.translation && (
                             <p className="text-sm opacity-60 mt-1">{line.translation}</p>
