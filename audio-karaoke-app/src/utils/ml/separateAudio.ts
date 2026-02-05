@@ -14,6 +14,16 @@ export interface SeparationOptions {
 }
 
 /**
+ * Metrics returned from the separation process
+ */
+export interface SeparationMetrics {
+    ttfa: number;
+    totalTime: number;
+    numSegments: number;
+    averageInferenceTime?: number;
+}
+
+/**
  * Separate audio into vocals and instrumentals using a Web Worker.
  * Supports progressive streaming and WebGPU acceleration.
  *
@@ -78,7 +88,7 @@ export async function separateAudio(
         }
 
         try {
-            // Phase 1: Decode Audio (Main Thread)
+            // Phase 1: Decoding
             updateProgress(onProgress, 'decoding', 0, 0, 0, 'Decoding audio file...');
 
             if (signal?.aborted) throw new Error('Processing aborted by user');
@@ -135,6 +145,10 @@ export async function separateAudio(
                     }
                 } else if (type === 'COMPLETE') {
                     console.log('[separateAudio] Worker completed separation');
+                    if (payload.metrics) {
+                        console.log('[separateAudio] Performance Metrics:');
+                        console.table(payload.metrics);
+                    }
 
                     try {
                         // If the worker returned full buffers (e.g. from cache), ingest them into manager
