@@ -30,12 +30,12 @@ export function useModels() {
 
         async function determineRecommendation() {
             const support = await checkONNXSupport();
-            if (support.isLowEnd) {
-                // Recommend the lightest model for low-end devices
+            if (support.isLowEnd || !support.webgpu) {
+                // Recommend the lightest model for low-end devices or if WebGPU is not available
                 // In our route.ts, mdx-net-inst-v1 is the default and reasonably light
                 setRecommendedModelId('mdx-net-inst-v1');
             } else {
-                // Recommend a higher quality model for powerful devices
+                // Recommend a higher quality model for powerful devices with WebGPU support
                 setRecommendedModelId('kim-vocal-2');
             }
         }

@@ -27,12 +27,13 @@ export async function checkWebGPUSupport(): Promise<boolean> {
             // Check for required features if any specific ones are known to be needed
             console.log('[WebGPU] Adapter features:', Array.from((adapter as any).features));
         } else {
-            console.error('[WebGPU] No GPU adapter found at all.');
+            console.log('[WebGPU] No GPU adapter found. This is expected on many devices. Falling back to CPU (WASM).');
         }
 
         return !!adapter;
     } catch (e) {
-        console.warn('WebGPU requestAdapter failed:', e);
+        console.warn('[WebGPU] requestAdapter failed. This usually means WebGPU is disabled or not supported by the browser.', e);
+        console.log('[WebGPU] Falling back to CPU (WASM) execution.');
         return false;
     }
 }
