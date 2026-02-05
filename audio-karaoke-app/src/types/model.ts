@@ -28,6 +28,7 @@ export interface ModelInfo {
     url?: string;
     description?: string;
     downloadedAt?: number;
+    isGpuSupported?: boolean;
 }
 
 export interface ModelStorageData {
