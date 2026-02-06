@@ -45,7 +45,7 @@ class WorkerPool {
             return new URL('./mp3.worker.ts', import.meta.url).href;
         } catch (e) {
             // Fallback to a direct path
-            console.warn('[WorkerPool] Failed to resolve worker URL, using fallback');
+            console.warn('[WorkerPool] Failed to resolve worker URL, using fallback:', e);
             return '/utils/audio/mp3.worker.js';
         }
     }
@@ -58,7 +58,7 @@ class WorkerPool {
 
         // Create new worker if under limit
         if (this.workers.length < this.maxWorkers) {
-            const worker = new Worker(this.workerUrl, { type: 'module' });
+            const worker = new Worker(this.workerUrl);
             this.workers.push(worker);
             return worker;
         }
@@ -101,6 +101,17 @@ function getWorkerPool(): WorkerPool {
         workerPool = new WorkerPool(2);
     }
     return workerPool;
+}
+
+/**
+ * Cleanup worker pool when app unmounts
+ * Call this function in component cleanup effects
+ */
+export function cleanupWorkerPool(): void {
+    if (workerPool) {
+        workerPool.terminateAll();
+        workerPool = null;
+    }
 }
 
 // File size limits (in bytes)
@@ -316,10 +327,22 @@ export async function exportToMP3(
             } else if (type === 'ERROR') {
                 clearTimeout(timeout);
                 pool.release(worker);
+                console.error('[WorkerPool] Worker reported error:', payload);
+
+                // Parse error payload if it's a JSON string
+                let errorMessage = payload;
+                try {
+                    const errorData = JSON.parse(payload);
+                    errorMessage = errorData.message || errorData.details || payload;
+                } catch {
+                    // If parsing fails, use the raw payload
+                    errorMessage = payload;
+                }
+
                 reject(new MP3ExportError(
                     MP3ExportErrorType.ENCODING_FAILED,
                     'Encoding failed',
-                    payload
+                    errorMessage
                 ));
             }
         };
@@ -327,10 +350,11 @@ export async function exportToMP3(
         worker.onerror = (err) => {
             clearTimeout(timeout);
             pool.release(worker);
+            console.error('[WorkerPool] Worker error:', err);
             reject(new MP3ExportError(
                 MP3ExportErrorType.WORKER_INIT_FAILED,
-                'Worker error',
-                err.message
+                'Worker initialization failed',
+                `Failed to initialize worker: ${err.message || 'Unknown error'}. This may be due to browser compatibility or missing files. Please check browser console for more details.`
             ));
         };
 
