@@ -119,8 +119,21 @@ async function initializeFFmpeg(baseUrl: string, maxRetries: number = 2): Promis
             }
 
             // Import UMD scripts (bypass Webpack)
+            // FIX: Use fetch + eval instead of importScripts for blob URL workers
             // @ts-expect-error - importScripts is a Web Worker API
-            importScripts(coreJsUrl);
+            try {
+                const response = await fetch(coreJsUrl);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch FFmpeg JS: ' + response.status + ' ' + response.statusText);
+                }
+                const scriptContent = await response.text();
+                // Use eval to execute the script in the worker context
+                // @ts-expect-error - eval is used to load the FFmpeg library
+                eval(scriptContent);
+            } catch (fetchError) {
+                const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+                throw new Error('Failed to load FFmpeg from ' + coreJsUrl + ': ' + errorMsg);
+            }
 
             // Initialize FFmpeg (handle different export names)
             const FFmpegLib = (self as unknown as { FFmpeg?: FFmpegLib; FFmpegWASM?: FFmpegLib }).FFmpeg ||
