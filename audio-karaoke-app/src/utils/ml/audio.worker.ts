@@ -82,12 +82,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // Phase 1: Generate file hash
             sendProgress({ phase: 'loading-model', currentSegment: 0, totalSegments: 0, percentage: 0, message: 'Generating file hash...' });
             if (isAborted) throw new Error('Processing aborted by user');
-            const fileHash = await hashFile(file);
+            const fileHash = await audioCache.hashFile(file);
 
             // Phase 2: Check cache
             if (!skipCache) {
                 sendProgress({ phase: 'loading-model', currentSegment: 0, totalSegments: 0, percentage: 5, message: 'Checking cache...' });
-                const cached = await getCachedAudio(fileHash);
+                const cached = await audioCache.getCachedAudio(fileHash, modelInfo.id);
 
                 if (cached) {
                     sendProgress({ phase: 'loading-model', currentSegment: 0, totalSegments: 0, percentage: 100, message: 'Loading from cache...' });

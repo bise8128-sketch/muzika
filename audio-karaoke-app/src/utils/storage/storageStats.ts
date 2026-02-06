@@ -1,4 +1,6 @@
-import { db } from './audioDatabase';
+import { modelStorage } from './modelStorage';
+import { audioCache } from './audioCache';
+import { processingLogger } from './processingLogs';
 
 export interface StorageStats {
     totalSize: number;
@@ -9,21 +11,14 @@ export interface StorageStats {
 
 export async function getStorageStats(): Promise<StorageStats> {
     try {
-        const models = await db.models.toArray();
-        const cachedAudio = await db.cachedAudio.toArray();
-
-        const modelSize = models.reduce((acc, m) => acc + (m.data?.byteLength || 0), 0);
-        const cacheSize = cachedAudio.reduce((acc, c) => {
-            const vSize = c.vocals instanceof Blob ? c.vocals.size : 0;
-            const iSize = c.instrumentals instanceof Blob ? c.instrumentals.size : 0;
-            return acc + vSize + iSize;
-        }, 0);
+        // Use modelStorage's aggregation which covers both
+        const stats = await modelStorage.getStorageStats();
 
         return {
-            totalSize: modelSize + cacheSize,
-            modelSize,
-            cacheSize,
-            itemCount: cachedAudio.length
+            totalSize: stats.totalSize,
+            modelSize: stats.modelsSize,
+            cacheSize: stats.audioSize,
+            itemCount: stats.cachedAudioCount
         };
     } catch (error) {
         console.error('Failed to get storage stats:', error);
@@ -32,8 +27,8 @@ export async function getStorageStats(): Promise<StorageStats> {
 }
 
 export async function clearCache(): Promise<void> {
-    await db.cachedAudio.clear();
-    await db.processingLogs.clear();
+    await audioCache.clearAudioCache();
+    await processingLogger.clearAllLogs();
 }
 
 export function formatSize(bytes: number): string {

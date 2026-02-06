@@ -1,4 +1,4 @@
-import { getAllCachedAudio, deleteCachedAudio, clearAllCachedAudio, getCachedAudio } from './audioCache';
+import { audioCache } from './audioCache';
 import type { CachedAudio } from '@/types/storage';
 
 export interface HistorySession {
@@ -14,7 +14,7 @@ export interface HistorySession {
  */
 export async function getHistorySessions(): Promise<HistorySession[]> {
     try {
-        const cachedItems = await getAllCachedAudio();
+        const cachedItems = await audioCache.getAllCachedAudio();
 
         // Map to UI friendly format and sort
         return cachedItems
@@ -37,19 +37,19 @@ export async function getHistorySessions(): Promise<HistorySession[]> {
  * Restore a session from history
  */
 export async function restoreSession(fileHash: string): Promise<CachedAudio | null> {
-    return await getCachedAudio(fileHash);
+    return await audioCache.getCachedAudio(fileHash);
 }
 
 /**
  * Delete a specific session
  */
 export async function deleteSession(fileHash: string): Promise<void> {
-    await deleteCachedAudio(fileHash);
+    await audioCache.deleteCachedAudio(fileHash);
 }
 
 /**
  * Clear all history
  */
 export async function clearHistory(): Promise<void> {
-    await clearAllCachedAudio();
+    await audioCache.clearAudioCache();
 }
