@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useModels } from '@/hooks/useModels';
-import { getAllModels } from '@/utils/storage/modelStorage';
+import { modelStorage } from '@/utils/storage/modelStorage';
 import { ModelCard } from './ModelCard';
 import { getStorageStats, clearCache, formatSize, StorageStats } from '@/utils/storage/storageStats';
 import { ModelInfo } from '@/types/model';
@@ -16,7 +16,7 @@ export const ModelManager: React.FC = () => {
     const refreshData = async () => {
         try {
             // Get downloaded models
-            const models = await getAllModels();
+            const models = await modelStorage.getAllModels();
             setDownloadedModels(models.map(m => m.id));
 
             // Get stats
@@ -90,7 +90,7 @@ export const ModelManager: React.FC = () => {
 
             <div className="mt-8 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-lg text-sm text-indigo-200">
                 <div className="flex gap-3">
-                    <svg className="w-5 h-5 flex-shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>

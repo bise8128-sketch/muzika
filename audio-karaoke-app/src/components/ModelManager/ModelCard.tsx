@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { downloadModel } from '@/utils/ml/modelDownloader';
-import { deleteModel } from '@/utils/storage/modelStorage';
+import { modelStorage } from '@/utils/storage/modelStorage';
 
 interface ModelCardProps {
     model: ModelInfo;
@@ -47,7 +47,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({
     const handleDelete = async () => {
         try {
             if (confirm(`Are you sure you want to delete ${model.name}?`)) {
-                await deleteModel(model.id);
+                await modelStorage.deleteModel(model.id);
                 onDeleteComplete();
             }
         } catch (err) {
