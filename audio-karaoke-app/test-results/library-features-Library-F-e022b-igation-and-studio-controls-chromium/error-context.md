@@ -1,0 +1,89 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [active]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - navigation [ref=e6]:
+            - button "previous" [disabled] [ref=e7]:
+              - img "previous" [ref=e8]
+            - generic [ref=e10]:
+              - generic [ref=e11]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e12]:
+              - img "next" [ref=e13]
+          - img
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - img [ref=e17]
+            - generic "Latest available version is detected (16.1.6)." [ref=e19]: Next.js 16.1.6
+            - generic [ref=e20]: Webpack
+          - img
+      - dialog "Build Error" [ref=e22]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e29]: Build Error
+              - generic [ref=e30]:
+                - button "Copy Error Info" [ref=e31] [cursor=pointer]:
+                  - img [ref=e32]
+                - link "Go to related documentation" [ref=e34] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                  - img [ref=e35]
+                - button "Attach Node.js inspector" [ref=e37] [cursor=pointer]:
+                  - img [ref=e38]
+            - generic [ref=e47]: "Module not found: Can't resolve 'music-metadata-browser'"
+          - generic [ref=e49]:
+            - generic [ref=e51]:
+              - img [ref=e53]
+              - generic [ref=e57]: ./src/utils/storage/songsStorage.ts (10:1)
+              - button "Open in editor" [ref=e58] [cursor=pointer]:
+                - img [ref=e60]
+            - generic [ref=e63]:
+              - generic [ref=e64]: Module not found
+              - generic [ref=e65]: ": Can't resolve '"
+              - text: music-metadata-browser
+              - generic [ref=e66]: "'"
+              - generic [ref=e67]: 8 |
+              - text: import
+              - generic [ref=e68]: "type {"
+              - text: SongEntry
+              - generic [ref=e69]: "}"
+              - text: from '@/types/storage';
+              - generic [ref=e70]: 9 |
+              - text: import
+              - generic [ref=e71]: "{ audioCache }"
+              - text: from './audioCache'; >
+              - generic [ref=e72]: 10 |
+              - text: import * as
+              - generic [ref=e73]: mm
+              - text: from 'music-metadata-browser';
+              - generic [ref=e74]: "|"
+              - text: ^
+              - generic [ref=e75]: 11 |
+              - generic [ref=e76]: 12 |
+              - text: export class SongsStorage
+              - generic [ref=e77]: "{"
+              - generic [ref=e78]: 13 |
+              - text: /**
+              - generic [ref=e79]:
+                - link "https://nextjs.org/docs/messages/module-not-found" [ref=e80] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                - text: "Import trace for requested module:"
+              - link "./src/app/[locale]/page.tsx" [ref=e81] [cursor=pointer]:
+                - text: ./src/app/[locale]/page.tsx
+                - img [ref=e82]
+        - generic [ref=e86]: "1"
+        - generic [ref=e87]: "2"
+    - generic [ref=e92] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e93]:
+        - img [ref=e94]
+      - button "Open issues overlay" [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: "0"
+          - generic [ref=e101]: "1"
+        - generic [ref=e102]: Issue
+  - alert [ref=e103]
+```
