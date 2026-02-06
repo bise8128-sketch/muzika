@@ -1,5 +1,5 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
-import { saveModel } from '@/utils/storage/modelStorage';
+import { modelStorage } from '@/utils/storage/modelStorage';
 
 /**
  * Downloads a model file from a URL with progress tracking.
@@ -64,7 +64,7 @@ export async function downloadModel(
     const modelData = combined.buffer;
 
     // Save to storage
-    await saveModel(modelInfo, modelData);
+    await modelStorage.saveModel(modelInfo, modelData);
 
     return modelData;
 }

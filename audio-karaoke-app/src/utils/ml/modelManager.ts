@@ -1,5 +1,5 @@
 import type { ModelInfo, ModelDownloadProgress, ModelType } from '@/types/model';
-import { getModel, modelExists, getAllModels } from '@/utils/storage/modelStorage';
+import { modelStorage } from '@/utils/storage/modelStorage';
 import { downloadModel } from './modelDownloader';
 import { setupONNX } from './onnxSetup';
 import * as ort from 'onnxruntime-web';
@@ -32,9 +32,9 @@ export async function loadModel(
     let modelData: ArrayBuffer | null = null;
 
     // Check if model exists in IndexedDB
-    if (await modelExists(modelInfo.id)) {
+    if (await modelStorage.modelExists(modelInfo.id)) {
         console.log(`Loading model ${modelInfo.id} from IndexedDB cache...`);
-        modelData = await getModel(modelInfo.id);
+        modelData = await modelStorage.getModel(modelInfo.id);
     }
 
     // If not in cache, download it
@@ -91,9 +91,8 @@ export function isModelLoaded(modelId: string): boolean {
  * Checks all models in storage and returns their current status.
  */
 export async function checkModelAvailability() {
-    const storedModels = await getAllModels();
-    const storage = await import('@/utils/storage/modelStorage');
-    const stats = await storage.getStorageStats();
+    const storedModels = await modelStorage.getAllModels();
+    const stats = await modelStorage.getStorageStats();
 
     return {
         models: storedModels.map(m => ({

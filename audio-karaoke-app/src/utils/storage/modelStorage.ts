@@ -6,111 +6,162 @@ import { db } from './audioDatabase';
 import { ModelType, type ModelInfo, type ModelStorageData } from '@/types/model';
 import type { StorageStats, StorageQuota } from '@/types/storage';
 
-/**
- * Save an ONNX model to IndexedDB
- */
-export async function saveModel(modelInfo: ModelInfo, modelData: ArrayBuffer): Promise<void> {
-    const storageData: ModelStorageData = {
-        modelId: modelInfo.id,
-        name: modelInfo.name,
-        version: modelInfo.version,
-        data: modelData,
-        size: modelData.byteLength,
-        downloadedAt: Date.now(),
-    };
+export class ModelStorage {
+    /**
+     * Save an ONNX model to IndexedDB
+     */
+    async saveModel(modelInfo: ModelInfo, modelData: ArrayBuffer): Promise<number> {
+        const storageData: ModelStorageData = {
+            modelId: modelInfo.id,
+            name: modelInfo.name,
+            version: modelInfo.version,
+            data: modelData,
+            size: modelData.byteLength,
+            downloadedAt: Date.now(),
+        };
 
-    // Check if model already exists
-    const existing = await db.models.where('modelId').equals(modelInfo.id).first();
+        // Check if model already exists
+        const existing = await db.models.where('modelId').equals(modelInfo.id).first();
 
-    if (existing) {
-        // Update existing model
-        await db.models.update(existing.id!, storageData);
-    } else {
-        // Add new model
-        await db.models.add(storageData);
+        if (existing) {
+            // Update existing model
+            await db.models.update(existing.id!, storageData);
+            console.log(`✅ Updated model ${modelInfo.name} (${this.formatSize(modelData.byteLength)})`);
+            return existing.id!;
+        } else {
+            // Add new model
+            const id = await db.models.add(storageData);
+            console.log(`✅ Saved model ${modelInfo.name} (${this.formatSize(modelData.byteLength)})`);
+            return id;
+        }
     }
-}
 
-/**
- * Retrieve a cached model from IndexedDB
- */
-export async function getModel(modelId: string): Promise<ArrayBuffer | null> {
-    const model = await db.models.where('modelId').equals(modelId).first();
-    return model ? model.data : null;
-}
+    /**
+     * Retrieve a cached model from IndexedDB
+     */
+    async getModel(modelId: string): Promise<ArrayBuffer | null> {
+        const model = await db.models.where('modelId').equals(modelId).first();
+        return model ? model.data : null;
+    }
 
-/**
- * Delete a model from IndexedDB
- */
-export async function deleteModel(modelId: string): Promise<void> {
-    await db.models.where('modelId').equals(modelId).delete();
-}
+    /**
+     * Get model metadata
+     */
+    async getModelInfo(modelId: string): Promise<ModelStorageData | undefined> {
+        return await db.models.where('modelId').equals(modelId).first();
+    }
 
-/**
- * Get all stored models
- */
-export async function getAllModels(): Promise<ModelInfo[]> {
-    const models = await db.models.toArray();
-    return models.map(model => ({
-        id: model.modelId,
-        type: ModelType.MDX, // Default type or determine from modelId
-        name: model.name,
-        version: model.version,
-        size: model.size,
-        downloadedAt: model.downloadedAt,
-    }));
-}
+    /**
+     * Delete a model from IndexedDB
+     */
+    async deleteModel(modelId: string): Promise<void> {
+        await db.models.where('modelId').equals(modelId).delete();
+        console.log(`❌ Deleted model ${modelId}`);
+    }
 
-/**
- * Check if a model exists in cache
- */
-export async function modelExists(modelId: string): Promise<boolean> {
-    const count = await db.models.where('modelId').equals(modelId).count();
-    return count > 0;
-}
+    /**
+     * Get all stored models
+     */
+    async getAllModels(): Promise<ModelInfo[]> {
+        const models = await db.models.toArray();
+        return models.map(model => ({
+            id: model.modelId,
+            type: ModelType.MDX, // Default type or determine from modelId
+            name: model.name,
+            version: model.version,
+            size: model.size,
+            downloadedAt: model.downloadedAt,
+        }));
+    }
 
-/**
- * Get storage statistics
- */
-export async function getStorageStats(): Promise<StorageStats> {
-    const models = await db.models.toArray();
-    const audio = await db.cachedAudio.toArray();
+    /**
+     * Check if a model exists in cache
+     */
+    async modelExists(modelId: string): Promise<boolean> {
+        const count = await db.models.where('modelId').equals(modelId).count();
+        return count > 0;
+    }
 
-    let modelsSize = 0;
-    let audioSize = 0;
+    /**
+     * Clear all models (cache cleanup)
+     */
+    async clearAllModels(): Promise<void> {
+        const count = await db.models.count();
+        await db.models.clear();
+        console.log(`❌ Cleared ${count} models from cache`);
+    }
 
-    models.forEach(model => {
-        modelsSize += model.size;
-    });
+    /**
+     * Export model (for backup)
+     */
+    async exportModel(modelId: string): Promise<Blob> {
+        const model = await this.getModel(modelId);
+        if (!model) throw new Error(`Model ${modelId} not found`);
 
-    audio.forEach(item => {
-        audioSize += item.vocals.byteLength + item.instrumentals.byteLength;
-    });
+        return new Blob([model], { type: 'application/octet-stream' });
+    }
 
-    const totalSize = modelsSize + audioSize;
+    /**
+     * Import model (from backup)
+     * Note: This requires adhering to a naming convention or passing metadata separately
+     * For now, simplified implementation
+     */
+    async importModel(file: File, modelInfo: ModelInfo): Promise<number> {
+        const arrayBuffer = await file.arrayBuffer();
+        return this.saveModel(modelInfo, arrayBuffer);
+    }
 
-    // Get storage quota
-    let quota: StorageQuota = {
-        usage: 0,
-        quota: 0,
-        percentage: 0,
-    };
+    /**
+     * Get storage statistics
+     */
+    async getStorageStats(): Promise<StorageStats> {
+        const models = await db.models.toArray();
+        const audio = await db.cachedAudio.toArray();
 
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
-        const estimate = await navigator.storage.estimate();
-        quota = {
-            usage: estimate.usage || 0,
-            quota: estimate.quota || 0,
-            percentage: estimate.quota ? ((estimate.usage || 0) / estimate.quota) * 100 : 0,
+        let modelsSize = 0;
+        let audioSize = 0;
+
+        models.forEach(model => {
+            modelsSize += model.size;
+        });
+
+        audio.forEach(item => {
+            audioSize += item.vocals.byteLength + item.instrumentals.byteLength;
+        });
+
+        const totalSize = modelsSize + audioSize;
+
+        // Get storage quota
+        const quota: StorageQuota = {
+            usage: 0,
+            quota: 0,
+            percentage: 0,
+        };
+
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+            const estimate = await navigator.storage.estimate();
+            quota.usage = estimate.usage || 0;
+            quota.quota = estimate.quota || 0;
+            quota.percentage = quota.quota > 0 ? (quota.usage / quota.quota) * 100 : 0;
+        }
+
+        return {
+            totalSize,
+            modelsSize,
+            audioSize,
+            quota,
+            cachedAudioCount: audio.length,
+            cachedModelsCount: models.length,
         };
     }
 
-    return {
-        totalSize,
-        modelsSize,
-        audioSize,
-        quota,
-        cachedAudioCount: audio.length,
-        cachedModelsCount: models.length,
-    };
+    private formatSize(bytes: number): string {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
 }
+
+export const modelStorage = new ModelStorage();

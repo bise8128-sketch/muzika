@@ -4,7 +4,7 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { CachedAudio, ProcessingLog } from '@/types/storage';
+import type { CachedAudio, ProcessingLog, SavedSong } from '@/types/storage';
 import type { ModelStorageData } from '@/types/model';
 
 export class AudioKaraokeDB extends Dexie {
@@ -12,11 +12,21 @@ export class AudioKaraokeDB extends Dexie {
     models!: Table<ModelStorageData, number>;
     cachedAudio!: Table<CachedAudio, number>;
     processingLogs!: Table<ProcessingLog, number>;
+    songs!: Table<SavedSong, number>;
 
     constructor() {
         super('AudioKaraokeDB');
 
         // Define database schema
+        // Version 3: Added songs table and updated cachedAudio indices
+        this.version(3).stores({
+            models: '++id, modelId, name, version, downloadedAt',
+            cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
+            processingLogs: '++id, fileHash, status, startedAt',
+            songs: '++id, originalHash, customName, savedAt'
+        });
+
+        // Keep previous versions for migration history if needed
         this.version(2).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt',
@@ -31,6 +41,7 @@ export class AudioKaraokeDB extends Dexie {
         await this.models.clear();
         await this.cachedAudio.clear();
         await this.processingLogs.clear();
+        await this.songs.clear();
     }
 
     /**
@@ -39,6 +50,7 @@ export class AudioKaraokeDB extends Dexie {
     async getDatabaseSize(): Promise<number> {
         const models = await this.models.toArray();
         const audio = await this.cachedAudio.toArray();
+        const songs = await this.songs.toArray();
 
         let totalSize = 0;
 
@@ -48,6 +60,10 @@ export class AudioKaraokeDB extends Dexie {
 
         audio.forEach(item => {
             totalSize += item.vocals.byteLength + item.instrumentals.byteLength;
+        });
+
+        songs.forEach(song => {
+            totalSize += song.vocals.byteLength + song.instrumentals.byteLength;
         });
 
         return totalSize;

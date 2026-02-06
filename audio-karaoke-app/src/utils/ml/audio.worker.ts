@@ -3,7 +3,7 @@
  * Handles heavy processing off the main thread to keep UI responsive.
  */
 
-import { hashFile, getCachedAudio, cacheAudioResult } from '@/utils/storage/audioCache';
+import { audioCache } from '@/utils/storage/audioCache';
 import { segmentAudio, applyCrossfade } from '@/utils/audio/audioProcessor';
 import { loadModel } from './modelManager';
 import { processAudioInChunks, InferenceEngine } from './inference';
