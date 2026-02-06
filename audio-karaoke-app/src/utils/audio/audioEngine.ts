@@ -47,7 +47,7 @@ export class AudioEngine {
     async load(buffer: ArrayBuffer) {
         // Decode buffer
         const audioBuffer = await Tone.context.decodeAudioData(buffer);
-        this.player.buffer = audioBuffer;
+        this.player.buffer = new Tone.ToneAudioBuffer(audioBuffer);
         this._duration = audioBuffer.duration;
         this.emit('load', { duration: this._duration });
     }
