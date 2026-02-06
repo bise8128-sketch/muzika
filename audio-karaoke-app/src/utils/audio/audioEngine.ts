@@ -1,11 +1,11 @@
-import * as Tone from 'tone';
+import { PitchShift, Player, ToneAudioBuffer, context, now, start } from 'tone';
 
 type AudioEngineEvent = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'load';
 type EventCallback = (data?: unknown) => void;
 
 export class AudioEngine {
-    private player: Tone.Player;
-    private pitchShift: Tone.PitchShift;
+    private player: Player;
+    private pitchShift: PitchShift;
     private listeners: Map<AudioEngineEvent, EventCallback[]> = new Map();
     private updateInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -20,14 +20,14 @@ export class AudioEngine {
 
     constructor() {
         // Initialize nodes
-        this.pitchShift = new Tone.PitchShift({
+        this.pitchShift = new PitchShift({
             pitch: 0,
             windowSize: 0.1,
             delayTime: 0,
             feedback: 0
         }).toDestination();
 
-        this.player = new Tone.Player().connect(this.pitchShift);
+        this.player = new Player().connect(this.pitchShift);
 
         // Setup internal events logic (Tone.Player doesn't emit 'timeupdate')
     }
@@ -36,8 +36,8 @@ export class AudioEngine {
      * Initialize audio context if needed (browser requires user gesture)
      */
     async initialize() {
-        if (Tone.context.state !== 'running') {
-            await Tone.start();
+        if (context.state !== 'running') {
+            await start();
         }
     }
 
@@ -46,8 +46,8 @@ export class AudioEngine {
      */
     async load(buffer: ArrayBuffer) {
         // Decode buffer
-        const audioBuffer = await Tone.context.decodeAudioData(buffer);
-        this.player.buffer = new Tone.ToneAudioBuffer(audioBuffer);
+        const audioBuffer = await context.decodeAudioData(buffer);
+        this.player.buffer = new ToneAudioBuffer(audioBuffer);
         this._duration = audioBuffer.duration;
         this.emit('load', { duration: this._duration });
     }
@@ -66,7 +66,7 @@ export class AudioEngine {
         }
 
         // Tone.Player.start(when, offset, duration)
-        this.player.start(Tone.now(), this._currentTime);
+        this.player.start(now(), this._currentTime);
         this._isPlaying = true;
         this.startUpdateInterval();
         this.emit('play');
@@ -113,7 +113,7 @@ export class AudioEngine {
         this._currentTime = Math.max(0, Math.min(time, this._duration));
 
         if (wasPlaying) {
-            this.player.start(Tone.now(), this._currentTime);
+            this.player.start(now(), this._currentTime);
         }
 
         this.emit('timeupdate', { currentTime: this._currentTime, duration: this._duration });
@@ -181,7 +181,7 @@ export class AudioEngine {
      */
     private startUpdateInterval() {
         this.stopUpdateInterval();
-        const startTime = Tone.now() - (this._currentTime / this._tempo); // Adjust for tempo?
+        const startTime = now() - (this._currentTime / this._tempo); // Adjust for tempo?
         // Actually, Tone.Transport.seconds is easier if using Transport, but we are using pure time.
         // Better approach: track when we started and how much time elapsed * playbackRate.
 
