@@ -1,11 +1,13 @@
 
 import type { NextConfig } from "next";
+import * as path from "path";
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   compress: true,
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
   allowedDevOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.2.190:3000'],

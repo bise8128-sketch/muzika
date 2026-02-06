@@ -46,7 +46,15 @@ const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManage
   ssr: false
 });
 
+import { SeparationResult as ISeparationResult } from '@/types/audio';
+
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
+
+interface DownloadTrack {
+  id: string;
+  name: string;
+  blob: AudioBuffer | null;
+}
 
 // Backend Status Component
 function BackendStatus() {
@@ -94,13 +102,18 @@ export default function Home() {
   const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
   const [state, setState] = useState<AppState>('upload');
-  const [controller, setController] = useState<PlaybackController | null>(null);
+  const [controller] = useState(() => new PlaybackController());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [autoStartKaraoke, setAutoStartKaraoke] = useState(false);
+  const [autoStartKaraoke, setAutoStartKaraoke] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getSettings().autoStartKaraoke;
+    }
+    return false;
+  });
 
   // Result state (from hook OR from restoration)
-  const [restoredResult, setRestoredResult] = useState<any>(null);
+  const [restoredResult, setRestoredResult] = useState<ISeparationResult | null>(null);
 
   // Model Selection
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
@@ -134,22 +147,31 @@ export default function Home() {
     setHistoryItems(sessions);
   };
 
-  // Load settings and init controller on mount
+  // Load history on mount
   useEffect(() => {
-    loadHistory();
-    const settings = getSettings();
-    setAutoStartKaraoke(settings.autoStartKaraoke);
-
-    const newController = new PlaybackController();
-    setController(newController);
-    return () => newController.dispose();
+    let mounted = true;
+    const init = async () => {
+      const sessions = await getHistorySessions();
+      if (mounted) {
+        setHistoryItems(sessions);
+      }
+    };
+    init();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // Dispose controller on unmount
+  useEffect(() => {
+    return () => {
+      if (controller) controller.dispose();
+    };
+  }, [controller]);
 
   // Update UI based on separation status
   useEffect(() => {
-    if (separationStatus === 'processing') {
-      setState('processing');
-    } else if (separationStatus === 'completed' && separationResult) {
+    if (separationStatus === 'completed' && separationResult) {
       // Refresh history
       loadHistory();
 
@@ -167,7 +189,7 @@ export default function Home() {
       setState('upload');
       alert(`Error: ${separationError || 'Unknown error'}`);
     }
-  }, [separationStatus, separationResult, separationMessage, autoStartKaraoke, controller]);
+  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError]);
 
   const handleUpload = async (files: File[], isKaraokeMode: boolean = false) => {
     if (files.length === 0) return;
@@ -200,13 +222,14 @@ export default function Home() {
     }
 
     try {
+      setState('processing');
       await separate(file, modelInfo);
     } catch (e) {
       console.error("Upload/Separation failed immediately:", e);
     }
   };
 
-  const handleDownload = async (track: any, format: 'wav' | 'mp3') => {
+  const handleDownload = async (track: DownloadTrack, format: 'wav' | 'mp3') => {
     if (!track.blob) {
       alert('Track data not available for download');
       return;
@@ -318,7 +341,7 @@ export default function Home() {
               </div>
               <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                  className="h-full bg-linear-to-r from-primary to-accent transition-all duration-300"
                   style={{ width: `${separationProgress}%` }}
                 ></div>
               </div>
@@ -454,7 +477,7 @@ export default function Home() {
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-white/5 transition-all focus-ring"
+              className="p-2.5 rounded-xl hover:bg-white/5 border border-white/5 transition-all focus-ring"
               aria-label="Open settings"
             >
               <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">

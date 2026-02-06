@@ -12,7 +12,7 @@ export interface AudioBufferData {
 export interface SeparationResult {
     vocals: AudioBuffer;
     instrumentals: AudioBuffer;
-    originalAudio: AudioBuffer;
+    originalAudio?: AudioBuffer | null;
     timestamp: number;
     fileHash: string;
 }
