@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 import * as path from "path";
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import createNextIntlPlugin from 'next-intl/plugin';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -14,8 +15,6 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration (backward compatibility)
   webpack: (config, { isServer }) => {
-    // Import CopyWebpackPlugin
-    const CopyWebpackPlugin = require('copy-webpack-plugin');
 
     // Enable WebAssembly support
     config.experiments = {
