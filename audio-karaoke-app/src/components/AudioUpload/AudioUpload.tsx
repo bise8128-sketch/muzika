@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
 
 interface AudioUploadProps {
-    onUpload: (files: File[]) => void;
+    onUpload: (files: File[], isKaraokeMode?: boolean) => void;
     isLoading?: boolean;
     autoStartKaraoke?: boolean;
     onAutoStartToggle?: (value: boolean) => void;
@@ -24,10 +24,11 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     const t = useTranslations('AudioUpload');
     const { models } = useModels();
     const [isDragging, setIsDragging] = useState(false);
+    const [isKaraokeMode, setIsKaraokeMode] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const validateFiles = (files: File[]): boolean => {
+    const validateFiles = useCallback((files: File[]): boolean => {
         const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac'];
         const maxSize = 50 * 1024 * 1024; // 50MB
 
@@ -44,7 +45,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
 
         setError(null);
         return true;
-    };
+    }, [t]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -62,14 +63,14 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
 
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0 && validateFiles(files)) {
-            onUpload(files);
+            onUpload(files, isKaraokeMode);
         }
-    }, [onUpload]);
+    }, [onUpload, isKaraokeMode, validateFiles]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files ? Array.from(e.target.files) : [];
         if (files.length > 0 && validateFiles(files)) {
-            onUpload(files);
+            onUpload(files, isKaraokeMode);
         }
     };
 
@@ -147,7 +148,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
             {/* AI Model Selection & Settings */}
             {!isLoading && (
                 <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start animate-in fade-in slide-in-from-top-4 duration-700">
-                    <div className="space-y-3">
+                    <div className={`space-y-3 transition-opacity duration-300 ${isKaraokeMode ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                         <label htmlFor="model-select" className="block text-sm font-bold uppercase tracking-wider text-muted-foreground ml-1">
                             AI Separation Engine
                         </label>
@@ -155,6 +156,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                             id="model-select"
                             value={selectedModelId}
                             onChange={(e) => onModelChange(e.target.value)}
+                            disabled={isKaraokeMode}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus-ring appearance-none cursor-pointer hover:bg-white/10 transition-colors"
                         >
                             {models.map(m => (
@@ -168,26 +170,48 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                         </p>
                     </div>
 
-                    <div className="flex flex-col justify-end h-full">
+                    <div className="flex flex-col justify-end h-full space-y-4">
                         <label className="flex items-center gap-4 cursor-pointer group p-3 rounded-xl hover:bg-white/5 transition-all">
                             <div className="relative">
                                 <input
                                     type="checkbox"
-                                    checked={autoStartKaraoke}
-                                    onChange={(e) => onAutoStartToggle?.(e.target.checked)}
+                                    checked={isKaraokeMode}
+                                    onChange={(e) => setIsKaraokeMode(e.target.checked)}
                                     className="peer sr-only"
-                                    aria-label="Auto-start Karaoke Mode"
+                                    aria-label="Direct Karaoke Mode"
                                 />
-                                <div className="w-11 h-6 bg-white/10 rounded-full border border-white/20 peer-checked:bg-primary transition-all duration-300"></div>
+                                <div className="w-11 h-6 bg-white/10 rounded-full border border-white/20 peer-checked:bg-emerald-500 transition-all duration-300"></div>
                                 <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 peer-checked:left-6"></div>
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                                    {t('autoStart')}
+                                <span className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors">
+                                    Direct Karaoke Mode
                                 </span>
-                                <span className="text-xs text-muted-foreground">Skip results and start singing immediately</span>
+                                <span className="text-xs text-muted-foreground">Skip separation (File is already instrumental)</span>
                             </div>
                         </label>
+
+                        {!isKaraokeMode && (
+                            <label className="flex items-center gap-4 cursor-pointer group p-3 rounded-xl hover:bg-white/5 transition-all">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoStartKaraoke}
+                                        onChange={(e) => onAutoStartToggle?.(e.target.checked)}
+                                        className="peer sr-only"
+                                        aria-label="Auto-start Karaoke Mode"
+                                    />
+                                    <div className="w-11 h-6 bg-white/10 rounded-full border border-white/20 peer-checked:bg-primary transition-all duration-300"></div>
+                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 peer-checked:left-6"></div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                                        {t('autoStart')}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">Skip results and start singing immediately</span>
+                                </div>
+                            </label>
+                        )}
                     </div>
                 </div>
             )}

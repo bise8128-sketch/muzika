@@ -29,17 +29,26 @@ export interface ProcessingLog {
     error?: string; // Keep for backward compatibility
 }
 
-export interface SavedSong {
+export interface SongEntry {
     id?: number;
-    originalHash: string;      // SHA-256 of the original file
-    customName: string;        // User-defined name (e.g., "My Favorite Song - Low Pitch")
-    fileName: string;          // Original filename
-    pitch: number;             // Pitch adjustment (e.g., -2, 0, +2)
-    tempo: number;             // Tempo multiplier (e.g., 0.9, 1.0, 1.1)
-    vocals: ArrayBuffer;       // Processed vocal stem
-    instrumentals: ArrayBuffer; // Processed instrumental stem
-    modelUsed: string;         // AI model used for separation
-    savedAt: number;           // Timestamp
+    type: 'ai_separated' | 'direct_karaoke';
+    title: string;
+    artist?: string;
+    versionName: string;      // e.g., "Original", "Lowered Key", "Fast Remix"
+
+    // Audio Data
+    instrumentalData: ArrayBuffer;
+    vocalData?: ArrayBuffer;  // Optional for direct karaoke
+
+    // Metadata & Settings
+    originalHash: string;
+    pitchAdjustment: number;  // semitones
+    tempoMultiplier: number;  // e.g., 1.1 for +10%
+    duration: number;
+
+    // Timestamps
+    createdAt: number;
+    lastPlayedAt?: number;
 }
 
 export interface StorageQuota {

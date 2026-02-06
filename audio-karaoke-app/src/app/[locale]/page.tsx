@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
@@ -12,6 +13,7 @@ import { exportAudio } from '@/utils/audio/audioExporter';
 import { getHistorySessions, restoreSession, clearHistory as dbClearHistory, HistorySession } from '@/utils/storage/historyStore';
 import { float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
+import { songsStorage } from '@/utils/storage/songsStorage';
 import { DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
 import { useModels } from '@/hooks/useModels';
@@ -89,6 +91,7 @@ function BackendStatus() {
 
 export default function Home() {
   const t = useTranslations('HomePage');
+  const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
   const [state, setState] = useState<AppState>('upload');
   const [controller, setController] = useState<PlaybackController | null>(null);
@@ -166,8 +169,22 @@ export default function Home() {
     }
   }, [separationStatus, separationResult, separationMessage, autoStartKaraoke, controller]);
 
-  const handleUpload = async (files: File[]) => {
+  const handleUpload = async (files: File[], isKaraokeMode: boolean = false) => {
     if (files.length === 0) return;
+
+    if (isKaraokeMode) {
+      try {
+        for (const file of files) {
+          await songsStorage.saveDirectKaraoke(file);
+        }
+        // Navigate to library or show success
+        router.push('/library');
+      } catch (e) {
+        console.error("Failed to save karaoke song:", e);
+        alert("Failed to save song to library.");
+      }
+      return;
+    }
 
     if (files.length > 1) {
       batch.addToQueue(files);

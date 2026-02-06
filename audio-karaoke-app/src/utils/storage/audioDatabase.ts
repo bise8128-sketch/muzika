@@ -4,7 +4,7 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { CachedAudio, ProcessingLog, SavedSong } from '@/types/storage';
+import type { CachedAudio, ProcessingLog, SongEntry } from '@/types/storage';
 import type { ModelStorageData } from '@/types/model';
 
 export class AudioKaraokeDB extends Dexie {
@@ -12,21 +12,31 @@ export class AudioKaraokeDB extends Dexie {
     models!: Table<ModelStorageData, number>;
     cachedAudio!: Table<CachedAudio, number>;
     processingLogs!: Table<ProcessingLog, number>;
-    songs!: Table<SavedSong, number>;
+    songs!: Table<SongEntry, number>;
 
     constructor() {
         super('AudioKaraokeDB');
 
         // Define database schema
-        // Version 3: Added songs table and updated cachedAudio indices
+        // Version 4: Updated songs table for unified library
+        this.version(4).stores({
+            models: '++id, modelId, name, version, downloadedAt',
+            cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
+            processingLogs: '++id, fileHash, status, startedAt',
+            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt'
+        });
+
+        // Keep previous versions for migration history if needed
         this.version(3).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
             processingLogs: '++id, fileHash, status, startedAt',
             songs: '++id, originalHash, customName, savedAt'
+        }).upgrade(trans => {
+            // Basic migration if needed, but since structure changed significantly, we might just let it be or clear.
+            // For now, no explicit data migration logic here as types are incompatible.
         });
 
-        // Keep previous versions for migration history if needed
         this.version(2).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt',
@@ -63,7 +73,7 @@ export class AudioKaraokeDB extends Dexie {
         });
 
         songs.forEach(song => {
-            totalSize += song.vocals.byteLength + song.instrumentals.byteLength;
+            totalSize += song.instrumentalData.byteLength + (song.vocalData?.byteLength || 0);
         });
 
         return totalSize;
