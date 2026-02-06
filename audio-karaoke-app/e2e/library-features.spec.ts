@@ -12,15 +12,11 @@ test.describe('Library Features', () => {
 
     test('should support direct karaoke upload, library navigation, and studio controls', async ({ page }) => {
         // --- 1. Direct Karaoke Upload ---
-        await expect(page).toHaveTitle(/Muzika/);
+        // Verify page loaded (title check)
+        await expect(page).toHaveTitle(/Karaoke/i);
 
         // Wait for page to load and upload component to be visible
-        try {
-            await expect(page.getByText('Select Audio Files')).toBeVisible({ timeout: 5000 });
-        } catch (e) {
-            console.log('Page body text:', await page.textContent('body'));
-            throw e;
-        }
+        await expect(page.getByText('Select Audio Files')).toBeVisible();
 
         // Enable Direct Karaoke Mode
         const karaokeModeCheckbox = page.getByLabel('Direct Karaoke Mode');
