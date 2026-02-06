@@ -15,13 +15,26 @@ test.describe('Library Features', () => {
         // Verify page loaded (title check)
         await expect(page).toHaveTitle(/Karaoke/i);
 
+        // Dismiss Onboarding if present
+        const skipButton = page.getByRole('button', { name: 'Skip' });
+        try {
+            await skipButton.waitFor({ state: 'visible', timeout: 5000 });
+            await skipButton.click();
+            // Wait for modal to disappear (using class selector for the overlay)
+            await expect(page.locator('.z-\\[100\\]')).not.toBeVisible();
+        } catch (e) {
+            console.log('Onboarding not found or already closed');
+        }
+
         // Wait for page to load and upload component to be visible
         await expect(page.getByText('Select Audio Files')).toBeVisible();
 
         // Enable Direct Karaoke Mode
         const karaokeModeCheckbox = page.getByLabel('Direct Karaoke Mode');
-        await expect(karaokeModeCheckbox).toBeVisible();
-        await karaokeModeCheckbox.check();
+        // Verify it's visible (might be covered by custom style, but check existence)
+        await expect(karaokeModeCheckbox).toBeAttached();
+        // Use force check because the input is sr-only and covered by custom UI
+        await karaokeModeCheckbox.check({ force: true });
 
         // Verify it's checked
         await expect(karaokeModeCheckbox).toBeChecked();

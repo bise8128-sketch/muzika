@@ -102,17 +102,9 @@
               - option "Kim Vocal 2 - Premier model for ultra-clean vocal extraction with minimal artifacts. Preferred by professionals."
               - 'option "MDX-Net Karaoke 2 - Specialized for karaoke: removes lead vocals while preserving backing harmonies."'
               - option "MDX-Net Main - A robust general-purpose model for balanced vocal and instrumental separation."
-    - generic [ref=e107]:
-      - img [ref=e109]
-      - generic [ref=e111]:
-        - heading "Welcome to Muzika" [level=3] [ref=e117]
-        - paragraph [ref=e118]: Experience professional-grade AI audio separation right in your browser. Your files never leave your device.
-        - generic [ref=e119]:
-          - button "Skip" [ref=e120]
-          - button "Next Step" [ref=e121]
-    - contentinfo [ref=e122]:
-      - paragraph [ref=e123]: © 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.
-  - button "Open Next.js Dev Tools" [ref=e129] [cursor=pointer]:
-    - img [ref=e130]
-  - alert [ref=e133]
+    - contentinfo [ref=e105]:
+      - paragraph [ref=e106]: © 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.
+  - button "Open Next.js Dev Tools" [ref=e112] [cursor=pointer]:
+    - img [ref=e113]
+  - alert [ref=e116]
 ```
