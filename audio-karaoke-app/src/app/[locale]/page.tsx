@@ -431,6 +431,12 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8">
             <LanguageSwitcher />
             <button
+              onClick={() => router.push('/library')}
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
+            >
+              Library
+            </button>
+            <button
               onClick={() => setShowHelp(true)}
               className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
             >
