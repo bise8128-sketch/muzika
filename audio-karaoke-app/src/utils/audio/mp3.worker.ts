@@ -119,33 +119,38 @@ async function initializeFFmpeg(baseUrl: string, maxRetries: number = 2): Promis
             }
 
             // Import UMD scripts (bypass Webpack)
-            // FIX: Use fetch + eval instead of importScripts for blob URL workers
-            // @ts-expect-error - importScripts is a Web Worker API
+            // FIX: Use fetch + new Function instead of importScripts for blob URL workers
             try {
                 const response = await fetch(coreJsUrl);
                 if (!response.ok) {
                     throw new Error('Failed to fetch FFmpeg JS: ' + response.status + ' ' + response.statusText);
                 }
                 const scriptContent = await response.text();
-                // Use eval to execute the script in the worker context
-                // @ts-expect-error - eval is used to load the FFmpeg library
-                eval(scriptContent);
+                // Use new Function to execute the script in the global scope
+                // This is needed because eval executes in the current scope, not global
+                const loadScript = new Function(scriptContent);
+                loadScript();
             } catch (fetchError) {
                 const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
                 throw new Error('Failed to load FFmpeg from ' + coreJsUrl + ': ' + errorMsg);
             }
 
             // Initialize FFmpeg (handle different export names)
-            const FFmpegLib = (self as unknown as { FFmpeg?: FFmpegLib; FFmpegWASM?: FFmpegLib }).FFmpeg ||
-                (self as unknown as { FFmpeg?: FFmpegLib; FFmpegWASM?: FFmpegLib }).FFmpegWASM;
+            // @ts-expect-error - FFmpegWASM is added to global scope by the UMD build
+            const FFmpegLib = (self as unknown as { FFmpeg?: any; FFmpegWASM?: any }).FFmpeg ||
+                (self as unknown as { FFmpeg?: any; FFmpegWASM?: any }).FFmpegWASM;
             if (!FFmpegLib) throw new Error('FFmpeg library not found in global scope');
 
-            ffmpeg = new FFmpegLib.FFmpeg();
+            // Create FFmpeg instance
+            // @ts-expect-error - FFmpeg constructor
+            ffmpeg = new FFmpegLib();
 
             log('FFmpeg initialized, loading core...');
 
             if (!ffmpeg) throw new Error('Failed to create FFmpeg instance');
 
+            // Load FFmpeg with the correct API for version 0.12.x
+            // The new API uses coreURL and wasmURL directly
             await ffmpeg.load({
                 coreURL: coreWasmUrl,
                 wasmURL: wasmUrl,
