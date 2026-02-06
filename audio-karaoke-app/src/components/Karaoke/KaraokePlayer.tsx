@@ -17,7 +17,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { VideoExporter } from '@/utils/audio/videoExport';
 import { CDGRenderer } from './CDGRenderer';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
-import { exportAudio, renderProcessedAudio } from '@/utils/audio/audioExporter';
+import { exportAudio, renderProcessedAudio, MP3ExportError, getErrorMessage } from '@/utils/audio/audioExporter';
 import { useTranslations } from 'next-intl';
 import { SettingsPanel } from '../UI/SettingsPanel';
 
@@ -353,7 +353,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             // controller['audioBuffers'] is private but used here for the feature logic
             // In a real app we'd expose a getter or pass them via context
             const processedBuffer = await renderProcessedAudio(
-                (controller as any).audioBuffers,
+                (controller as unknown as { audioBuffers: AudioBuffer[] }).audioBuffers,
                 [playback.vocalsVolume, playback.instrumentalVolume],
                 {
                     pitch,
@@ -368,6 +368,11 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             await exportAudio(processedBuffer, format, filename);
         } catch (error) {
             console.error('Audio export failed:', error);
+            if (error instanceof MP3ExportError) {
+                alert(getErrorMessage(error));
+            } else {
+                alert('Failed to export audio. Check console for details.');
+            }
         } finally {
             setIsExportingAudio(false);
         }

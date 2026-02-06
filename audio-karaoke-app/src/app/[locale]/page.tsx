@@ -9,7 +9,7 @@ import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
 import { BatchQueue } from '@/components/Batch/BatchQueue';
 import { useBatchSeparation, QueueItem } from '@/hooks/useBatchSeparation';
-import { exportAudio } from '@/utils/audio/audioExporter';
+import { exportAudio, MP3ExportError, getErrorMessage } from '@/utils/audio/audioExporter';
 import { getHistorySessions, restoreSession, clearHistory as dbClearHistory, HistorySession } from '@/utils/storage/historyStore';
 import { float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
@@ -53,7 +53,7 @@ type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'ba
 interface DownloadTrack {
   id: string;
   name: string;
-  blob: AudioBuffer | null;
+  blob: Blob | AudioBuffer | null;
 }
 
 // Backend Status Component
@@ -236,12 +236,29 @@ export default function Home() {
     }
 
     try {
-      const buffer = track.blob as AudioBuffer;
+      let buffer: AudioBuffer;
+
+      // Handle both Blob and AudioBuffer types
+      if (track.blob instanceof AudioBuffer) {
+        buffer = track.blob;
+      } else if (track.blob instanceof Blob) {
+        // Convert Blob to AudioBuffer
+        const arrayBuffer = await track.blob.arrayBuffer();
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        buffer = await audioContext.decodeAudioData(arrayBuffer);
+      } else {
+        throw new Error('Invalid track data type');
+      }
+
       const filename = `${track.name.toLowerCase()}_${Date.now()}.${format}`;
       await exportAudio(buffer, format, filename);
     } catch (e) {
       console.error('Download failed:', e);
-      alert('Failed to export audio. Check console for details.');
+      if (e instanceof MP3ExportError) {
+        alert(getErrorMessage(e));
+      } else {
+        alert('Failed to export audio. Check console for details.');
+      }
     }
   };
 

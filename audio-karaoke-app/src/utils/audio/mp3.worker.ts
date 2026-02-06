@@ -101,34 +101,37 @@ async function initializeFFmpeg(baseUrl: string, maxRetries: number = 2): Promis
             };
 
             // Aggressively shim document in all possible global scopes
-            if (typeof (self as any).document === 'undefined') {
+            if (typeof (self as unknown as { document?: unknown }).document === 'undefined') {
                 log('Shimming self.document');
-                (self as any).document = docShim;
+                (self as unknown as { document: unknown }).document = docShim;
             }
 
-            if (typeof (globalThis as any).document === 'undefined') {
+            if (typeof (globalThis as unknown as { document?: unknown }).document === 'undefined') {
                 log('Shimming globalThis.document');
-                (globalThis as any).document = docShim;
+                (globalThis as unknown as { document: unknown }).document = docShim;
             }
 
             // Verify shim
             try {
-                log(`Document baseURI: ${(document as any).baseURI}`);
+                log(`Document baseURI: ${(document as unknown as { baseURI?: string }).baseURI}`);
             } catch (e) {
                 log('Document check failed (this is expected in some environments)', 'warn');
             }
 
             // Import UMD scripts (bypass Webpack)
-            // @ts-ignore
+            // @ts-expect-error - importScripts is a Web Worker API
             importScripts(coreJsUrl);
 
             // Initialize FFmpeg (handle different export names)
-            const FFmpegLib = (self as any).FFmpeg || (self as any).FFmpegWASM;
+            const FFmpegLib = (self as unknown as { FFmpeg?: FFmpegLib; FFmpegWASM?: FFmpegLib }).FFmpeg ||
+                (self as unknown as { FFmpeg?: FFmpegLib; FFmpegWASM?: FFmpegLib }).FFmpegWASM;
             if (!FFmpegLib) throw new Error('FFmpeg library not found in global scope');
 
             ffmpeg = new FFmpegLib.FFmpeg();
 
             log('FFmpeg initialized, loading core...');
+
+            if (!ffmpeg) throw new Error('Failed to create FFmpeg instance');
 
             await ffmpeg.load({
                 coreURL: coreWasmUrl,
@@ -139,16 +142,17 @@ async function initializeFFmpeg(baseUrl: string, maxRetries: number = 2): Promis
             log('FFmpeg core loaded successfully');
 
             return;
-        } catch (error: any) {
-            lastError = error;
-            log(`Initialization attempt ${attempt + 1} failed: ${error.message}`, 'error');
+        } catch (error: unknown) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            log(`Initialization attempt ${attempt + 1} failed: ${lastError.message}`, 'error');
 
             // Clean up failed state
             ffmpeg = null;
             isInitialized = false;
 
             // Don't retry on certain errors
-            if (error.message.includes('not found') || error.message.includes('404')) {
+            const errorMessage = lastError.message;
+            if (errorMessage.includes('not found') || errorMessage.includes('404')) {
                 log('File not found error, aborting retries', 'error');
                 break;
             }
@@ -180,14 +184,15 @@ self.onmessage = async (e) => {
             await initializeFFmpeg(baseUrl);
 
             self.postMessage({ type: 'INIT_SUCCESS' });
-        } catch (error: any) {
-            log(`INIT failed: ${error.message}`, 'error');
+        } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            log(`INIT failed: ${err.message}`, 'error');
             self.postMessage({
                 type: 'ERROR',
                 payload: JSON.stringify({
                     type: WorkerErrorType.INIT_FAILED,
-                    message: error.message,
-                    details: error.stack || 'No stack trace available'
+                    message: err.message,
+                    details: err.stack || 'No stack trace available'
                 })
             });
         }
@@ -233,16 +238,16 @@ self.onmessage = async (e) => {
                 payload: data.buffer
             }, {
                 transfer: [data.buffer]
-            } as any);
-
-        } catch (error: any) {
-            log(`EXPORT failed: ${error.message}`, 'error');
+            } as { transfer: Transferable[] });
+        } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            log(`EXPORT failed: ${err.message}`, 'error');
             self.postMessage({
                 type: 'ERROR',
                 payload: JSON.stringify({
                     type: WorkerErrorType.ENCODING_FAILED,
-                    message: error.message,
-                    details: error.stack || 'No stack trace available'
+                    message: err.message,
+                    details: err.stack || 'No stack trace available'
                 })
             });
         }
