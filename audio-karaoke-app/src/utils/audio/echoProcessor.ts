@@ -124,9 +124,11 @@ export class EchoProcessor {
         this.inputNode.connect(this.dryGainNode);
         this.dryGainNode.connect(this.outputNode);
 
-        // Bypass path (when disabled)
-        this.inputNode.connect(this.bypassNode);
-        this.bypassNode.connect(this.outputNode);
+        // Bypass path (only connect when disabled)
+        if (!this.settings.enabled) {
+            this.inputNode.connect(this.bypassNode);
+            this.bypassNode.connect(this.outputNode);
+        }
     }
 
     /**
