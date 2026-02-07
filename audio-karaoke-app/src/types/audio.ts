@@ -49,6 +49,87 @@ export interface KaraokeSettings {
     echoAmount: number; // 0-1
 }
 
+/**
+ * Reverb effect settings
+ */
+export interface ReverbSettings {
+    enabled: boolean;
+    decay: number; // 0.1 to 10 seconds
+    roomSize: 'small' | 'medium' | 'large' | 'hall';
+    preDelay: number; // 0 to 200ms
+    wetLevel: number; // 0 to 1
+    dryLevel: number; // 0 to 1
+    preset?: 'hall' | 'room' | 'plate' | 'chamber' | 'spring';
+}
+
+/**
+ * Echo/Delay effect settings
+ */
+export interface EchoSettings {
+    enabled: boolean;
+    delayTime: number; // 50 to 1000ms
+    feedback: number; // 0 to 0.9
+    wetLevel: number; // 0 to 1
+    dryLevel: number; // 0 to 1
+    stereoDelay: boolean;
+    leftDelay: number; // 50 to 1000ms
+    rightDelay: number; // 50 to 1000ms
+}
+
+/**
+ * Pitch correction effect settings
+ */
+export interface PitchCorrectionSettings {
+    enabled: boolean;
+    scale: 'chromatic' | 'major' | 'minor' | 'pentatonic-major' | 'pentatonic-minor';
+    referenceKey: number; // 0-11 (C to B)
+    retuneSpeed: number; // 0.1 to 1.0 (slow to fast)
+    correctionAmount: number; // 0 to 1
+    latency: number; // processing latency in ms
+}
+
+/**
+ * Audio effects settings combining all effects
+ */
+export interface AudioEffectsSettings {
+    reverb: ReverbSettings;
+    echo: EchoSettings;
+    pitchCorrection: PitchCorrectionSettings;
+}
+
+/**
+ * Default audio effects settings
+ */
+export const DEFAULT_AUDIO_EFFECTS: AudioEffectsSettings = {
+    reverb: {
+        enabled: false,
+        decay: 2.0,
+        roomSize: 'medium',
+        preDelay: 20,
+        wetLevel: 0.3,
+        dryLevel: 0.7,
+        preset: 'room'
+    },
+    echo: {
+        enabled: false,
+        delayTime: 300,
+        feedback: 0.3,
+        wetLevel: 0.3,
+        dryLevel: 0.7,
+        stereoDelay: false,
+        leftDelay: 300,
+        rightDelay: 300
+    },
+    pitchCorrection: {
+        enabled: false,
+        scale: 'chromatic',
+        referenceKey: 0,
+        retuneSpeed: 0.5,
+        correctionAmount: 0.8,
+        latency: 50
+    }
+};
+
 export type AudioFormat = 'mp3' | 'wav' | 'ogg';
 
 export interface ExportOptions {
