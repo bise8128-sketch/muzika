@@ -1,7 +1,7 @@
 import os
 import yt_dlp
 import logging
-from .utils import ensure_dir
+from utils import ensure_dir
 
 logger = logging.getLogger('Downloader')
 
