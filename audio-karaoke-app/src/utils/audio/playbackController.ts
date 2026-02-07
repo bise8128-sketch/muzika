@@ -68,10 +68,15 @@ export class PlaybackController {
         this.audioContext = getAudioContext();
         this.processor = new RealtimeAudioProcessor(this.audioContext.sampleRate);
 
+        // Initialize new effect processors
+        this.reverbProcessor = new ReverbProcessor(this.audioContext);
+        this.echoProcessor = new EchoProcessor(this.audioContext);
+        this.pitchCorrector = new PitchCorrector(this.audioContext);
+
         // Initialize AudioWorklet processor
         this.initializeAudioWorklet();
 
-        // Initialize Effects Graph
+        // Initialize Legacy Effects Graph (kept for backward compatibility)
         this.reverbNode = this.audioContext.createConvolver();
         this.reverbGain = this.audioContext.createGain();
         this.reverbGain.gain.value = 0; // Default dry
@@ -656,7 +661,7 @@ export class PlaybackController {
         }
     }
 
-    private emit(event: EventType, data?: any): void {
+    private emit(event: EventType, data?: unknown): void {
         const callbacks = this.listeners.get(event);
         if (callbacks) {
             callbacks.forEach(callback => callback(data));
