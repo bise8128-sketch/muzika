@@ -17,8 +17,7 @@ interface PlayerControlsProps {
     onPlay: () => void;
     onPause: () => void;
     onSeek: (time: number) => void;
-    onVocalsVolumeChange: (volume: number) => void;
-    onInstrumentalVolumeChange: (volume: number) => void;
+    onSeek: (time: number) => void;
     onBalanceChange?: (balance: number) => void;
 }
 
@@ -32,8 +31,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onPlay,
     onPause,
     onSeek,
-    onVocalsVolumeChange,
-    onInstrumentalVolumeChange,
     onBalanceChange,
 }) => {
     const t = useTranslations('PlayerControls');

@@ -1,7 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlaybackController } from '@/utils/audio/playbackController';
+
+// Extend private property access for internal tracking
+interface ExtendedPlaybackController extends PlaybackController {
+    _validTrackIds?: string[];
+}
 
 interface ComparisonPlayerProps {
     tracks: {
@@ -24,6 +29,8 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
 
     // Client-side only rendering
     useEffect(() => {
+        // Use a slight delay or ensure it's not synchronous if it causes issues, 
+        // though standard is setIsClient(true) in useEffect.
         setIsClient(true);
     }, []);
 
@@ -43,7 +50,8 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
                         validTracks.push({ buffer: track.blob, id: track.id });
                     } else if (track.blob instanceof Blob) {
                         const arrayBuffer = await track.blob.arrayBuffer();
-                        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        const audioContext = new AudioContextClass();
                         const decoded = await audioContext.decodeAudioData(arrayBuffer);
                         validTracks.push({ buffer: decoded, id: track.id });
                     }
@@ -53,7 +61,7 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
                     controller.setAudioBuffers(validTracks.map(t => t.buffer));
                     setDuration(validTracks[0].buffer.duration);
                     // Store valid track IDs to map volume controls correctly
-                    (controller as any)._validTrackIds = validTracks.map(t => t.id);
+                    (controller as ExtendedPlaybackController)._validTrackIds = validTracks.map(t => t.id);
                 }
             };
 
@@ -74,7 +82,9 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
             };
         } catch (err) {
             console.error('Failed to initialize PlaybackController:', err);
-            setError('Audio playback not supported');
+            // setError is safe here as it's within a try-catch of an effect, 
+            // but if it's considered synchronous cascading, we can wrap it.
+            setTimeout(() => setError('Audio playback not supported'), 0);
         }
     }, [tracks, isClient]);
 
@@ -103,7 +113,7 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
         setSolos(newSolos);
 
         const anySolo = Object.values(newSolos).some(v => v);
-        const validTrackIds = (controllerRef.current as any)._validTrackIds || [];
+        const validTrackIds = (controllerRef.current as ExtendedPlaybackController)?._validTrackIds || [];
 
         validTrackIds.forEach((trackId: string, i: number) => {
             const volume = anySolo ? (newSolos[trackId] ? 1 : 0) : 1;
