@@ -98,8 +98,34 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get video info
-        const info = await ytdl.getInfo(url);
+        // Configure ytdl agent with cookies to avoid 403 errors and bot detection
+        // Using common visitor cookies that usually work
+        const agent = ytdl.createAgent([
+            { name: 'VISITOR_INFO1_LIVE', value: 'QNNnlEShxMs', domain: '.youtube.com', path: '/' },
+            { name: 'GPS', value: '1', domain: '.youtube.com', path: '/' }
+        ]);
+
+        // Get video info with timeout and retries
+        console.log('[API] Fetching video info...');
+        const infoPromise = ytdl.getInfo(url, {
+            agent,
+            requestOptions: {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                }
+            }
+        });
+
+        // Add timeout to getInfo
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('YouTube info extraction timed out')), 15000)
+        );
+
+        const info = await Promise.race([infoPromise, timeoutPromise]);
+
+        console.log('[API] Video info fetched:', info.videoDetails.title);
         const title = info.videoDetails.title;
         const duration = parseInt(info.videoDetails.lengthSeconds);
         const thumbnail = info.videoDetails.thumbnails[0]?.url || '';
@@ -116,7 +142,10 @@ export async function POST(request: NextRequest) {
         // Stream audio with highest quality
         const audioStream = ytdl(url, {
             quality: 'highestaudio',
-            filter: 'audioonly'
+            filter: 'audioonly',
+            agent, // Use the same agent for the stream
+            highWaterMark: 1 << 25, // Increase buffer size for stability
+            dlChunkSize: 0, // Disable chunking to prevent connection drops
         });
 
         // Handle stream errors to prevent crashing
