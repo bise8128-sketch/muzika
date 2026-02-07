@@ -12,7 +12,7 @@ import { PitchCorrector } from './pitchCorrection';
 import { ReverbSettings, EchoSettings, PitchCorrectionSettings } from '../../types/audio';
 
 type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended';
-type EventCallback = (data?: unknown) => void;
+type EventCallback = (data?: any) => void;
 
 const BUFFER_SIZE = 4096;
 
