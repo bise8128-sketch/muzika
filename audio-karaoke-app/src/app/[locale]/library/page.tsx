@@ -7,9 +7,13 @@ import { PlaylistManager } from '@/components/Library/PlaylistManager';
 import { usePlaybackQueue } from '@/hooks/usePlaybackQueue';
 import type { SongEntry } from '@/types/storage';
 
+import { ImportModal } from '@/components/Library/ImportModal';
+import { db } from '@/utils/storage/audioDatabase';
+
 export default function LibraryPage() {
     const router = useRouter();
     const [showPlaylists, setShowPlaylists] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [selectedSong, setSelectedSong] = useState<SongEntry | null>(null);
     const {
         addSongsToQueue,
@@ -26,6 +30,15 @@ export default function LibraryPage() {
 
     const handleSongSelect = useCallback((song: SongEntry) => {
         setSelectedSong(song);
+    }, []);
+
+    const handleImport = useCallback(async (song: SongEntry) => {
+        try {
+            await db.songs.add(song);
+        } catch (e) {
+            console.error("Failed to save song", e);
+            alert("Failed to save song to library");
+        }
     }, []);
 
     const handleClosePlayer = useCallback(() => {
@@ -73,7 +86,19 @@ export default function LibraryPage() {
             </nav>
 
             <main className="container mx-auto px-6 py-12 md:py-20 flex-1">
-                <h1 className="text-4xl font-bold mb-8">Song Library</h1>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-4xl font-bold">Song Library</h1>
+                    <button
+                        onClick={() => setShowImport(true)}
+                        className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Import Local
+                    </button>
+                </div>
+
                 <div className="flex gap-6">
                     {/* Main Content Area */}
                     <div className={`flex-1 transition-all duration-300 ${showPlaylists ? 'hidden' : 'block'}`}>
@@ -91,6 +116,13 @@ export default function LibraryPage() {
                     </div>
                 </div>
             </main>
+
+            {showImport && (
+                <ImportModal
+                    onClose={() => setShowImport(false)}
+                    onImport={handleImport}
+                />
+            )}
         </div>
     );
 }
