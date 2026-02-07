@@ -1,11 +1,36 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { LibraryGrid } from '@/components/Library/LibraryGrid';
+import { PlaylistManager } from '@/components/Library/PlaylistManager';
+import { usePlaybackQueue } from '@/hooks/usePlaybackQueue';
+import type { SongEntry } from '@/types/storage';
 
 export default function LibraryPage() {
     const router = useRouter();
+    const [showPlaylists, setShowPlaylists] = useState(false);
+    const [selectedSong, setSelectedSong] = useState<SongEntry | null>(null);
+    const {
+        addSongsToQueue,
+        playAtIndex
+    } = usePlaybackQueue();
+
+    const handleAddToQueue = useCallback(async (songIds: number[]) => {
+        await addSongsToQueue(songIds);
+        // If queue was empty, play the first added song
+        if (songIds.length > 0) {
+            await playAtIndex(0);
+        }
+    }, [addSongsToQueue, playAtIndex]);
+
+    const handleSongSelect = useCallback((song: SongEntry) => {
+        setSelectedSong(song);
+    }, []);
+
+    const handleClosePlayer = useCallback(() => {
+        setSelectedSong(null);
+    }, []);
 
     return (
         <div className="min-h-screen selection:bg-primary/30 flex flex-col">
@@ -24,18 +49,47 @@ export default function LibraryPage() {
                         </div>
                         <span className="text-2xl font-black tracking-tighter">MUZIKA</span>
                     </button>
-                    <button
-                        onClick={() => router.push('/')}
-                        className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
-                    >
-                        Back to Studio
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowPlaylists(!showPlaylists)}
+                            className={`
+                                px-4 py-2 rounded-lg font-medium transition-colors
+                                ${showPlaylists
+                                    ? 'bg-primary text-white'
+                                    : 'text-muted-foreground hover:text-white hover:bg-white/10'
+                                }
+                            `}
+                        >
+                            {showPlaylists ? 'Show Library' : 'Show Playlists'}
+                        </button>
+                        <button
+                            onClick={() => router.push('/')}
+                            className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
+                        >
+                            Back to Studio
+                        </button>
+                    </div>
                 </div>
             </nav>
 
             <main className="container mx-auto px-6 py-12 md:py-20 flex-1">
                 <h1 className="text-4xl font-bold mb-8">Song Library</h1>
-                <LibraryGrid />
+                <div className="flex gap-6">
+                    {/* Main Content Area */}
+                    <div className={`flex-1 transition-all duration-300 ${showPlaylists ? 'hidden' : 'block'}`}>
+                        <LibraryGrid
+                            onSongSelect={handleSongSelect}
+                            selectedSong={selectedSong}
+                            onClosePlayer={handleClosePlayer}
+                            onAddToQueue={handleAddToQueue}
+                        />
+                    </div>
+
+                    {/* Playlist Panel */}
+                    <div className={`w-96 transition-all duration-300 ${showPlaylists ? 'block' : 'hidden'}`}>
+                        <PlaylistManager onAddToQueue={handleAddToQueue} />
+                    </div>
+                </div>
             </main>
         </div>
     );

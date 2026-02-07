@@ -8,7 +8,19 @@ import { LibraryPlayer } from './LibraryPlayer';
 import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 
-export const LibraryGrid = () => {
+interface LibraryGridProps {
+    onSongSelect?: (song: SongEntry) => void;
+    selectedSong?: SongEntry | null;
+    onClosePlayer?: () => void;
+    onAddToQueue?: (songIds: number[]) => Promise<void>;
+}
+
+export const LibraryGrid: React.FC<LibraryGridProps> = ({
+    onSongSelect,
+    selectedSong,
+    onClosePlayer,
+    onAddToQueue
+}) => {
     const [allSongs, setAllSongs] = useState<SongEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [playingSong, setPlayingSong] = useState<SongEntry | null>(null);
@@ -93,6 +105,9 @@ export const LibraryGrid = () => {
 
     const handlePlay = (song: SongEntry) => {
         setPlayingSong(song);
+        if (onSongSelect) {
+            onSongSelect(song);
+        }
     };
 
     const handleSelectSong = (e: React.MouseEvent, id: number) => {
@@ -126,9 +141,11 @@ export const LibraryGrid = () => {
         }
     };
 
-    const handleAddSelectedToQueue = () => {
-        // This would integrate with usePlaybackQueue hook
-        console.log('Add to queue:', Array.from(selectedSongs));
+    const handleAddSelectedToQueue = async () => {
+        if (selectedSongs.size === 0) return;
+        if (onAddToQueue) {
+            await onAddToQueue(Array.from(selectedSongs));
+        }
         setSelectedSongs(new Set());
         setIsSelectionMode(false);
     };
@@ -137,10 +154,15 @@ export const LibraryGrid = () => {
 
     return (
         <div className="w-full">
-            {playingSong && (
+            {selectedSong && (
                 <LibraryPlayer
-                    song={playingSong}
-                    onClose={() => setPlayingSong(null)}
+                    song={selectedSong}
+                    onClose={() => {
+                        setPlayingSong(null);
+                        if (onClosePlayer) {
+                            onClosePlayer();
+                        }
+                    }}
                 />
             )}
 
