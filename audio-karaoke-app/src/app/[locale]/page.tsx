@@ -451,7 +451,7 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
             <AudioUpload
               onUpload={handleUpload}
-              isLoading={separationStatus === 'processing' || (state === 'processing' && !!serverJobId)}
+              isLoading={separationStatus === 'processing'}
               autoStartKaraoke={autoStartKaraoke}
               onAutoStartToggle={(val) => {
                 setAutoStartKaraoke(val);
