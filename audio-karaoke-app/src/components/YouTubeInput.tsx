@@ -84,7 +84,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             }
 
             // Create file from chunks
-            const blob = new Blob(chunks, { type: 'audio/mpeg' });
+            const blob = new Blob(chunks as any, { type: 'audio/mpeg' });
             const file = new File([blob], filename, { type: 'audio/mpeg' });
 
             // Create metadata
