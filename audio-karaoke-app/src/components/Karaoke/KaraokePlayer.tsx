@@ -88,7 +88,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
         const handlePlay = () => workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: controller.getCurrentTime() } });
         const handlePause = () => workerRef.current?.postMessage({ type: 'PAUSE' });
-        const handleSeek = (data: { currentTime: number }) => {
+        const handleSeek = (data: any) => {
             // For seek, we can send PLAY with new time if playing, or SYNC if paused
             // But simpler is to just send SYNC_TIME
             workerRef.current?.postMessage({ type: 'SYNC_TIME', payload: { currentTime: data.currentTime } });
