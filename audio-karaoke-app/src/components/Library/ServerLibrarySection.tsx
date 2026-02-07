@@ -25,7 +25,7 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
                 const response = await fetch('/api/backend-library');
                 if (!response.ok) throw new Error('Failed to fetch server library');
                 const data = await response.json();
-                setSongs(data.files || []);
+                setSongs(data.songs || []);
             } catch (err: any) {
                 console.error(err);
                 setError(err.message);
