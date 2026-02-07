@@ -50,7 +50,8 @@ async def download_audio(request: DownloadRequest):
         logger.info(f"Received download request for: {request.url}")
         file_path = downloader.download(request.url, format=request.format)
         filename = os.path.basename(file_path)
-        return {"status": "success", "filename": filename, "path": file_path}
+        relative_path = os.path.relpath(file_path, OUTPUT_DIR)
+        return {"status": "success", "filename": filename, "path": relative_path}
     except Exception as e:
         logger.error(f"Download failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
