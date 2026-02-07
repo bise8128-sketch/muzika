@@ -17,7 +17,6 @@ interface PlayerControlsProps {
     onPlay: () => void;
     onPause: () => void;
     onSeek: (time: number) => void;
-    onSeek: (time: number) => void;
     onBalanceChange?: (balance: number) => void;
 }
 
