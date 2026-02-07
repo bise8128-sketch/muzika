@@ -57,7 +57,7 @@ function extractVideoId(url: string): string | null {
 }
 
 export async function POST(request: NextRequest) {
-    console.log('[API] /api/youtube/extract called');
+    console.log('[API] /api/extract-youtube called');
     try {
         const body = await request.json();
         const { url } = body;
@@ -117,6 +117,11 @@ export async function POST(request: NextRequest) {
         const audioStream = ytdl(url, {
             quality: 'highestaudio',
             filter: 'audioonly'
+        });
+
+        // Handle stream errors to prevent crashing
+        audioStream.on('error', (error) => {
+            console.error('YTDL stream error:', error);
         });
 
         // Convert Node.js Readable stream to Web ReadableStream

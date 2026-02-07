@@ -35,7 +35,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
 
         try {
             // Call backend API
-            const apiUrl = '/api/youtube/extract';
+            const apiUrl = '/api/extract-youtube';
             console.log(`Sending request to ${apiUrl}`, { url });
 
             // Check online status
@@ -122,7 +122,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
 
             if (err instanceof Error) {
                 if (err.message === 'Failed to fetch') {
-                    message = `${t('error')} (Connection Failed). Please check if the server is running.`;
+                    message = `${t('error')} (Connection Failed). Please check your internet connection or try disabling ad-blockers.`;
                 } else {
                     message = err.message;
                 }
