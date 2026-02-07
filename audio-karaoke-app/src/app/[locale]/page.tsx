@@ -136,6 +136,138 @@ export default function Home() {
   // Batch Hook
   const batch = useBatchSeparation();
 
+  // Server-side Processing State
+  const [serverJobId, setServerJobId] = useState<string | null>(null);
+  const [serverLogs, setServerLogs] = useState<string>('');
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (serverJobId && state === 'processing') {
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`/api/python-processing?jobId=${serverJobId}`);
+          if (!res.ok) return;
+
+          const data = await res.json();
+          if (data.status === 'completed') {
+            clearInterval(interval);
+
+            // Load audio files
+            try {
+              const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              const ctx = new AudioContextClass();
+
+              const [vocalsBuffer, instrumentalBuffer, originalBuffer] = await Promise.all([
+                data.stems.vocals ? fetch(data.stems.vocals).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
+                data.stems.other ? fetch(data.stems.other).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null, // Assuming 'other' is instrumental/accompaniment or mixed
+                data.original ? fetch(data.original).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null
+              ]);
+
+              // If we have 4 stems (drums, bass, other, vocals), we should probably mix drums+bass+other for instrumental
+              // But for now let's just use what we have. 
+              // Demucs returns drums, bass, other, vocals.
+              // We need vocals vs instrumental.
+              // Instrumental = drums + bass + other.
+
+              let finalInstrumental = instrumentalBuffer;
+
+              if (data.stems.drums && data.stems.bass && data.stems.other) {
+                // We need to mix them.
+                // This is complex to do in browser without robust mixer.
+                // Ideally server should provide 'no_vocals' stem.
+                // But standard Demucs separates 4 stems.
+                // Let's check if the CLI wrapper can mix them or if we mix here.
+                // Mixing audio buffers is adding samples.
+
+                const fetchAndDecode = (url: string) => fetch(url).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
+                const [drums, bass, other] = await Promise.all([
+                  fetchAndDecode(data.stems.drums),
+                  fetchAndDecode(data.stems.bass),
+                  fetchAndDecode(data.stems.other)
+                ]);
+
+                // Simple mix
+                const length = vocalsBuffer?.length || drums.length;
+                const mixed = ctx.createBuffer(2, length, ctx.sampleRate);
+                for (let c = 0; c < 2; c++) {
+                  const d = drums.getChannelData(c);
+                  const b = bass.getChannelData(c);
+                  const o = other.getChannelData(c);
+                  const out = mixed.getChannelData(c);
+                  for (let i = 0; i < length; i++) {
+                    out[i] = d[i] + b[i] + o[i];
+                  }
+                }
+                finalInstrumental = mixed;
+              }
+
+              // Set result
+              // We need to mock ISeparationResult structure
+              // It expects AudioBuffer | null
+
+              if (!vocalsBuffer || !finalInstrumental) {
+                throw new Error("Missing audio stems from server response");
+              }
+
+              setRestoredResult({
+                vocals: vocalsBuffer,
+                instrumentals: finalInstrumental,
+                originalAudio: originalBuffer,
+                timestamp: Date.now(),
+                fileHash: serverJobId || 'server-job'
+              });
+
+              setServerJobId(null);
+              setState('results');
+
+            } catch (e) {
+              console.error("Failed to load server results", e);
+              alert("Failed to load processed audio.");
+              setState('upload');
+            }
+
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            alert(`Server Error: ${data.error}`);
+            setState('upload');
+          } else if (data.status === 'processing') {
+            // Update logs or progress if available
+            if (data.logs) setServerLogs(data.logs);
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+      };
+
+      interval = setInterval(checkStatus, 2000);
+      checkStatus(); // Initial check
+    }
+    return () => clearInterval(interval);
+  }, [serverJobId, state]);
+
+  const handleServerProcessing = async (url: string, config: { model: string, format: string }) => {
+    try {
+      setState('processing');
+      const res = await fetch('/api/python-processing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, ...config })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Server request failed');
+      }
+
+      const data = await res.json();
+      setServerJobId(data.jobId);
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : "Failed to start processing");
+      setState('upload');
+    }
+  };
+
   const handleBatchDownload = async (item: QueueItem) => {
     if (!item.result) return;
     const baseName = item.file.name.replace(/\.[^/.]+$/, "");
@@ -319,7 +451,7 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
             <AudioUpload
               onUpload={handleUpload}
-              isLoading={separationStatus === 'processing'}
+              isLoading={separationStatus === 'processing' || (state === 'processing' && !!serverJobId)}
               autoStartKaraoke={autoStartKaraoke}
               onAutoStartToggle={(val) => {
                 setAutoStartKaraoke(val);
@@ -327,6 +459,7 @@ export default function Home() {
               }}
               selectedModelId={selectedModelId}
               onModelChange={setSelectedModelId}
+              onServerProcessing={handleServerProcessing}
             />
             <div className="mt-16">
               <History

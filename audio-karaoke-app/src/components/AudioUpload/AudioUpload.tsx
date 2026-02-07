@@ -12,6 +12,7 @@ interface AudioUploadProps {
     onAutoStartToggle?: (value: boolean) => void;
     selectedModelId: string;
     onModelChange: (id: string) => void;
+    onServerProcessing?: (url: string, config: { model: string, format: string }) => void;
 }
 
 export const AudioUpload: React.FC<AudioUploadProps> = ({
@@ -20,12 +21,15 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     autoStartKaraoke = false,
     onAutoStartToggle,
     selectedModelId,
-    onModelChange
+    onModelChange,
+    onServerProcessing
 }) => {
     const t = useTranslations('AudioUpload');
     const { models } = useModels();
     const [isDragging, setIsDragging] = useState(false);
     const [isKaraokeMode, setIsKaraokeMode] = useState(false);
+    const [processingMode, setProcessingMode] = useState<'client' | 'server'>('client');
+    const [serverFormat, setServerFormat] = useState('mp3');
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 

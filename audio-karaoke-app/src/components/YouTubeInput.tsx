@@ -6,6 +6,8 @@ import './YouTubeInput.css';
 
 interface YouTubeInputProps {
     onAudioExtracted: (file: File, metadata: VideoMetadata) => void;
+    onUrlSubmit?: (url: string) => void;
+    mode?: 'client' | 'server';
     disabled?: boolean;
 }
 
@@ -16,12 +18,26 @@ interface VideoMetadata {
     videoId: string;
 }
 
-export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInputProps) {
+export default function YouTubeInput({ onAudioExtracted, onUrlSubmit, mode = 'client', disabled }: YouTubeInputProps) {
     const t = useTranslations('YouTube');
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
+
+    const handleSubmit = async () => {
+        if (!url.trim()) {
+            setError(t('emptyUrl'));
+            return;
+        }
+
+        if (mode === 'server' && onUrlSubmit) {
+            onUrlSubmit(url);
+            return;
+        }
+
+        await extractAudio();
+    };
 
     const extractAudio = async () => {
         if (!url.trim()) {
@@ -38,7 +54,6 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             const apiUrl = '/api/extract-youtube';
             console.log(`Sending request to ${apiUrl}`, { url });
 
-            // Check online status
             if (typeof navigator !== 'undefined' && !navigator.onLine) {
                 throw new Error('You appear to be offline. Please check your internet connection.');
             }
@@ -136,68 +151,57 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && !loading && url.trim()) {
-            extractAudio();
-        }
-    };
-
     return (
-        <div className="youtube-input-container">
-            <div className="youtube-input-header">
-                <svg className="youtube-icon" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-full">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                 </svg>
-                <h3 className="youtube-title">{t('title')}</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider">{t('title')}</h3>
+                {mode === 'server' && (
+                    <span className="ml-auto text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        PYTHON ENGINE
+                    </span>
+                )}
             </div>
 
-            <div className="input-group">
+            <div className="flex flex-col sm:flex-row gap-2">
                 <input
                     type="text"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder={t('placeholder')}
                     disabled={disabled || loading}
-                    className="youtube-url-input"
-                    onKeyDown={handleKeyDown}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
                 />
                 <button
-                    onClick={extractAudio}
+                    onClick={handleSubmit}
                     disabled={disabled || loading || !url.trim()}
-                    className="extract-button"
+                    className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20 whitespace-nowrap flex items-center justify-center min-w-[100px]"
                 >
-                    {loading ? t('extracting') : t('extract')}
+                    {loading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        t('extract')
+                    )}
                 </button>
             </div>
 
             {loading && progress > 0 && (
-                <div className="progress-container">
-                    <div className="progress-bar" style={{ width: `${progress}%` }}>
-                        <span className="progress-text">{progress}%</span>
-                    </div>
+                <div className="mt-3 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
                 </div>
             )}
 
             {error && (
-                <div className="error-message">
-                    <svg className="error-icon" viewBox="0 0 20 20" fill="currentColor">
+                <div className="mt-3 text-sm text-red-400 flex items-center gap-2 bg-red-500/5 p-3 rounded-lg border border-red-500/10">
+                    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    {error}
+                    <span>{error}</span>
                 </div>
             )}
-
-            {/* Legal Disclaimer */}
-            <div className="youtube-disclaimer">
-                <svg className="disclaimer-icon" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                <p className="disclaimer-text">
-                    <strong>Legal Notice:</strong> Downloading content from YouTube may violate their Terms of Service.
-                    Use this feature only for content you own or have permission to use.
-                    This tool is intended for educational purposes and personal use only.
-                </p>
-            </div>
         </div>
     );
 }
