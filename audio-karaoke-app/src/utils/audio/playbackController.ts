@@ -11,7 +11,7 @@ import { EchoProcessor } from './echoProcessor';
 import { PitchCorrector } from './pitchCorrection';
 import { ReverbSettings, EchoSettings, PitchCorrectionSettings } from '../../types/audio';
 
-type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended';
+type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'seeked';
 type EventCallback = (data?: any) => void;
 
 const BUFFER_SIZE = 4096;
@@ -177,6 +177,13 @@ export class PlaybackController {
         this.stop();
         this.audioBuffers = buffers;
         this.trackVolumes = buffers.map(() => 1.0); // Default volume 1.0
+    }
+
+    /**
+     * Get audio buffers
+     */
+    getAudioBuffers(): AudioBuffer[] {
+        return this.audioBuffers;
     }
 
     /**
@@ -775,6 +782,7 @@ export class PlaybackController {
             currentTime: clampedTime,
             duration: duration
         });
+        this.emit('seeked', { currentTime: clampedTime });
     }
 
     getCurrentTime(): number {

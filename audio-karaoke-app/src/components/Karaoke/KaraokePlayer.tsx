@@ -104,7 +104,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
         controller.on('play', handlePlay);
         controller.on('pause', handlePause);
-        controller.on('seeked' as any, handleSeek); // Assuming seek event exists or we use timeupdate
+        controller.on('seeked', handleSeek); // Assuming seek event exists or we use timeupdate
 
         // Manual hook for seek since PlaybackController might not emit 'seeked' specifically
         // But usePlayback's seek function calls controller.setCurrentTime
@@ -112,7 +112,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         return () => {
             controller.off('play', handlePlay);
             controller.off('pause', handlePause);
-            controller.off('seeked' as any, handleSeek);
+            controller.off('seeked', handleSeek);
         };
     }, [controller]);
 
@@ -329,7 +329,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 height: 720,
                 fps: 30,
                 lyrics,
-                audioBuffers: controller['audioBuffers'], // Accessing private for demo
+                audioBuffers: controller.getAudioBuffers(), // Accessing through getter
                 voiceBuffer: recorder.recordedBuffer
             });
 
@@ -353,7 +353,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             // controller['audioBuffers'] is private but used here for the feature logic
             // In a real app we'd expose a getter or pass them via context
             const processedBuffer = await renderProcessedAudio(
-                (controller as unknown as { audioBuffers: AudioBuffer[] }).audioBuffers,
+                controller.getAudioBuffers(),
                 [playback.vocalsVolume, playback.instrumentalVolume],
                 {
                     pitch,

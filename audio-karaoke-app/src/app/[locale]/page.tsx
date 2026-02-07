@@ -248,7 +248,8 @@ export default function Home() {
       } else if (track.blob instanceof Blob) {
         // Convert Blob to AudioBuffer
         const arrayBuffer = await track.blob.arrayBuffer();
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const audioContext = new AudioContextClass();
         buffer = await audioContext.decodeAudioData(arrayBuffer);
       } else {
         throw new Error('Invalid track data type');
