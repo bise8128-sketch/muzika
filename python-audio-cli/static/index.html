@@ -12,10 +12,12 @@
             margin: 2rem auto;
             padding: 0 1rem;
             line-height: 1.5;
+            color: #333;
         }
 
-        h1 {
-            color: #333;
+        h1,
+        h2 {
+            color: #222;
         }
 
         .card {
@@ -23,6 +25,8 @@
             padding: 2rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            background: white;
         }
 
         .input-group {
@@ -41,6 +45,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 1rem;
+            box-sizing: border-box;
         }
 
         button {
@@ -51,6 +56,11 @@
             border-radius: 4px;
             font-size: 1rem;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
         }
 
         button:disabled {
@@ -74,29 +84,64 @@
             color: #28a745;
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
+        /* Library Styles */
+        .library-list {
+            display: grid;
+            gap: 1rem;
         }
 
-        li {
+        .song-item {
+            border: 1px solid #eee;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .song-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 0.5rem;
         }
 
-        a {
-            color: #007bff;
-            text-decoration: none;
+        .song-title {
+            font-weight: bold;
+            font-size: 1.1rem;
         }
 
-        a:hover {
-            text-decoration: underline;
+        .stems-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .stem-tag {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            color: #495057;
+        }
+
+        .stem-tag:hover {
+            background: #dee2e6;
+            color: #212529;
+        }
+
+        .stem-tag.original {
+            background: #d1e7dd;
+            color: #0f5132;
         }
     </style>
 </head>
 
 <body>
     <h1>Audio Extractor & Separator</h1>
+
     <div class="card">
+        <h2>Process New Song</h2>
         <div class="input-group">
             <label for="url">YouTube URL</label>
             <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..."
@@ -112,11 +157,51 @@
         <div id="status"></div>
     </div>
 
+    <div class="card">
+        <h2>Library</h2>
+        <div id="library" class="library-list">Loading library...</div>
+    </div>
+
     <script>
         const processBtn = document.getElementById('processBtn');
         const statusDiv = document.getElementById('status');
         const urlInput = document.getElementById('url');
         const separateCheckbox = document.getElementById('separate');
+        const libraryDiv = document.getElementById('library');
+
+        async function loadLibrary() {
+            try {
+                const res = await fetch('/api/library');
+                const data = await res.json();
+
+                if (data.songs.length === 0) {
+                    libraryDiv.innerHTML = '<p>No songs found yet.</p>';
+                    return;
+                }
+
+                libraryDiv.innerHTML = data.songs.map(song => `
+                    <div class="song-item">
+                        <div class="song-header">
+                            <span class="song-title">${song.filename}</span>
+                            <a href="/files/${song.path}" class="stem-tag original" download>Original</a>
+                        </div>
+                        ${Object.keys(song.stems).length > 0 ? `
+                            <div class="stems-list">
+                                ${Object.entries(song.stems).map(([name, path]) => `
+                                    <a href="/files/${path}" class="stem-tag" download>${name}</a>
+                                `).join('')}
+                            </div>
+                        ` : '<small>No stems separated</small>'}
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load library:', err);
+                libraryDiv.innerHTML = '<p class="error">Failed to load library.</p>';
+            }
+        }
+
+        // Load library on start
+        loadLibrary();
 
         processBtn.addEventListener('click', async () => {
             const url = urlInput.value.trim();
@@ -161,6 +246,8 @@
                 }
 
                 statusDiv.classList.add('success');
+                // Refresh library
+                loadLibrary();
 
             } catch (err) {
                 statusDiv.innerHTML += `<br><span class="error">Error: ${err.message}</span>`;
