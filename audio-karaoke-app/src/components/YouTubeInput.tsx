@@ -35,11 +35,22 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
 
         try {
             // Call backend API
-            console.log('Sending request to /api/youtube/extract', { url });
-            const response = await fetch('/api/youtube/extract', {
+            const apiUrl = '/api/youtube/extract';
+            console.log(`Sending request to ${apiUrl}`, { url });
+
+            // Check online status
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                throw new Error('You appear to be offline. Please check your internet connection.');
+            }
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ url }),
+                cache: 'no-store'
             });
 
             if (!response.ok) {
@@ -107,7 +118,19 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             setProgress(0);
         } catch (err) {
             console.error('YouTube extraction error:', err);
-            setError(err instanceof Error ? err.message : t('error'));
+            let message = t('error');
+
+            if (err instanceof Error) {
+                if (err.message === 'Failed to fetch') {
+                    message = `${t('error')} (Connection Failed). Please check if the server is running.`;
+                } else {
+                    message = err.message;
+                }
+            } else if (typeof err === 'string') {
+                message = err;
+            }
+
+            setError(message);
         } finally {
             setLoading(false);
         }
