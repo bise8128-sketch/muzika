@@ -35,6 +35,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
 
         try {
             // Call backend API
+            console.log('Sending request to /api/youtube/extract', { url });
             const response = await fetch('/api/youtube/extract', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -42,8 +43,14 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || t('error'));
+                let errorMsg = t('error');
+                try {
+                    const error = await response.json();
+                    errorMsg = error.error || errorMsg;
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                throw new Error(errorMsg);
             }
 
             // Check if this is the "not implemented" response

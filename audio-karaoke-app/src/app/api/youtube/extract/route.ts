@@ -57,11 +57,15 @@ function extractVideoId(url: string): string | null {
 }
 
 export async function POST(request: NextRequest) {
+    console.log('[API] /api/youtube/extract called');
     try {
-        const { url } = await request.json();
+        const body = await request.json();
+        const { url } = body;
+        console.log('[API] Processing URL:', url);
 
         // Validate YouTube URL
         if (!url || typeof url !== 'string') {
+            console.warn('[API] Invalid URL provided');
             return NextResponse.json(
                 { error: 'URL is required' },
                 { status: 400 }
