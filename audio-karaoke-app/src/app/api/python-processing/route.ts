@@ -109,14 +109,14 @@ export async function POST(request: NextRequest) {
             console.log(`[Job ${jobId}] content processing finished with code ${code}`);
 
             // Scan for results
-            let result = {};
+            let result: Record<string, any> = {};
             if (code === 0) {
                 try {
                     // Check stems directory
                     const stemsDir = path.join(jobDir, 'stems');
                     const downloadsDir = path.join(jobDir, 'downloads');
 
-                    let stems = {};
+                    let stems: Record<string, string> = {};
                     let original = null;
 
                     if (fs.existsSync(stemsDir)) {
