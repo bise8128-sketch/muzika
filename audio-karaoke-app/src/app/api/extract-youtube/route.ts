@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
         const webStream = Readable.toWeb(audioStream as unknown as YtdlSourceStream);
 
         // Return streaming response with metadata in headers
-        return new NextResponse(webStream as any, {
+        return new NextResponse(webStream as ReadableStream, {
             headers: {
                 'Content-Type': 'audio/mpeg',
                 'Content-Disposition': `attachment; filename="${encodeURIComponent(title)}.mp3"`,
@@ -168,18 +168,20 @@ export async function POST(request: NextRequest) {
             },
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('YouTube extraction error:', error);
 
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         // Handle specific ytdl errors
-        if (error.message?.includes('Video unavailable')) {
+        if (errorMessage.includes('Video unavailable')) {
             return NextResponse.json(
                 { error: 'This video is private, unavailable, or has been removed' },
                 { status: 404 }
             );
         }
 
-        if (error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
             return NextResponse.json(
                 { error: 'Rate limit exceeded. Please try again later.' },
                 { status: 429 }
