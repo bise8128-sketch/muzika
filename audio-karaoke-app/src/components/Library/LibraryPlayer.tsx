@@ -118,7 +118,7 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
                 </button>
 
                 <div className="text-center mt-2">
-                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
+                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-purple-400">
                         {currentPlayingSong.title}
                     </h2>
                     <p className="text-muted-foreground">{currentPlayingSong.artist || 'Unknown Artist'}</p>
