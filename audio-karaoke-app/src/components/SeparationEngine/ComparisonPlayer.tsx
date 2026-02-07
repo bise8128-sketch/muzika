@@ -21,18 +21,11 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [solos, setSolos] = useState<Record<string, boolean>>({});
-    const [isClient, setIsClient] = useState(false);
+    const [isClient, setIsClient] = useState(typeof window !== 'undefined');
     const [error, setError] = useState<string | null>(null);
 
     // We'll use a local controller for comparison playback
     const controllerRef = useRef<PlaybackController | null>(null);
-
-    // Client-side only rendering
-    useEffect(() => {
-        // Use a slight delay or ensure it's not synchronous if it causes issues, 
-        // though standard is setIsClient(true) in useEffect.
-        setIsClient(true);
-    }, []);
 
     useEffect(() => {
         // Only run in client-side environment
@@ -50,7 +43,7 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
                         validTracks.push({ buffer: track.blob, id: track.id });
                     } else if (track.blob instanceof Blob) {
                         const arrayBuffer = await track.blob.arrayBuffer();
-                        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                        const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
                         const audioContext = new AudioContextClass();
                         const decoded = await audioContext.decodeAudioData(arrayBuffer);
                         validTracks.push({ buffer: decoded, id: track.id });
