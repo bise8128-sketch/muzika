@@ -12,7 +12,7 @@ import { PitchCorrector } from './pitchCorrection';
 import { ReverbSettings, EchoSettings, PitchCorrectionSettings } from '../../types/audio';
 
 type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'seeked';
-type EventCallback = (data?: any) => void;
+type EventCallback = (data?: unknown) => void;
 
 const BUFFER_SIZE = 4096;
 
@@ -563,7 +563,7 @@ export class PlaybackController {
             try {
                 source.stop();
                 source.disconnect();
-            } catch (e) {
+            } catch {
                 // Source may already be stopped
             }
         });
@@ -575,15 +575,15 @@ export class PlaybackController {
      * This method is no longer used with AudioWorklet-based processing
      * Kept for backward compatibility but does nothing
      */
-    private handleAudioProcess(e: AudioProcessingEvent) {
+    private handleAudioProcess(_e: AudioProcessingEvent) {
         // No longer used - AudioWorklet handles processing automatically
         if (!this.isPlaying) return;
 
-        const outputL = e.outputBuffer.getChannelData(0);
-        const outputR = e.outputBuffer.getChannelData(1);
+        const outputL = _e.outputBuffer.getChannelData(0);
+        const outputR = _e.outputBuffer.getChannelData(1);
 
         // 1. Fetch RAW data from buffers
-        const numSamplesNeeded = BUFFER_SIZE; // We assume 1:1 for input-fetching logic, SoundTouch handles time stretch buffering
+        // SoundTouch handles time stretch buffering
 
         // Use an input buffer for SoundTouch
         // Ideally we fetch enough samples.
@@ -777,7 +777,6 @@ export class PlaybackController {
         this.processor.reset();
         this.processor.setPitchSemitones(this.pitch);
         this.processor.setTempo(this.tempo);
-
         this.emit('timeupdate', {
             currentTime: clampedTime,
             duration: duration

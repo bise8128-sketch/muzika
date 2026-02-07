@@ -89,9 +89,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ forceShow = false, onClo
                         ))}
                     </div>
 
-                    <h3 className="text-3xl font-black tracking-tight mb-4">{t(step.titleKey as any)}</h3>
+                    <h3 className="text-3xl font-black tracking-tight mb-4">{t(step.titleKey as Parameters<typeof t>[0])}</h3>
                     <p className="text-muted-foreground text-lg leading-relaxed mb-10">
-                        {t(step.contentKey as any)}
+                        {t(step.contentKey as Parameters<typeof t>[0])}
                     </p>
 
                     <div className="flex items-center justify-between gap-4">

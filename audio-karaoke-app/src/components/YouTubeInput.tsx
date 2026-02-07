@@ -84,7 +84,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             const reader = response.body?.getReader();
             const contentLength = parseInt(response.headers.get('Content-Length') || '0');
             let receivedLength = 0;
-            const chunks: Uint8Array[] = [];
+            const chunks: BlobPart[] = [];
 
             if (reader) {
                 while (true) {
@@ -102,7 +102,7 @@ export default function YouTubeInput({ onAudioExtracted, disabled }: YouTubeInpu
             }
 
             // Create file from chunks
-            const blob = new Blob(chunks as BlobPart[], { type: 'audio/mpeg' });
+            const blob = new Blob(chunks, { type: 'audio/mpeg' });
             const file = new File([blob], filename, { type: 'audio/mpeg' });
 
             // Create metadata

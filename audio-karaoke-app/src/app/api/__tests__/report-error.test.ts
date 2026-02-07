@@ -9,7 +9,7 @@ const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
 jest.mock('next/server', () => ({
     NextRequest: jest.fn(),
     NextResponse: {
-        json: jest.fn((data: any, options?: any) => ({
+        json: jest.fn((data: unknown, options?: { status?: number }) => ({
             json: async () => data,
             status: options?.status || 200,
         })),
@@ -28,12 +28,12 @@ describe('/api/report-error', () => {
         mockConsoleError.mockRestore();
     });
 
-    const createMockRequest = (body: any, headers?: Record<string, string>) => {
+    const createMockRequest = (body: unknown, headers?: Record<string, string>) => {
         return {
             json: async () => body,
             headers: {
                 get: jest.fn((key: string) => {
-                    const defaultHeaders = {
+                    const defaultHeaders: Record<string, string> = {
                         'x-forwarded-for': '127.0.0.1',
                         'user-agent': 'Mozilla/5.0',
                         ...headers,

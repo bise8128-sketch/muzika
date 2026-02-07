@@ -21,12 +21,12 @@ export interface PerformanceMetrics {
 
 export interface AudioWorkletMessage {
     type: 'config' | 'metrics' | 'error' | 'ping' | 'pong';
-    data?: any;
+    data?: unknown;
     timestamp?: number;
 }
 
 // Global registerProcessor function - this will be available in the AudioWorklet context
-declare function registerProcessor(name: string, processor: any): void;
+declare function registerProcessor(name: string, processor: unknown): void;
 
 /**
  * Generic audio processor for basic audio manipulation
@@ -140,8 +140,9 @@ export class GenericAudioProcessor {
         this.metrics.timestamp = currentTime;
 
         // Estimate memory usage (approximation)
-        if ((performance as any).memory) {
-            this.metrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
+        const perf = performance as unknown as { memory?: { usedJSHeapSize: number } };
+        if (perf.memory) {
+            this.metrics.memoryUsage = perf.memory.usedJSHeapSize;
         }
 
         // Calculate CPU usage (approximation based on processing time)
@@ -167,11 +168,12 @@ export class GenericAudioProcessor {
     /**
      * Handle errors gracefully
      */
-    private handleError(error: any, context: string): void {
+    private handleError(error: unknown, context: string): void {
+        const message = error instanceof Error ? error.message : String(error);
         const errorMessage: AudioWorkletMessage = {
             type: 'error',
             data: {
-                error: error.message || error,
+                error: message,
                 context,
                 timestamp: performance.now(),
                 processor: 'GenericAudioProcessor'
@@ -207,7 +209,7 @@ export class GenericAudioProcessor {
                     if (input && output && input.length === output.length) {
                         // Apply gain
                         for (let sample = 0; sample < input.length; sample++) {
-                            (output as any)[sample] = (input as any)[sample] * this.gain;
+                            output[sample] = input[sample] * this.gain;
                         }
                     }
                 }
