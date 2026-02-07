@@ -257,8 +257,8 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     ].map((item, i) => (
                         <div key={i} className="glass-card p-4 rounded-2xl text-center group hover:border-primary/30 transition-all">
                             <div className="text-2xl mb-2">{item.tag}</div>
-                            <div className="font-semibold text-sm">{t(item.title as any)}</div>
-                            <div className="text-xs text-muted-foreground">{t(item.desc as any)}</div>
+                            <div className="font-semibold text-sm">{t(item.title as "private" | "fast" | "free")}</div>
+                            <div className="text-xs text-muted-foreground">{t(item.desc as "privateDesc" | "fastDesc" | "freeDesc")}</div>
                         </div>
                     ))}
                 </div>
