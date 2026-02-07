@@ -23,9 +23,9 @@ export class PlaybackController {
     private workletNode: AudioWorkletNode | null = null;
 
     // New Effect Processors
-    private reverbProcessor: ReverbProcessor;
-    private echoProcessor: EchoProcessor;
-    private pitchCorrector: PitchCorrector;
+    private reverbProcessor!: ReverbProcessor;
+    private echoProcessor!: EchoProcessor;
+    private pitchCorrector!: PitchCorrector;
 
     // Legacy Effects (kept for backward compatibility)
     private reverbNode: ConvolverNode;
