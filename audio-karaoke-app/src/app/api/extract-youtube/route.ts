@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import ytdl from '@distube/ytdl-core';
 import { Readable } from 'stream';
 
+interface YtdlSourceStream extends Readable { }
+
 /**
  * LEGAL DISCLAIMER & TERMS OF SERVICE WARNING
  * ============================================
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Convert Node.js Readable stream to Web ReadableStream
-        const webStream = Readable.toWeb(audioStream as any);
+        const webStream = Readable.toWeb(audioStream as YtdlSourceStream);
 
         // Return streaming response with metadata in headers
         return new NextResponse(webStream as any, {
