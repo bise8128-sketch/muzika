@@ -202,13 +202,14 @@ export class ReverbProcessor {
             const time = i / sampleRate;
             const decay = Math.exp(-3 * time / decayTime);
 
-            // Add some early reflections
+            // Add some early reflections - fixed to trigger on ranges, not single samples
             let earlyReflections = 0;
             if (i < sampleRate * 0.1) {
                 const reflectionTimes = [0.01, 0.02, 0.03, 0.05, 0.07];
                 for (const t of reflectionTimes) {
                     const idx = Math.floor(t * sampleRate);
-                    if (i === idx) {
+                    // Check if current sample is within a small window around the reflection time
+                    if (Math.abs(i - idx) < 50) {
                         earlyReflections += (Math.random() * 2 - 1) * 0.5;
                     }
                 }
@@ -419,7 +420,6 @@ export class ReverbProcessor {
         this.wetGainNode.disconnect();
         this.dryGainNode.disconnect();
         this.preDelayNode.disconnect();
-        this.preDelayGain.disconnect();
         this.bypassNode.disconnect();
         this.isInitialized = false;
     }
