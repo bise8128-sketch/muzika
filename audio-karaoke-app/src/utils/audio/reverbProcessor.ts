@@ -22,7 +22,6 @@ export class ReverbProcessor {
     private inputNode!: GainNode;
     private outputNode!: GainNode;
     private preDelayNode!: DelayNode;
-    private preDelayGain!: GainNode;
     private bypassNode!: GainNode;
     private settings: ReverbSettings;
     private isInitialized: boolean = false;
@@ -99,14 +98,12 @@ export class ReverbProcessor {
         this.wetGainNode = this.audioContext.createGain();
         this.dryGainNode = this.audioContext.createGain();
         this.preDelayNode = this.audioContext.createDelay(0.2); // Max 200ms
-        this.preDelayGain = this.audioContext.createGain();
         this.bypassNode = this.audioContext.createGain();
 
         // Set initial values
         this.wetGainNode.gain.value = this.settings.enabled ? this.settings.wetLevel : 0;
         this.dryGainNode.gain.value = this.settings.dryLevel;
         this.preDelayNode.delayTime.value = this.settings.preDelay / 1000;
-        this.preDelayGain.gain.value = 1.0;
         this.bypassNode.gain.value = 1.0;
 
         // Create initial impulse response
@@ -127,9 +124,11 @@ export class ReverbProcessor {
         this.inputNode.connect(this.dryGainNode);
         this.dryGainNode.connect(this.outputNode);
 
-        // Bypass path (when disabled)
-        this.inputNode.connect(this.bypassNode);
-        this.bypassNode.connect(this.outputNode);
+        // Bypass path (only connect when disabled)
+        if (!this.settings.enabled) {
+            this.inputNode.connect(this.bypassNode);
+            this.bypassNode.connect(this.outputNode);
+        }
     }
 
     /**
