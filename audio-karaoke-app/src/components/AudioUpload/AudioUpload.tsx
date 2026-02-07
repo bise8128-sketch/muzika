@@ -168,6 +168,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     console.log('YouTube audio extracted:', metadata);
                     onUpload([file], isKaraokeMode);
                 }}
+                mode={processingMode}
                 disabled={isLoading}
             />
 
@@ -197,6 +198,21 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     </div>
 
                     <div className="flex flex-col justify-end h-full space-y-4">
+                        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10 mb-2">
+                            <button
+                                onClick={() => setProcessingMode('client')}
+                                className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${processingMode === 'client' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
+                            >
+                                CLIENT ENGINE
+                            </button>
+                            <button
+                                onClick={() => setProcessingMode('server')}
+                                className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${processingMode === 'server' ? 'bg-emerald-500 text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
+                            >
+                                PYTHON SERVER
+                            </button>
+                        </div>
+
                         <label className="flex items-center gap-4 cursor-pointer group p-3 rounded-xl hover:bg-white/5 transition-all">
                             <div className="relative">
                                 <input

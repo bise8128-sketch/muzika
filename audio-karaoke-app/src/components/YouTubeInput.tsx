@@ -51,7 +51,7 @@ export default function YouTubeInput({ onAudioExtracted, onUrlSubmit, mode = 'cl
 
         try {
             // Call backend API
-            const apiUrl = '/api/extract-youtube';
+            const apiUrl = mode === 'server' ? '/api/backend-download' : '/api/extract-youtube';
             console.log(`Sending request to ${apiUrl}`, { url });
 
             if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -64,7 +64,7 @@ export default function YouTubeInput({ onAudioExtracted, onUrlSubmit, mode = 'cl
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ url }),
+                body: JSON.stringify({ url, format: 'mp3' }),
                 cache: 'no-store'
             });
 
@@ -72,13 +72,42 @@ export default function YouTubeInput({ onAudioExtracted, onUrlSubmit, mode = 'cl
                 let errorMsg = t('error');
                 try {
                     const error = await response.json();
-                    errorMsg = error.error || errorMsg;
+                    errorMsg = error.error || error.detail || errorMsg;
                 } catch (e) {
                     console.error('Failed to parse error response:', e);
                 }
                 throw new Error(errorMsg);
             }
 
+            // Handle server-side response (JSON with filename/path)
+            if (mode === 'server') {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    // We need to fetch the actual file now to give it back as a File object
+                    // or we could change the interface to return a path.
+                    // But for consistency with client mode, let's fetch it.
+                    const fileUrl = `/api/backend-files/${data.path}`;
+                    const fileResponse = await fetch(fileUrl);
+                    if (!fileResponse.ok) throw new Error('Failed to download file from server');
+
+                    const blob = await fileResponse.blob();
+                    const file = new File([blob], data.filename, { type: 'audio/mpeg' });
+
+                    const metadata: VideoMetadata = {
+                        title: data.filename.replace(/\.[^/.]+$/, ""),
+                        duration: 0,
+                        thumbnail: '',
+                        videoId: url.match(/(?:v=|\/)([\w-]{11})/)?.[1] || '',
+                    };
+
+                    onAudioExtracted(file, metadata);
+                    setUrl('');
+                    setProgress(0);
+                    return;
+                }
+            }
+
+            // Client mode handling...
             // Check if this is the "not implemented" response
             const contentType = response.headers.get('Content-Type');
             if (contentType?.includes('application/json')) {
