@@ -65,3 +65,15 @@ export interface StorageStats {
     cachedAudioCount: number;
     cachedModelsCount: number;
 }
+
+/**
+ * Playlist type for organizing songs
+ */
+export interface Playlist {
+    id?: number;
+    name: string;
+    songIds: number[];
+    createdAt: number;
+    updatedAt: number;
+    isDefault?: boolean;
+}

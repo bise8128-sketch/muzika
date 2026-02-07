@@ -2,6 +2,8 @@
  * Audio type definitions for the karaoke separation app
  */
 
+import type { SongEntry } from './storage';
+
 export interface AudioBufferData {
     channelData: Float32Array[];
     sampleRate: number;
@@ -136,4 +138,14 @@ export interface ExportOptions {
     format: AudioFormat;
     quality: 'low' | 'medium' | 'high';
     bitrate?: number; // For MP3: 128, 192, 256, 320 kbps
+}
+
+/**
+ * Player state for managing playback queue and playback modes
+ */
+export interface PlayerState {
+    songs: SongEntry[];
+    currentIndex: number;
+    shuffleMode: boolean;
+    repeatMode: 'off' | 'all' | 'one';
 }
