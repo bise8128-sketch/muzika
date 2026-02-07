@@ -31,6 +31,13 @@ export class AudioKaraokeDB extends Dexie {
         });
 
         // Keep previous versions for migration history if needed
+        this.version(4).stores({
+            models: '++id, modelId, name, version, downloadedAt',
+            cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
+            processingLogs: '++id, fileHash, status, startedAt',
+            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt'
+        });
+
         this.version(3).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
@@ -56,6 +63,8 @@ export class AudioKaraokeDB extends Dexie {
         await this.cachedAudio.clear();
         await this.processingLogs.clear();
         await this.songs.clear();
+        await this.playlists.clear();
+        await this.queue.clear();
     }
 
     /**
