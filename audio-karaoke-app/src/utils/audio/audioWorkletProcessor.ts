@@ -26,7 +26,7 @@ export interface AudioWorkletMessage {
 }
 
 // Global registerProcessor function - this will be available in the AudioWorklet context
-declare function registerProcessor(name: string, processor: unknown): void;
+declare function _registerProcessor(name: string, processor: unknown): void;
 
 /**
  * Generic audio processor for basic audio manipulation

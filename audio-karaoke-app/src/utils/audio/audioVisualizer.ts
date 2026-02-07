@@ -62,7 +62,7 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get time domain data
-            this.analyser.getByteTimeDomainData(this.dataArray as any);
+            this.analyser.getByteTimeDomainData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
             // Clear canvas
             ctx.fillStyle = 'rgb(20, 20, 20)';
@@ -110,7 +110,7 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get frequency data
-            this.analyser.getByteFrequencyData(this.dataArray as any);
+            this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
             // Clear canvas
             ctx.fillStyle = 'rgb(20, 20, 20)';
@@ -161,8 +161,8 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get both time and frequency data
-            this.analyser.getByteTimeDomainData(timeDataArray as any);
-            this.analyser.getByteFrequencyData(freqDataArray as any);
+            this.analyser.getByteTimeDomainData(timeDataArray as unknown as Uint8Array<ArrayBuffer>);
+            this.analyser.getByteFrequencyData(freqDataArray as unknown as Uint8Array<ArrayBuffer>);
 
             // Draw waveform
             waveCtx.fillStyle = 'rgb(20, 20, 20)';
@@ -224,7 +224,7 @@ export class AudioVisualizer {
 
     /**
     getFrequencyData(): Uint8Array {
-        this.analyser.getByteFrequencyData(this.dataArray as any);
+        this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
         return this.dataArray;
     }
 
@@ -232,7 +232,7 @@ export class AudioVisualizer {
      * Get current time domain data
      */
     getTimeDomainData(): Uint8Array {
-        this.analyser.getByteTimeDomainData(this.dataArray as any);
+        this.analyser.getByteTimeDomainData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
         return this.dataArray;
     }
 

@@ -96,11 +96,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: data.currentTime } });
             }
         };
-        // Time update from controller (sync drift check)
-        const handleTimeUpdate = (data: { currentTime: number }) => {
-            // Optional: Send sync occasionally if needed, but 'play' command handles most.
-            // Maybe sync on large drifts?
-        };
 
         controller.on('play', handlePlay);
         controller.on('pause', handlePause);
@@ -191,7 +186,11 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             switch (e.key) {
                 case ' ':
                     e.preventDefault();
-                    playback.isPlaying ? playback.pause() : playback.play();
+                    if (playback.isPlaying) {
+                        playback.pause();
+                    } else {
+                        playback.play();
+                    }
                     break;
                 case 'm':
                 case 'M':
