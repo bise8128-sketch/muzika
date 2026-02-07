@@ -44,9 +44,18 @@ python cli.py "URL" --output my_songs
 python cli.py "URL" --separate --keep-original
 ```
 
+## GUI Interface
+
+A simple Streamlit interface is included.
+
+```bash
+streamlit run streamlit_app.py
+```
+
 ## Structure
 
 - `cli.py`: Main entry point.
+- `streamlit_app.py`: Simple GUI.
 - `downloader.py`: Handles YouTube downloads.
 - `separator.py`: Handles AI source separation.
 - `utils.py`: Helper functions.
