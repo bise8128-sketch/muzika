@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PlaybackController } from '@/utils/audio/playbackController';
+import { getAudioContext } from '@/utils/audio/audioContext';
 
 // Extend private property access for internal tracking
 interface ExtendedPlaybackController extends PlaybackController {
@@ -21,8 +22,14 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [solos, setSolos] = useState<Record<string, boolean>>({});
-    const [isClient, setIsClient] = useState(typeof window !== 'undefined');
+    const [isClient, setIsClient] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Set client flag after mount to avoid hydration mismatch
+    useEffect(() => {
+        const timer = setTimeout(() => setIsClient(true), 0);
+        return () => clearTimeout(timer);
+    }, []);
 
     // We'll use a local controller for comparison playback
     const controllerRef = useRef<PlaybackController | null>(null);
@@ -31,55 +38,65 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
         // Only run in client-side environment
         if (!isClient) return;
 
+        let isMounted = true;
+        let animationFrameId: number;
+
         try {
             const controller = new PlaybackController();
             controllerRef.current = controller;
 
             const loadTracks = async () => {
                 const validTracks: { buffer: AudioBuffer, id: string }[] = [];
+                const audioContext = getAudioContext();
 
                 for (const track of tracks) {
                     if (track.blob instanceof AudioBuffer) {
                         validTracks.push({ buffer: track.blob, id: track.id });
                     } else if (track.blob instanceof Blob) {
                         const arrayBuffer = await track.blob.arrayBuffer();
-                        const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-                        const audioContext = new AudioContextClass();
+                        // Use shared audioContext for decoding to avoid memory leaks/context limits
                         const decoded = await audioContext.decodeAudioData(arrayBuffer);
                         validTracks.push({ buffer: decoded, id: track.id });
                     }
                 }
 
+                if (!isMounted) return;
+
                 if (validTracks.length > 0) {
                     controller.setAudioBuffers(validTracks.map(t => t.buffer));
-                    setDuration(validTracks[0].buffer.duration);
+                    setDuration(validTracks[0].buffer.duration || 0);
                     // Store valid track IDs to map volume controls correctly
                     (controller as ExtendedPlaybackController)._validTrackIds = validTracks.map(t => t.id);
                 }
             };
 
             loadTracks().catch(err => {
+                if (!isMounted) return;
                 console.error('Failed to load tracks:', err);
                 setError('Failed to load audio tracks');
             });
 
-            const interval = setInterval(() => {
-                if (controllerRef.current) {
+            // Use requestAnimationFrame for smoother time updates
+            const updateProgress = () => {
+                if (controllerRef.current && isPlaying) {
                     setCurrentTime(controllerRef.current.getCurrentTime());
                 }
-            }, 100);
+                animationFrameId = requestAnimationFrame(updateProgress);
+            };
+            animationFrameId = requestAnimationFrame(updateProgress);
 
             return () => {
-                clearInterval(interval);
+                isMounted = false;
+                cancelAnimationFrame(animationFrameId);
                 controller.dispose();
+                controllerRef.current = null;
             };
         } catch (err) {
             console.error('Failed to initialize PlaybackController:', err);
-            // setError is safe here as it's within a try-catch of an effect, 
-            // but if it's considered synchronous cascading, we can wrap it.
+            // Defer setError to avoid cascading render warning in effect
             setTimeout(() => setError('Audio playback not supported'), 0);
         }
-    }, [tracks, isClient]);
+    }, [tracks, isClient, isPlaying]);
 
     const handlePlayPause = () => {
         if (!controllerRef.current) return;
