@@ -43,7 +43,16 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
             try {
                 // engine.load handles decoding
                 // For now, load instrumental data (which is full backing track for karaoke)
-                const bufferToLoad = currentPlayingSong.instrumentalData;
+                let bufferToLoad: ArrayBuffer | Uint8Array | undefined = currentPlayingSong.instrumentalData;
+
+                // Handle server-side songs (no instrumentalData yet)
+                if (!bufferToLoad && currentPlayingSong.id === -1 && currentPlayingSong.originalHash) {
+                    const response = await fetch(`/api/backend-files/downloads/${currentPlayingSong.originalHash}`);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        bufferToLoad = await blob.arrayBuffer();
+                    }
+                }
 
                 if (bufferToLoad) {
                     await engine.load(bufferToLoad);

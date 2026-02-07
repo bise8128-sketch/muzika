@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { LibraryGrid } from '@/components/Library/LibraryGrid';
+import { ServerLibrarySection } from '@/components/Library/ServerLibrarySection';
 import { PlaylistManager } from '@/components/Library/PlaylistManager';
 import { usePlaybackQueue } from '@/hooks/usePlaybackQueue';
 import type { SongEntry } from '@/types/storage';
@@ -108,6 +109,9 @@ export default function LibraryPage() {
                             onClosePlayer={handleClosePlayer}
                             onAddToQueue={handleAddToQueue}
                         />
+                        <div className="mt-12 pt-12 border-t border-white/5">
+                            <ServerLibrarySection onSelect={handleSongSelect} />
+                        </div>
                     </div>
 
                     {/* Playlist Panel */}
