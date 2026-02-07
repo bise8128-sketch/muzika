@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
+import YouTubeInput from '@/components/YouTubeInput';
 
 interface AudioUploadProps {
     onUpload: (files: File[], isKaraokeMode?: boolean) => void;
@@ -144,6 +145,27 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-primary/10 blur-[60px] rounded-full group-hover:bg-primary/20 transition-all"></div>
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-accent/10 blur-[60px] rounded-full group-hover:bg-accent/20 transition-all"></div>
             </div>
+
+            {/* OR Divider */}
+            <div className="relative my-10">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10"></div>
+                </div>
+                <div className="relative flex justify-center">
+                    <span className="px-4 text-sm font-bold uppercase tracking-widest text-muted-foreground bg-zinc-950">
+                        {t('or')}
+                    </span>
+                </div>
+            </div>
+
+            {/* YouTube Input */}
+            <YouTubeInput
+                onAudioExtracted={(file, metadata) => {
+                    console.log('YouTube audio extracted:', metadata);
+                    onUpload([file], isKaraokeMode);
+                }}
+                disabled={isLoading}
+            />
 
             {/* AI Model Selection & Settings */}
             {!isLoading && (
