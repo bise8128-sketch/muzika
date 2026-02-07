@@ -791,7 +791,7 @@ export async function renderProcessedAudio(
     const combinedBuffer = await offlineCtx.startRendering();
 
     // 2. Apply Pitch and Tempo
-    const pitchTempoBuffer = await applyPitchAndTempo(combinedBuffer, effects.pitch / 100, effects.tempo);
+    const pitchTempoBuffer = await applyPitchAndTempo(combinedBuffer, effects.pitch, effects.tempo);
 
     // 3. Apply EQ
     const eqOfflineCtx = new OfflineAudioContext(channels, pitchTempoBuffer.length, sampleRate);

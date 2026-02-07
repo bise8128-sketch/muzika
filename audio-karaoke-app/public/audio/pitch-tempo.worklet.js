@@ -92,39 +92,35 @@ class PitchTempoProcessor extends AudioWorkletProcessor {
             this.leftBuffer.write(leftInput);
             this.rightBuffer.write(rightInput);
 
-            // Apply tempo by reading at different rate
-            const readRate = this.tempo / this.pitch;
-            const samplesToRead = Math.floor(128 * readRate);
+            // Apply tempo/pitch by reading at adjusted rate
+            for (let i = 0; i < 128; i++) {
+                const srcIndexFloor = Math.floor(this.phase);
+                const srcIndexCeil = (srcIndexFloor + 1);
+                const frac = this.phase - srcIndexFloor;
 
-            // Only process if we have enough samples
-            if (this.leftBuffer.available() >= samplesToRead) {
-                const leftRead = this.leftBuffer.read(samplesToRead);
-                const rightRead = this.rightBuffer.read(samplesToRead);
+                if (this.leftBuffer.available() > srcIndexCeil) {
+                    const l1 = this.leftBuffer.buffer[(this.leftBuffer.readIndex + srcIndexFloor) % this.leftBuffer.size];
+                    const l2 = this.leftBuffer.buffer[(this.leftBuffer.readIndex + srcIndexCeil) % this.leftBuffer.size];
 
-                // Resample to 128 samples (simple linear interpolation)
-                for (let i = 0; i < 128; i++) {
-                    const srcIndex = (i / 128) * samplesToRead;
-                    const srcIndexFloor = Math.floor(srcIndex);
-                    const srcIndexCeil = Math.min(srcIndexFloor + 1, samplesToRead - 1);
-                    const frac = srcIndex - srcIndexFloor;
+                    const r1 = this.rightBuffer.buffer[(this.rightBuffer.readIndex + srcIndexFloor) % this.rightBuffer.size];
+                    const r2 = this.rightBuffer.buffer[(this.rightBuffer.readIndex + srcIndexCeil) % this.rightBuffer.size];
 
-                    // Apply pitch shift via resampling
-                    const pitchedIndex = srcIndex * this.pitch;
-                    const pitchedFloor = Math.floor(pitchedIndex) % samplesToRead;
-                    const pitchedCeil = Math.ceil(pitchedIndex) % samplesToRead;
-                    const pitchFrac = pitchedIndex - Math.floor(pitchedIndex);
+                    leftOutput[i] = l1 * (1 - frac) + l2 * frac;
+                    rightOutput[i] = r1 * (1 - frac) + r2 * frac;
 
-                    // Linear interpolation with pitch shift
-                    leftOutput[i] = leftRead[pitchedFloor] * (1 - pitchFrac) +
-                        leftRead[pitchedCeil] * pitchFrac;
-                    rightOutput[i] = rightRead[pitchedFloor] * (1 - pitchFrac) +
-                        rightRead[pitchedCeil] * pitchFrac;
-                }
-            } else {
-                // Not enough data yet, output silence
-                leftOutput.fill(0);
-                if (rightOutput !== leftOutput) {
-                    rightOutput.fill(0);
+                    // Advance phase based on effective rate
+                    // pitch > 1 means higher frequency = play faster
+                    // tempo > 1 means faster output = play faster
+                    this.phase += (this.pitch / this.tempo);
+
+                    while (this.phase >= 1) {
+                        this.leftBuffer.read(1);
+                        this.rightBuffer.read(1);
+                        this.phase -= 1;
+                    }
+                } else {
+                    leftOutput[i] = 0;
+                    rightOutput[i] = 0;
                 }
             }
         }
