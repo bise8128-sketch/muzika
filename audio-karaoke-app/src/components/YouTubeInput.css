@@ -121,12 +121,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
   animation: shimmer 2s infinite;
 }
 
@@ -134,6 +132,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -173,6 +172,7 @@
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -222,5 +222,49 @@
 
   .progress-container {
     background: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Legal Disclaimer */
+.youtube-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 165, 0, 0.08);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-left: 4px solid rgba(255, 165, 0, 0.8);
+  border-radius: 8px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.disclaimer-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #ffa500;
+  margin-top: 2px;
+}
+
+.disclaimer-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.disclaimer-text strong {
+  color: #ffa500;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .youtube-disclaimer {
+    padding: 10px 12px;
+  }
+
+  .disclaimer-text {
+    font-size: 11px;
   }
 }
