@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import ytdl from '@distube/ytdl-core';
 import { Readable } from 'stream';
 
-interface YtdlSourceStream extends Readable { }
+type YtdlSourceStream = Readable;
 
 /**
  * LEGAL DISCLAIMER & TERMS OF SERVICE WARNING
