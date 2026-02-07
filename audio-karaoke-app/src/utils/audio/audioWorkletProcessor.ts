@@ -26,7 +26,6 @@ export interface AudioWorkletMessage {
 }
 
 // Global registerProcessor function - this will be available in the AudioWorklet context
-declare function _registerProcessor(name: string, processor: unknown): void;
 
 /**
  * Generic audio processor for basic audio manipulation
@@ -84,7 +83,7 @@ export class GenericAudioProcessor {
     private handleMessage(message: AudioWorkletMessage): void {
         switch (message.type) {
             case 'config':
-                this.updateConfig(message.data);
+                this.updateConfig(message.data as Partial<AudioWorkletProcessorConfig>);
                 break;
             case 'ping':
                 this.handlePing();
@@ -191,20 +190,25 @@ export class GenericAudioProcessor {
         try {
             const startTime = performance.now();
 
-            if (this.bypass || inputs.length === 0 || outputs.length === 0) {
+            const inputChannels = inputs[0];
+            const outputChannels = outputs[0];
+
+            if (!inputChannels || !outputChannels) return true;
+
+            if (this.bypass) {
                 // Bypass mode: copy input to output
-                for (let channel = 0; channel < inputs.length && channel < outputs.length; channel++) {
-                    if (inputs[channel] && outputs[channel] && inputs[channel].length === outputs[channel].length) {
-                        for (let sample = 0; sample < inputs[channel].length; sample++) {
-                            outputs[channel][sample] = inputs[channel][sample];
-                        }
+                for (let channel = 0; channel < inputChannels.length && channel < outputChannels.length; channel++) {
+                    const input = inputChannels[channel];
+                    const output = outputChannels[channel];
+                    if (input && output && input.length === output.length) {
+                        output.set(input);
                     }
                 }
             } else {
                 // Process each channel
-                for (let channel = 0; channel < inputs.length && channel < outputs.length; channel++) {
-                    const input = inputs[channel];
-                    const output = outputs[channel];
+                for (let channel = 0; channel < inputChannels.length && channel < outputChannels.length; channel++) {
+                    const input = inputChannels[channel];
+                    const output = outputChannels[channel];
 
                     if (input && output && input.length === output.length) {
                         // Apply gain
