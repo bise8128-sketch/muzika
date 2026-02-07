@@ -27,7 +27,7 @@ export function usePlayback(controller: PlaybackController | null) {
             setIsPlaying(false);
             setCurrentTime(0);
         };
-        const handleTimeUpdate = (data: { currentTime: number; duration: number }) => {
+        const handleTimeUpdate = (data: any) => {
             setCurrentTime(data.currentTime);
             setDuration(data.duration);
         };
