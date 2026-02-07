@@ -291,6 +291,155 @@ export class PlaybackController {
     }
 
     /**
+     * Set reverb settings using the new ReverbProcessor
+     * @param settings - Reverb settings object
+     */
+    setReverbSettings(settings: Partial<ReverbSettings>): void {
+        this.reverbProcessor.setSettings(settings);
+    }
+
+    /**
+     * Get current reverb settings
+     */
+    getReverbSettings(): ReverbSettings {
+        return this.reverbProcessor.getSettings();
+    }
+
+    /**
+     * Enable or disable reverb effect
+     */
+    setReverbEnabled(enabled: boolean): void {
+        this.reverbProcessor.setEnabled(enabled);
+    }
+
+    /**
+     * Apply a reverb preset
+     * @param preset - Preset name ('hall', 'room', 'plate', 'chamber', 'spring')
+     */
+    applyReverbPreset(preset: 'hall' | 'room' | 'plate' | 'chamber' | 'spring'): void {
+        this.reverbProcessor.applyPreset(preset);
+    }
+
+    /**
+     * Set echo settings using the new EchoProcessor
+     * @param settings - Echo settings object
+     */
+    setEchoSettings(settings: Partial<EchoSettings>): void {
+        this.echoProcessor.setSettings(settings);
+    }
+
+    /**
+     * Get current echo settings
+     */
+    getEchoSettings(): EchoSettings {
+        return this.echoProcessor.getSettings();
+    }
+
+    /**
+     * Enable or disable echo effect
+     */
+    setEchoEnabled(enabled: boolean): void {
+        this.echoProcessor.setEnabled(enabled);
+    }
+
+    /**
+     * Enable or disable stereo delay mode
+     */
+    setStereoDelayEnabled(enabled: boolean): void {
+        this.echoProcessor.setStereoDelay(enabled);
+    }
+
+    /**
+     * Set pitch correction settings using the new PitchCorrector
+     * @param settings - Pitch correction settings object
+     */
+    async setPitchCorrectionSettings(settings: Partial<PitchCorrectionSettings>): Promise<void> {
+        // Initialize pitch corrector if not already initialized
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setSettings(settings);
+    }
+
+    /**
+     * Get current pitch correction settings
+     */
+    getPitchCorrectionSettings(): PitchCorrectionSettings {
+        return this.pitchCorrector.getSettings();
+    }
+
+    /**
+     * Enable or disable pitch correction
+     */
+    async setPitchCorrectionEnabled(enabled: boolean): Promise<void> {
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setEnabled(enabled);
+    }
+
+    /**
+     * Set the scale for pitch correction
+     */
+    async setPitchCorrectionScale(scale: 'chromatic' | 'major' | 'minor' | 'pentatonic-major' | 'pentatonic-minor'): Promise<void> {
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setScale(scale);
+    }
+
+    /**
+     * Set the reference key for pitch correction (0-11 for C to B)
+     */
+    async setPitchCorrectionReferenceKey(referenceKey: number): Promise<void> {
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setReferenceKey(referenceKey);
+    }
+
+    /**
+     * Set the retune speed for pitch correction (0.1 to 1.0)
+     */
+    async setPitchCorrectionRetuneSpeed(retuneSpeed: number): Promise<void> {
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setRetuneSpeed(retuneSpeed);
+    }
+
+    /**
+     * Set the correction amount for pitch correction (0 to 1)
+     */
+    async setPitchCorrectionAmount(correctionAmount: number): Promise<void> {
+        if (!this.pitchCorrector.isReady()) {
+            await this.pitchCorrector.initialize();
+        }
+        this.pitchCorrector.setCorrectionAmount(correctionAmount);
+    }
+
+    /**
+     * Get the reverb processor instance
+     */
+    getReverbProcessor(): ReverbProcessor {
+        return this.reverbProcessor;
+    }
+
+    /**
+     * Get the echo processor instance
+     */
+    getEchoProcessor(): EchoProcessor {
+        return this.echoProcessor;
+    }
+
+    /**
+     * Get the pitch corrector instance
+     */
+    getPitchCorrector(): PitchCorrector {
+        return this.pitchCorrector;
+    }
+
+    /**
      * Start playback
      */
     play(): void {
@@ -690,5 +839,10 @@ export class PlaybackController {
         this.listeners.clear();
         this.audioBuffers = [];
         this.processor.dispose();
+
+        // Clean up new effect processors
+        this.reverbProcessor.destroy();
+        this.echoProcessor.destroy();
+        this.pitchCorrector.destroy();
     }
 }
