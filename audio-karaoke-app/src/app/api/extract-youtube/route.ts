@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Convert Node.js Readable stream to Web ReadableStream
-        const webStream = Readable.toWeb(audioStream as YtdlSourceStream);
+        const webStream = Readable.toWeb(audioStream as unknown as YtdlSourceStream);
 
         // Return streaming response with metadata in headers
         return new NextResponse(webStream as any, {
