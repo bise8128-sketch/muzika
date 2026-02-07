@@ -98,12 +98,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Configure ytdl agent with cookies to avoid 403 errors and bot detection
-        // Using common visitor cookies that usually work
-        const agent = ytdl.createAgent([
-            { name: 'VISITOR_INFO1_LIVE', value: 'QNNnlEShxMs', domain: '.youtube.com', path: '/' },
-            { name: 'GPS', value: '1', domain: '.youtube.com', path: '/' }
-        ]);
+        // Configure ytdl agent
+        // using cookies from env or default agent to avoid 403 errors
+        const cookies = process.env.YOUTUBE_COOKIES ? JSON.parse(process.env.YOUTUBE_COOKIES) : undefined;
+        const agent = ytdl.createAgent(cookies);
 
         // Get video info with timeout and retries
         console.log('[API] Fetching video info...');

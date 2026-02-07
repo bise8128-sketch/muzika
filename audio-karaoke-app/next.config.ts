@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
   allowedDevOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://192.168.2.190:3000'],
 
+  // External packages that should not be bundled by Webpack
+  serverExternalPackages: ['@distube/ytdl-core'],
+
   // Webpack configuration (backward compatibility)
   webpack: (config, { isServer }) => {
 
