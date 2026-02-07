@@ -94,13 +94,16 @@ export class PlaybackController {
         // EQ Config
         this.bassNode.type = 'lowshelf';
         this.bassNode.frequency.value = 200; // Hz
+        this.bassNode.gain.value = 0; // Default flat
 
         this.midNode.type = 'peaking';
         this.midNode.frequency.value = 1000; // Hz
         this.midNode.Q.value = 0.7;
+        this.midNode.gain.value = 0; // Default flat
 
         this.trebleNode.type = 'highshelf';
         this.trebleNode.frequency.value = 3000; // Hz
+        this.trebleNode.gain.value = 0; // Default flat
 
         // Build Master Chain: masterGain -> bass -> mid -> treble -> destination
         this.masterGain.connect(this.bassNode);
@@ -123,34 +126,6 @@ export class PlaybackController {
         this.echoNode.connect(this.echoFeedback);
         this.echoFeedback.connect(this.echoNode);
 
-        // Master Gain Node
-        this.masterGain = this.audioContext.createGain();
-        this.masterGain.gain.value = 1.0; // Default 0 dB
-        this.masterGain.connect(this.audioContext.destination);
-
-        // EQ Nodes
-        this.bassNode = this.audioContext.createBiquadFilter();
-        this.bassNode.type = 'lowshelf';
-        this.bassNode.frequency.value = 200; // 200 Hz
-        this.bassNode.gain.value = 0; // Default flat
-
-        this.midNode = this.audioContext.createBiquadFilter();
-        this.midNode.type = 'peaking';
-        this.midNode.frequency.value = 1000; // 1 kHz
-        this.midNode.gain.value = 0; // Default flat
-
-        this.trebleNode = this.audioContext.createBiquadFilter();
-        this.trebleNode.type = 'highshelf';
-        this.trebleNode.frequency.value = 5000; // 5 kHz
-        this.trebleNode.gain.value = 0; // Default flat
-
-        // Connect EQ: Source -> Bass -> Mid -> Treble -> Destination
-        // We will connect ScriptNode -> EQ -> Master Gain -> Destination
-
-        this.bassNode.connect(this.midNode);
-        this.midNode.connect(this.trebleNode);
-        this.trebleNode.connect(this.masterGain);
-
         this.createImpulseResponse();
     }
 
@@ -166,6 +141,12 @@ export class PlaybackController {
                 this.workletNode.connect(this.reverbNode);
                 this.workletNode.connect(this.echoNode);
             }
+
+            // Connect new effect processors outputs to master gain
+            const reverbOutput = this.reverbProcessor.getOutput();
+            const echoOutput = this.echoProcessor.getOutput();
+            if (reverbOutput) reverbOutput.connect(this.masterGain);
+            if (echoOutput) echoOutput.connect(this.masterGain);
         } catch (error) {
             console.warn('AudioWorklet initialization failed, using direct playback:', error);
         }
@@ -473,7 +454,17 @@ export class PlaybackController {
                 source.connect(gainNode);
                 gainNode.connect(destination);
 
-                // If no worklet, also connect to effects
+                // Connect to new effect processors
+                const reverbInput = this.reverbProcessor.getInput();
+                const echoInput = this.echoProcessor.getInput();
+                if (reverbInput) gainNode.connect(reverbInput);
+                if (echoInput) gainNode.connect(echoInput);
+                if (this.pitchCorrector.isReady()) {
+                    const pitchInput = this.pitchCorrector.getInput();
+                    if (pitchInput) gainNode.connect(pitchInput);
+                }
+
+                // If no worklet, also connect to legacy effects
                 if (!this.workletNode) {
                     gainNode.connect(this.reverbNode);
                     gainNode.connect(this.echoNode);
@@ -501,6 +492,16 @@ export class PlaybackController {
 
                 voiceSource.connect(voiceGain);
                 voiceGain.connect(destination);
+
+                // Connect voice to new effect processors
+                const reverbInput = this.reverbProcessor.getInput();
+                const echoInput = this.echoProcessor.getInput();
+                if (reverbInput) voiceGain.connect(reverbInput);
+                if (echoInput) voiceGain.connect(echoInput);
+                if (this.pitchCorrector.isReady()) {
+                    const pitchInput = this.pitchCorrector.getInput();
+                    if (pitchInput) voiceGain.connect(pitchInput);
+                }
 
                 if (!this.workletNode) {
                     voiceGain.connect(this.reverbNode);
