@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Extractor & Separator</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.5;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Audio Extractor & Separator</h1>
+    <div class="card">
+        <div class="input-group">
+            <label for="url">YouTube URL</label>
+            <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..."
+                value="https://www.youtube.com/watch?v=z_mhRk6DgN0&list=RDz_mhRk6DgN0&start_radio=1">
+        </div>
+        <div class="input-group">
+            <label>
+                <input type="checkbox" id="separate" checked> Separate into stems (Vocals, Drums, Bass, Other)
+            </label>
+        </div>
+        <button id="processBtn">Process Audio</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const processBtn = document.getElementById('processBtn');
+        const statusDiv = document.getElementById('status');
+        const urlInput = document.getElementById('url');
+        const separateCheckbox = document.getElementById('separate');
+
+        processBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) return alert('Please enter a URL');
+
+            processBtn.disabled = true;
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = 'Starting download...';
+            statusDiv.className = '';
+
+            try {
+                // Step 1: Download
+                const downloadRes = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (!downloadRes.ok) throw new Error('Download failed');
+                const downloadData = await downloadRes.json();
+
+                statusDiv.innerHTML = `Download complete: <a href="/files/downloads/${downloadData.filename}" download>${downloadData.filename}</a><br>`;
+
+                if (separateCheckbox.checked) {
+                    statusDiv.innerHTML += 'Starting separation (this may take a while)...';
+
+                    // Step 2: Separate
+                    const separateRes = await fetch('/api/separate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: downloadData.filename })
+                    });
+
+                    if (!separateRes.ok) throw new Error('Separation failed');
+                    const separateData = await separateRes.json();
+
+                    statusDiv.innerHTML += '<strong>Separation complete!</strong><br><ul>';
+                    for (const [stem, path] of Object.entries(separateData.stems)) {
+                        statusDiv.innerHTML += `<li>${stem}: <a href="/files/${path}" download>Download</a></li>`;
+                    }
+                    statusDiv.innerHTML += '</ul>';
+                }
+
+                statusDiv.classList.add('success');
+
+            } catch (err) {
+                statusDiv.innerHTML += `<br><span class="error">Error: ${err.message}</span>`;
+            } finally {
+                processBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
