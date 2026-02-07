@@ -136,13 +136,11 @@ async function initializeFFmpeg(baseUrl: string, maxRetries: number = 2): Promis
             }
 
             // Initialize FFmpeg (handle different export names)
-            // @ts-expect-error - FFmpegWASM is added to global scope by the UMD build
             const FFmpegLib = (self as unknown as { FFmpeg?: any; FFmpegWASM?: any }).FFmpeg ||
                 (self as unknown as { FFmpeg?: any; FFmpegWASM?: any }).FFmpegWASM;
             if (!FFmpegLib) throw new Error('FFmpeg library not found in global scope');
 
             // Create FFmpeg instance
-            // @ts-expect-error - FFmpeg constructor
             ffmpeg = new FFmpegLib();
 
             log('FFmpeg initialized, loading core...');
