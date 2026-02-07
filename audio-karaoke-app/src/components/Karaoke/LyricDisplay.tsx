@@ -36,7 +36,7 @@ const THEME_STYLES: Record<LyricTheme, {
         active: 'scale-105 opacity-100 py-4 text-karaoke-effect',
         past: 'text-2xl text-pink-500/30 blur-[0.5px] scale-95',
         future: 'text-2xl text-cyan-500/20 blur-[1px] scale-90',
-        gradient: 'bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500'
+        gradient: 'bg-clip-text text-transparent bg-linear-to-r from-cyan-400 to-blue-500'
     },
     classic: {
         container: 'space-y-4 py-20',

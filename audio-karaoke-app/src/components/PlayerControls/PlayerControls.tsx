@@ -49,13 +49,13 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     const handleMouseMove = (e: React.MouseEvent<HTMLInputElement>) => {
         if (!progressBarRef.current) return;
-        
+
         const rect = progressBarRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const width = rect.width;
         const percentage = Math.max(0, Math.min(1, x / width));
         const time = percentage * (duration || 1);
-        
+
         setPreviewTime(time);
 
         if (lyrics) {
@@ -76,11 +76,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <span className="text-xs font-mono text-gray-400 w-10 text-right">
                     {formatTime(currentTime)}
                 </span>
-                
+
                 <div className="flex-1 relative group">
                     {/* Tooltip */}
                     {previewTime !== null && (
-                        <div 
+                        <div
                             className="absolute bottom-full left-0 mb-2 transform -translate-x-1/2 bg-black/80 backdrop-blur text-white text-xs px-2 py-1 rounded border border-white/10 whitespace-nowrap z-50 pointer-events-none"
                             style={{ left: `${(previewTime / (duration || 1)) * 100}%` }}
                         >
@@ -113,7 +113,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <div className="flex items-center gap-4">
                     <button
                         onClick={isPlaying ? onPause : onPlay}
-                        className="w-16 h-16 flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 transition-transform shadow-lg shadow-purple-500/20"
+                        className="w-16 h-16 flex items-center justify-center rounded-full bg-linear-to-r from-purple-500 to-pink-500 hover:scale-105 transition-transform shadow-lg shadow-purple-500/20"
                     >
                         {isPlaying ? (
                             <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">

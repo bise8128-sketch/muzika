@@ -171,7 +171,7 @@ export const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({ tracks }) =>
                         className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
                     />
                     <div
-                        className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-100 relative"
+                        className="h-full bg-linear-to-r from-primary to-accent transition-all duration-100 relative"
                         style={{ width: `${(currentTime / duration) * 100}%` }}
                     >
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform"></div>
