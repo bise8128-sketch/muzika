@@ -4,7 +4,7 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { CachedAudio, ProcessingLog, SongEntry } from '@/types/storage';
+import type { CachedAudio, ProcessingLog, SongEntry, Playlist, QueueState } from '@/types/storage';
 import type { ModelStorageData } from '@/types/model';
 
 export class AudioKaraokeDB extends Dexie {
@@ -13,17 +13,21 @@ export class AudioKaraokeDB extends Dexie {
     cachedAudio!: Table<CachedAudio, number>;
     processingLogs!: Table<ProcessingLog, number>;
     songs!: Table<SongEntry, number>;
+    playlists!: Table<Playlist, number>;
+    queue!: Table<QueueState, number>;
 
     constructor() {
         super('AudioKaraokeDB');
 
         // Define database schema
-        // Version 4: Updated songs table for unified library
-        this.version(4).stores({
+        // Version 5: Added playlists and queue tables
+        this.version(5).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
             processingLogs: '++id, fileHash, status, startedAt',
-            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt'
+            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt',
+            playlists: '++id, name, createdAt, updatedAt',
+            queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
         });
 
         // Keep previous versions for migration history if needed

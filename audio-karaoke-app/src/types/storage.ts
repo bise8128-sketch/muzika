@@ -77,3 +77,30 @@ export interface Playlist {
     updatedAt: number;
     isDefault?: boolean;
 }
+
+/**
+ * Queue state for playback queue
+ */
+export interface QueueState {
+    id?: number;
+    songIds: number[];
+    currentIndex: number;
+    shuffleMode: 'off' | 'on';
+    repeatMode: 'off' | 'all' | 'one';
+    updatedAt: number;
+}
+
+/**
+ * Filter options for library
+ */
+export type FilterType = 'all' | 'ai_separated' | 'direct_karaoke';
+
+/**
+ * Sort options for library
+ */
+export type SortOption = 'date' | 'title' | 'artist' | 'duration';
+
+/**
+ * Sort order for library
+ */
+export type SortOrder = 'asc' | 'desc';
