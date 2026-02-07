@@ -1,5 +1,6 @@
 yt-dlp>=2023.10.13
-demucs>=4.0.0
 torch>=2.1.0
 torchaudio>=2.1.0
 colorlog>=6.7.0
+numpy
+scipy
