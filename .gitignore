@@ -9,4 +9,5 @@ build/
 .vercel
 .env*.local
 python-audio-cli/output/downloads/
+python-audio-cli/venv/
 
