@@ -76,6 +76,41 @@ async def separate_audio(request: SeparateRequest):
         logger.error(f"Separation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/library")
+async def get_library():
+    songs = []
+    if os.path.exists(DOWNLOADS_DIR):
+        try:
+            # Sort by modification time (newest first)
+            files = sorted(
+                [f for f in os.listdir(DOWNLOADS_DIR) if f.endswith(('.mp3', '.wav'))],
+                key=lambda x: os.path.getmtime(os.path.join(DOWNLOADS_DIR, x)),
+                reverse=True
+            )
+            
+            for f in files:
+                song = {
+                    "filename": f,
+                    "path": f"downloads/{f}",
+                    "stems": {}
+                }
+                
+                # Check for stems
+                base_name = os.path.splitext(f)[0]
+                stem_path = os.path.join(STEMS_DIR, base_name)
+                
+                if os.path.exists(stem_path) and os.path.isdir(stem_path):
+                    for stem in ["vocals", "drums", "bass", "other"]:
+                        stem_file = os.path.join(stem_path, f"{stem}.wav")
+                        if os.path.exists(stem_file):
+                            song["stems"][stem] = os.path.relpath(stem_file, OUTPUT_DIR)
+                
+                songs.append(song)
+        except Exception as e:
+            logger.error(f"Error scanning library: {e}")
+            
+    return {"songs": songs}
+
 @app.get("/files/{path:path}")
 async def get_file(path: str):
     file_path = os.path.join(OUTPUT_DIR, path)
