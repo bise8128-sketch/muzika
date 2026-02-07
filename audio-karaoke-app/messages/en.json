@@ -36,7 +36,22 @@
         "free": "Free",
         "freeDesc": "Open source",
         "errorFormat": "Unsupported file format: {name}. Please upload MP3, WAV or FLAC.",
-        "errorSize": "File {name} is too large. Max size is 50MB."
+        "errorSize": "File {name} is too large. Max size is 50MB.",
+        "or": "or"
+    },
+    "YouTube": {
+        "title": "YouTube Integration",
+        "placeholder": "Paste YouTube URL here...",
+        "extract": "Extract Audio",
+        "extracting": "Extracting...",
+        "emptyUrl": "Please enter a YouTube URL",
+        "invalidUrl": "Invalid YouTube URL format",
+        "success": "Audio extracted successfully!",
+        "error": "Failed to extract audio from YouTube",
+        "downloadProgress": "Downloading: {progress}%",
+        "processing": "Processing audio...",
+        "privateVideo": "This video is private or unavailable",
+        "rateLimited": "Too many requests. Please try again later."
     },
     "History": {
         "recentSessions": "Recent Sessions",
@@ -137,7 +152,8 @@
     },
     "LyricDisplay": {
         "noLyrics": "No lyrics loaded",
-        "uploadHint": "Upload an .lrc file or create some above"
+        "uploadHint": "Upload an .lrc file or create some above",
+        "waitingForLyrics": "Waiting for lyrics..."
     },
     "LyricEditor": {
         "title": "Lyric Editor",
@@ -160,7 +176,4 @@
     "BackendStatus": {
         "backend": "Backend: {status}"
     },
-    "LyricDisplay": {
-        "waitingForLyrics": "Waiting for lyrics..."
-    }
 }

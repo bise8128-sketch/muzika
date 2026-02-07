@@ -36,7 +36,22 @@
         "free": "Besplatno",
         "freeDesc": "Otvoreni kod",
         "errorFormat": "Nepodržan format datoteke: {name}. Molimo učitajte MP3, WAV ili FLAC.",
-        "errorSize": "Datoteka {name} je prevelika. Maksimalna veličina je 50MB."
+        "errorSize": "Datoteka {name} je prevelika. Maksimalna veličina je 50MB.",
+        "or": "ili"
+    },
+    "YouTube": {
+        "title": "YouTube integracija",
+        "placeholder": "Zalijepi YouTube URL ovdje...",
+        "extract": "Izvuci audio",
+        "extracting": "Izvlačenje...",
+        "emptyUrl": "Molimo unesite YouTube URL",
+        "invalidUrl": "Nevažeći YouTube URL format",
+        "success": "Audio uspješno izvučen!",
+        "error": "Neuspjelo izvlačenje zvuka sa YouTube-a",
+        "downloadProgress": "Preuzimanje: {progress}%",
+        "processing": "Obrada zvuka...",
+        "privateVideo": "Ovaj video je privatan ili nedostupan",
+        "rateLimited": "Previše zahtjeva. Molimo pokušajte kasnije."
     },
     "History": {
         "recentSessions": "Nedavne sesije",
@@ -130,7 +145,8 @@
     },
     "LyricDisplay": {
         "noLyrics": "Nema učitanih stihova",
-        "uploadHint": "Učitajte .lrc datoteku ili kreirajte stihove iznad"
+        "uploadHint": "Učitajte .lrc datoteku ili kreirajte stihove iznad",
+        "waitingForLyrics": "Čekanje na stihove..."
     },
     "LyricEditor": {
         "title": "Uređivač stihova",
