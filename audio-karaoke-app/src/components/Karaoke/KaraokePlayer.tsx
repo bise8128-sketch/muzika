@@ -550,8 +550,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     onPlay={playback.play}
                     onPause={playback.pause}
                     onSeek={playback.seek}
-                    onVocalsVolumeChange={(v) => playback.setVolume(v, 0)}
-                    onInstrumentalVolumeChange={(v) => playback.setVolume(v, 1)}
                     onBalanceChange={handleBalanceChange}
                 />
 
