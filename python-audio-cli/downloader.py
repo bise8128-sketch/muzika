@@ -26,6 +26,7 @@ class AudioDownloader:
             'logger': logger,
             'quiet': False, # Let user see progress
             'overwrites': True,
+            'noplaylist': True,
         }
 
         try:
