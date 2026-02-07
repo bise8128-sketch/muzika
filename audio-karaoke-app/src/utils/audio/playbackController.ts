@@ -6,9 +6,13 @@
 
 import { getAudioContext } from './audioContext';
 import { RealtimeAudioProcessor } from './pitchTempo';
+import { ReverbProcessor } from './reverbProcessor';
+import { EchoProcessor } from './echoProcessor';
+import { PitchCorrector } from './pitchCorrection';
+import { ReverbSettings, EchoSettings, PitchCorrectionSettings } from '../../types/audio';
 
 type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended';
-type EventCallback = (data?: any) => void;
+type EventCallback = (data?: unknown) => void;
 
 const BUFFER_SIZE = 4096;
 
@@ -18,7 +22,12 @@ export class PlaybackController {
     private processor: RealtimeAudioProcessor;
     private workletNode: AudioWorkletNode | null = null;
 
-    // Effects
+    // New Effect Processors
+    private reverbProcessor: ReverbProcessor;
+    private echoProcessor: EchoProcessor;
+    private pitchCorrector: PitchCorrector;
+
+    // Legacy Effects (kept for backward compatibility)
     private reverbNode: ConvolverNode;
     private reverbGain: GainNode;
     private echoNode: DelayNode;
