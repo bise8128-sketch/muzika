@@ -167,9 +167,11 @@ export class EchoProcessor {
         // Merger -> Output
         this.mergerNode.connect(this.outputNode);
 
-        // Bypass path (when disabled)
-        this.inputNode.connect(this.bypassNode);
-        this.bypassNode.connect(this.outputNode);
+        // Bypass path (only connect when disabled)
+        if (!this.settings.enabled) {
+            this.inputNode.connect(this.bypassNode);
+            this.bypassNode.connect(this.outputNode);
+        }
     }
 
     /**
@@ -236,6 +238,7 @@ export class EchoProcessor {
         // Update feedback
         if (settings.feedback !== undefined) {
             const feedback = Math.max(0, Math.min(0.9, settings.feedback));
+            this.settings.feedback = feedback;
             this.feedbackNode.gain.value = feedback;
             this.leftFeedbackNode.gain.value = feedback;
             this.rightFeedbackNode.gain.value = feedback;
@@ -271,11 +274,25 @@ export class EchoProcessor {
             this.leftWetGainNode.gain.value = this.settings.wetLevel;
             this.rightWetGainNode.gain.value = this.settings.wetLevel;
             this.bypassNode.gain.value = 0;
+            // Disconnect bypass path when enabled
+            try {
+                this.inputNode.disconnect(this.bypassNode);
+                this.bypassNode.disconnect(this.outputNode);
+            } catch (e) {
+                // Ignore if already disconnected
+            }
         } else {
             this.wetGainNode.gain.value = 0;
             this.leftWetGainNode.gain.value = 0;
             this.rightWetGainNode.gain.value = 0;
             this.bypassNode.gain.value = 1;
+            // Connect bypass path when disabled
+            try {
+                this.inputNode.connect(this.bypassNode);
+                this.bypassNode.connect(this.outputNode);
+            } catch (e) {
+                // Ignore if already connected
+            }
         }
     }
 

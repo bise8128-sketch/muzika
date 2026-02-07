@@ -111,7 +111,10 @@ export class PitchCorrector {
      * Send configuration to the worklet processor
      */
     private sendConfiguration(): void {
-        if (!this.workletNode) return;
+        if (!this.isInitialized || !this.workletNode) {
+            console.warn('PitchCorrector: Cannot send configuration - worklet not initialized');
+            return;
+        }
 
         this.workletNode.port.postMessage({
             type: 'config',
@@ -130,6 +133,10 @@ export class PitchCorrector {
      * Get input node for connecting audio sources
      */
     getInput(): AudioNode | null {
+        if (!this.isInitialized || !this.workletNode) {
+            console.warn('PitchCorrector: getInput() called before initialization');
+            return null;
+        }
         return this.workletNode;
     }
 
@@ -137,6 +144,10 @@ export class PitchCorrector {
      * Get output node for connecting to destination
      */
     getOutput(): AudioNode | null {
+        if (!this.isInitialized || !this.workletNode) {
+            console.warn('PitchCorrector: getOutput() called before initialization');
+            return null;
+        }
         return this.workletNode;
     }
 

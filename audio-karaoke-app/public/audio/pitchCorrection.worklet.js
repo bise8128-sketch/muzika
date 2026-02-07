@@ -183,8 +183,9 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
         // Calculate correction ratio
         const correctionRatio = targetFrequency / pitchResult.frequency;
 
-        // Apply correction based on correction amount
-        const effectiveRatio = 1 + (correctionRatio - 1) * this.config.correctionAmount;
+        // Apply correction based on correction amount and retune speed
+        // Retune speed controls how quickly the correction is applied (0.1 = slow, 1.0 = instant)
+        const effectiveRatio = 1 + (correctionRatio - 1) * this.config.correctionAmount * this.config.retuneSpeed;
 
         // Apply time-domain pitch shifting using resampling
         const phase = 0;
@@ -238,8 +239,8 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
                     this.analysisBuffer.shift();
                 }
 
-                // Apply pitch correction
-                const corrected = this.applyPitchCorrection(inputData, this.config.sampleRate);
+                // Apply pitch correction using analysis buffer for pitch detection
+                const corrected = this.applyPitchCorrectionWithAnalysisBuffer(inputData, this.config.sampleRate);
 
                 for (let i = 0; i < bufferSize; i++) {
                     outputData[i] = corrected[i];
