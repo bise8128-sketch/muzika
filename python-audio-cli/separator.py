@@ -3,7 +3,7 @@ import torchaudio
 from torchaudio.pipelines import HDEMUCS_HIGH_MUSDB_PLUS
 import os
 import logging
-from .utils import ensure_dir
+from utils import ensure_dir
 
 logger = logging.getLogger('Separator')
 
@@ -51,8 +51,6 @@ class AudioSeparator:
             waveform = (waveform - ref.mean()) / (waveform.std() + 1e-8)
             
             # Run inference
-            # To avoid OOM on CPU/GPU with long files, we should chunk.
-            # For this MVP, we will try full inference but catch OOM.
             try:
                 with torch.no_grad():
                     # Add batch dimension: (1, channels, time)
@@ -61,7 +59,6 @@ class AudioSeparator:
             except RuntimeError as e:
                 if "out of memory" in str(e):
                     logger.error("Out of memory. Try a shorter song or a machine with more RAM/VRAM.")
-                    # In a real production tool, we would implement chunking here.
                     raise
                 else:
                     raise
