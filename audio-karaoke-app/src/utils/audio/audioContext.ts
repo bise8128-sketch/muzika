@@ -16,6 +16,10 @@ let workletManager: AudioWorkletManager | null = null;
  * Creates and initializes the AudioWorkletManager for real-time audio processing
  */
 export function getAudioContext(): AudioContext {
+    if (typeof window === 'undefined') {
+        throw new Error('AudioContext cannot be initialized on the server');
+    }
+
     if (!audioContext) {
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
             sampleRate: 44100,

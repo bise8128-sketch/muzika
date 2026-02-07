@@ -102,7 +102,11 @@ export default function Home() {
   const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
   const [state, setState] = useState<AppState>('upload');
-  const [controller] = useState(() => new PlaybackController());
+  const [controller, setController] = useState<PlaybackController | null>(null);
+
+  useEffect(() => {
+    setController(new PlaybackController());
+  }, []);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [autoStartKaraoke, setAutoStartKaraoke] = useState(() => {
