@@ -208,6 +208,54 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
     }
 
     /**
+     * Apply pitch correction using analysis buffer for pitch detection
+     */
+    applyPitchCorrectionWithAnalysisBuffer(buffer, sampleRate) {
+        if (!this.config.enabled) {
+            return buffer;
+        }
+
+        const correctedBuffer = new Float32Array(buffer.length);
+
+        // Use analysis buffer for pitch detection if it has enough samples
+        let pitchResult = null;
+        if (this.analysisBuffer.length >= 1024) {
+            const analysisArray = new Float32Array(this.analysisBuffer);
+            pitchResult = this.detectPitch(analysisArray, sampleRate);
+        }
+
+        if (!pitchResult) {
+            // No clear pitch detected, return original
+            return buffer;
+        }
+
+        const targetNote = this.findNearestScaleNote(pitchResult.midiNote);
+        const targetFrequency = this.midiToFrequency(targetNote);
+
+        // Calculate correction ratio
+        const correctionRatio = targetFrequency / pitchResult.frequency;
+
+        // Apply correction based on correction amount and retune speed
+        const effectiveRatio = 1 + (correctionRatio - 1) * this.config.correctionAmount * this.config.retuneSpeed;
+
+        // Apply time-domain pitch shifting using resampling
+        for (let i = 0; i < buffer.length; i++) {
+            const sourceIndex = Math.floor(i / effectiveRatio);
+            if (sourceIndex < buffer.length) {
+                correctedBuffer[i] = buffer[sourceIndex];
+            } else {
+                correctedBuffer[i] = 0;
+            }
+        }
+
+        // Update metrics
+        this.totalCorrections++;
+        this.totalCorrectionAmount += Math.abs(effectiveRatio - 1);
+
+        return correctedBuffer;
+    }
+
+    /**
      * Process audio
      */
     process(inputs, outputs, parameters) {
