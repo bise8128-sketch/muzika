@@ -1,4 +1,4 @@
-import { Player, PitchShift, start, context, getContext, ToneAudioBuffer } from 'tone';
+import { Player, PitchShift, start, context, getContext, ToneAudioBuffer } from 'tone/build/esm/index';
 
 type AudioEngineEvent = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'load';
 type EventCallback = (data?: unknown) => void;
