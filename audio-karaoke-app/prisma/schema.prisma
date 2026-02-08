@@ -1,0 +1,95 @@
+// This is a robust schema definition for the Song Library & Version Management module.
+// It is designed to be compatible with Prisma ORM, but can also serve as a reference for SQL or NoSQL implementations.
+
+datasource db {
+  provider = "postgresql" // or "sqlite", "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enum for song types
+enum SongType {
+  AI_SEPARATED
+  DIRECT_KARAOKE
+}
+
+// Main Song Entry model
+model SongEntry {
+  id          String   @id @default(cuid())
+  type        SongType
+  title       String
+  artist      String?
+  duration    Float    // Duration in seconds
+  
+  // Metadata for better organization
+  album       String?
+  genre       String[] // Array of genres
+  year        Int?
+  bpm         Float?
+  key         String?
+  
+  // Tracking
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  playCount   Int      @default(0)
+  lastPlayedAt DateTime?
+
+  // Relations
+  versions    SongVersion[]
+  tags        Tag[]
+  
+  // Original file info (for reference/hashing)
+  originalFileHash String? @unique // SHA-256 of original file
+  originalFileName String?
+
+  @@index([title])
+  @@index([artist])
+  @@index([type])
+}
+
+// Version Management (e.g., Original, Lowered Key, Fast Tempo)
+model SongVersion {
+  id              String    @id @default(cuid())
+  songId          String
+  song            SongEntry @relation(fields: [songId], references: [id], onDelete: Cascade)
+  
+  versionName     String    // e.g., "Original", "Lowered Key", "Practice Mode"
+  isDefault       Boolean   @default(false)
+  
+  // Audio Adjustments
+  pitchAdjustment Float     @default(0) // semitones (can be decimal)
+  tempoMultiplier Float     @default(1.0) // 1.0 = original speed
+  
+  // Audio Assets (paths or blobs/references)
+  instrumentalUrl String?   // Path/URL to instrumental track
+  vocalUrl        String?   // Path/URL to vocal track (optional for direct karaoke)
+  lyricsUrl       String?   // Path/URL to LRC/CDG file
+  
+  // Effect Settings (Snapshots of settings used for this version)
+  reverbEnabled   Boolean   @default(false)
+  reverbMix       Float     @default(0)
+  echoEnabled     Boolean   @default(false)
+  echoFeedback    Float     @default(0)
+
+  createdAt       DateTime  @default(now())
+  
+  @@unique([songId, versionName])
+}
+
+// Tags for flexible categorization
+model Tag {
+  id    String      @id @default(cuid())
+  name  String      @unique
+  songs SongEntry[]
+}
+
+// User Settings / Preferences (Optional context)
+model UserSettings {
+  id                String  @id @default(cuid())
+  autoStartKaraoke  Boolean @default(false)
+  defaultPitchShift Float   @default(0)
+  theme             String  @default("dark")
+}

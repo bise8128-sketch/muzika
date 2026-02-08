@@ -30,11 +30,18 @@ export interface ProcessingLog {
 }
 
 export interface SongEntry {
-    id?: number;
+    id?: number | string;
     type: 'ai_separated' | 'direct_karaoke';
     title: string;
     artist?: string;
     versionName: string;      // e.g., "Original", "Lowered Key", "Fast Remix"
+
+    // Enhanced Metadata
+    album?: string;
+    genre?: string[];
+    year?: number;
+    bpm?: number;
+    key?: string;
 
     // Audio Data
     instrumentalData: ArrayBuffer;
@@ -48,6 +55,8 @@ export interface SongEntry {
 
     // Timestamps
     createdAt: number;
+    updatedAt?: number;
+    playCount?: number;
     lastPlayedAt?: number;
 }
 
