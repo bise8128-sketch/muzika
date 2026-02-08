@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:8000';
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
 export async function GET() {
     try {
-        const response = await fetch(`${BACKEND_URL}/api/library`, {
+        const response = await fetch(`${PYTHON_SERVICE_URL}/api/library`, {
             cache: 'no-store'
         });
 

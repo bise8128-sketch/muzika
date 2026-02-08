@@ -5,12 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import logging
+import torch
 from downloader import AudioDownloader
 from separator import AudioSeparator
+from utils import setup_logging
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("API")
+logger = setup_logging(level=logging.INFO)
+logger.name = "API"
 
 app = FastAPI(title="Audio Processing API")
 
@@ -43,6 +45,14 @@ class DownloadRequest(BaseModel):
 
 class SeparateRequest(BaseModel):
     filename: str
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "separator_initialized": separator is not None
+    }
 
 @app.post("/api/download")
 async def download_audio(request: DownloadRequest):

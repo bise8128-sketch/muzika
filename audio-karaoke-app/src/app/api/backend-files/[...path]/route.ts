@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://localhost:8000';
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ path: string }> }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     const { path } = await params;
-    const url = `${BACKEND_URL}/files/${path}`;
+    const filePath = path.join('/');
+    const url = `${PYTHON_SERVICE_URL}/files/${filePath}`;
 
     try {
         const response = await fetch(url);

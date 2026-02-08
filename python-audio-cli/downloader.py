@@ -18,6 +18,7 @@ class AudioDownloader:
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(self.output_dir, '%(title)s.%(ext)s'),
+            'restrictfilenames': True,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': format,

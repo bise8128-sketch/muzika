@@ -59,7 +59,14 @@ class AudioSeparator:
             except RuntimeError as e:
                 if "out of memory" in str(e):
                     logger.error("Out of memory. Try a shorter song or a machine with more RAM/VRAM.")
-                    raise
+                    # Fallback to CPU if OOM on GPU
+                    if self.device == "cuda":
+                        logger.info("Retrying on CPU...")
+                        self.model = self.model.to("cpu")
+                        input_tensor = input_tensor.to("cpu")
+                        sources = self.model(input_tensor)
+                    else:
+                        raise
                 else:
                     raise
 

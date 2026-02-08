@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { circuitBreakerFetch } from '@/utils/api/circuitBreakerFetch';
 
-const BACKEND_URL = 'http://localhost:8000';
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
         // Use circuitBreakerFetch for robustness against backend failures
-        const response = await circuitBreakerFetch(`${BACKEND_URL}/api/download`, {
+        const response = await circuitBreakerFetch(`${PYTHON_SERVICE_URL}/api/download`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
