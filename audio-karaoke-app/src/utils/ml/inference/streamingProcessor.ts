@@ -36,7 +36,8 @@ export class StreamingProcessor {
         sampleRate: number,
         channels: number,
         onProgress?: (progress: number) => void,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        onChunkProcessed?: (vocals: Float32Array, instrumentals: Float32Array, chunkIndex: number) => void
     ): Promise<InferenceOutput> {
         const totalSamples = audioData.length / channels;
         const overlapSamples = Math.floor(this.options.overlap * sampleRate);
@@ -52,6 +53,7 @@ export class StreamingProcessor {
 
         let currentSample = 0;
         let processedSamples = 0;
+        let chunkIndex = 0;
 
         while (currentSample < totalSamples) {
             if (signal?.aborted) {
@@ -105,12 +107,18 @@ export class StreamingProcessor {
             this.accumulateOutput(vocalsOut, result.vocals, currentSample, channels, overlapSamples, totalSamples);
             this.accumulateOutput(instOut, result.instrumentals, currentSample, channels, overlapSamples, totalSamples);
 
+            // Emit chunk for playback if requested
+            if (onChunkProcessed) {
+                onChunkProcessed(result.vocals, result.instrumentals, chunkIndex);
+            }
+
             // Update progress
             processedSamples += (actualChunkSamples - (currentSample === 0 ? 0 : overlapSamples));
             if (onProgress) onProgress(Math.min(1.0, processedSamples / totalSamples));
 
             // Advance
             currentSample += (actualChunkSamples - overlapSamples);
+            chunkIndex++;
 
             // Safety break
             if (actualChunkSamples < overlapSamples) break;

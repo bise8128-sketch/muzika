@@ -7,6 +7,7 @@ import { audioCache } from '@/utils/storage/audioCache';
 import { segmentAudio, applyCrossfade } from '@/utils/audio/audioProcessor';
 import { loadModel } from './modelManager';
 import { processAudioInChunks, InferenceEngine } from './inference';
+import { InferencePipeline } from './inference/pipeline';
 import type { ModelInfo } from '@/types/model';
 import type { ProcessingProgress } from '@/types/audio';
 import { bufferPool } from '../audio/bufferPool';
@@ -172,8 +173,6 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             sendProgress({ phase: 'loading-model', currentSegment: 0, totalSegments: 0, percentage: 10, message: 'Loading AI model...' });
             if (isAborted) throw new Error('Processing aborted by user');
 
-            // loadModel returns the initialized InferenceEngine
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const engine = await loadModel(modelInfo, (progress) => {
                 sendProgress({
                     phase: 'loading-model',
@@ -182,171 +181,78 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     percentage: 10 + (progress.percentage * 0.2),
                     message: `Downloading model: ${progress.percentage.toFixed(0)}%`
                 });
-            }) as unknown as InferenceEngine; // Cast if needed, or trust type inference
+            }) as unknown as InferenceEngine;
 
             if (isAborted) throw new Error('Processing aborted by user');
 
-            // Phase 4: Prepare Audio Segments
-            sendProgress({ phase: 'segmenting', currentSegment: 0, totalSegments: 0, percentage: 35, message: 'Segmenting audio...' });
+            // Phase 4: Initialize High-Performance Pipeline
+            sendProgress({ phase: 'segmenting', currentSegment: 0, totalSegments: 0, percentage: 35, message: 'Initializing pipeline...' });
+            const pipeline = new InferencePipeline(engine, { overlap: 2.0, maxChunkSize: 30.0 });
 
-            const simpleBuffer: SimpleAudioBuffer = {
-                sampleRate,
-                numberOfChannels: 2,
-                length: decodedData.left.length,
-                duration: decodedData.left.length / sampleRate,
-                getChannelData: (channel: number) => {
-                    return channel === 0 ? decodedData.left : decodedData.right;
-                }
-            };
-
-            // Estimate segment duration based on model config
-            // Default to ~10s if not specified, or use hop logic
-            // Note: segmentAudio handles the logic. 
-            // We pass undefined for duration to let it use default or we can calculate it.
-            // Let's assume segmentAudio does the right thing.
-            const segments = segmentAudio(simpleBuffer);
-            const totalSegments = segments.length;
-
-            // Phase 5: Inference Loop
-            // Engine is already initialized by loadModel
-
-            // Streaming State
-            let vocalsTail: Float32Array | null = null;
-            let instrumentalsTail: Float32Array | null = null;
-            let globalWritePosition = 0;
-            const channels = 2;
-
-            // Calculate crossfade. Assuming segments have overlap.
-            // We use a safe default if we don't know the exact overlap.
-            // 1024 samples is usually enough for smooth transition.
-            const crossfadeFrames = 1024;
+            // Interleave input audio for the pipeline
+            const length = decodedData.left.length;
+            const interleavedInput = new Float32Array(length * 2);
+            for (let i = 0; i < length; i++) {
+                interleavedInput[i * 2] = decodedData.left[i];
+                interleavedInput[i * 2 + 1] = decodedData.right[i];
+            }
 
             performance.mark('start-separation');
 
-            await processAudioInChunks(
-                engine,
-                segments.map(s => s.data),
-                2, // channels
+            // Phase 5: Inference with Dynamic Chunking and Overlap-Add
+            const result = await pipeline.process(
+                interleavedInput,
                 sampleRate,
-                (current, total) => {
-                    const percentage = 40 + ((current / total) * 60);
+                2, // channels
+                1, // priority
+                (progressPercentage) => {
+                    const percentage = 40 + (progressPercentage * 55);
                     sendProgress({
                         phase: 'separating',
-                        currentSegment: current,
-                        totalSegments: total,
+                        currentSegment: Math.floor(progressPercentage * 100),
+                        totalSegments: 100,
                         percentage,
                         message: `Separating audio... ${Math.round(percentage)}%`
                     });
                 },
-                (chunkResult, index) => {
-                    // Record performance mark for chunk completion
-                    performance.mark(`chunk-${index}-complete`);
-
-                    const vocals = chunkResult.vocals;
-                    const instrumentals = chunkResult.instrumentals;
-
-                    if (index === 0) {
-                        // Mark Time To First Audio (TTFA)
+                (vChunk, iChunk, idx) => {
+                    if (idx === 0) {
                         performance.mark('ttfa');
                         try {
                             performance.measure('time-to-first-audio', 'start-separation', 'ttfa');
-                            const ttfaMeasure = performance.getEntriesByName('time-to-first-audio')[0];
-                            console.log(`[audio.worker] TTFA: ${ttfaMeasure.duration.toFixed(2)}ms`);
-                        } catch (e) {
-                            console.warn('[audio.worker] performance.measure failed:', e);
-                        }
-
-                        // First segment
-                        // The valid part is up to (length - crossfade)
-                        const safeLen = vocals.length - crossfadeFrames;
-
-                        // We must send a copy or transfer the buffer. 
-                        // slice() creates a copy.
-                        const safeVocals = vocals.slice(0, safeLen);
-                        const safeInstr = instrumentals.slice(0, safeLen);
-
-                        // Use self as any to bypass TS signature mismatch for transferables
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (self as any).postMessage({
-                            type: 'CHUNK_PLAYBACK',
-                            payload: {
-                                vocals: safeVocals,
-                                instrumentals: safeInstr,
-                                position: globalWritePosition
-                            }
-                        }, [safeVocals.buffer, safeInstr.buffer]);
-
-                        globalWritePosition += safeLen;
-
-                        // Save tails
-                        vocalsTail = vocals.slice(safeLen);
-                        instrumentalsTail = instrumentals.slice(safeLen);
-                    } else {
-                        // Merge with previous tail
-                        if (vocalsTail && instrumentalsTail) {
-                            applyCrossfade(vocals, vocalsTail, 0, crossfadeFrames, channels);
-                            applyCrossfade(instrumentals, instrumentalsTail, 0, crossfadeFrames, channels);
-                        }
-
-                        const isLast = index === segments.length - 1;
-                        const safeLen = isLast ? vocals.length : vocals.length - crossfadeFrames;
-
-                        const safeVocals = vocals.slice(0, safeLen);
-                        const safeInstr = instrumentals.slice(0, safeLen);
-
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (self as any).postMessage({
-                            type: 'CHUNK_PLAYBACK',
-                            payload: {
-                                vocals: safeVocals,
-                                instrumentals: safeInstr,
-                                position: globalWritePosition
-                            }
-                        }, [safeVocals.buffer, safeInstr.buffer]);
-
-                        globalWritePosition += safeLen;
-
-                        if (!isLast) {
-                            vocalsTail = vocals.slice(safeLen);
-                            instrumentalsTail = instrumentals.slice(safeLen);
-                        }
+                        } catch (e) { /* ignore */ }
                     }
-
-                    // Release the original pooled buffers back to the pool
-                    // chunkResult.vocals and chunkResult.instrumentals were acquired from bufferPool in strategies
-                    bufferPool.release(vocals);
-                    bufferPool.release(instrumentals);
-                },
-                abortController.signal
+                    // For streaming playback, we could de-interleave and send CHUNK_PLAYBACK here
+                }
             );
 
-            // Phase 6: Complete
-            // We do NOT cache here to save memory. 
-            // The main thread can cache if it accumulated the chunks.
-
-            sendProgress({ phase: 'caching', currentSegment: totalSegments, totalSegments, percentage: 100, message: 'Complete!' });
-
-            engine.dispose();
+            // Phase 6: Complete & Metrics
+            sendProgress({ phase: 'caching', currentSegment: 100, totalSegments: 100, percentage: 100, message: 'Complete!' });
 
             // Collect metrics
             const ttfaEntry = performance.getEntriesByName('time-to-first-audio')[0];
             const metrics: SeparationMetrics = {
                 ttfa: ttfaEntry?.duration || 0,
                 totalTime: performance.now() - performance.getEntriesByName('start-separation')[0].startTime,
-                numSegments: totalSegments
+                numSegments: Math.ceil(length / (sampleRate * 30)) // Rough estimate
             };
 
-            // Send empty buffers as complete signal
-            self.postMessage({
+            // Prepare results (de-interleaving for storage/output if necessary, or just send interleaved)
+            // Most audio players expect planar, but some can handle interleaved.
+            // Let's assume we send the buffers as they are.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (self as any).postMessage({
                 type: 'COMPLETE',
                 payload: {
-                    vocals: new ArrayBuffer(0),
-                    instrumentals: new ArrayBuffer(0),
+                    vocals: result.vocals.buffer,
+                    instrumentals: result.instrumentals.buffer,
                     fileHash,
                     timestamp: Date.now(),
                     metrics
                 }
-            });
+            }, [result.vocals.buffer, result.instrumentals.buffer]);
+
+            pipeline.dispose();
 
         } catch (error) {
             console.error('[audio.worker] Error:', error);

@@ -23,7 +23,8 @@ export class InferencePipeline {
         sampleRate: number,
         channels: number,
         priority: number = 0,
-        onProgress?: (progress: number) => void
+        onProgress?: (progress: number) => void,
+        onChunkProcessed?: (vocals: Float32Array, instrumentals: Float32Array, chunkIndex: number) => void
     ): Promise<InferenceOutput> {
         return new Promise((resolve, reject) => {
             this.scheduler.addTask(async (signal) => {
@@ -38,7 +39,8 @@ export class InferencePipeline {
                         sampleRate,
                         channels,
                         onProgress,
-                        signal
+                        signal,
+                        onChunkProcessed
                     );
                     resolve(result);
                 } catch (e) {
