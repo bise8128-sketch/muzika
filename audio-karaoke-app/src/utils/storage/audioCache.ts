@@ -9,13 +9,59 @@ import type { CachedAudio } from '@/types/storage';
 export class AudioCache {
     /**
      * Generate SHA-256 hash of a file for cache lookup
+     * Optimized for large files by hashing only start/end chunks + metadata
      */
     async hashFile(file: File): Promise<string> {
-        const arrayBuffer = await file.arrayBuffer();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex;
+        // Include metadata in hash input
+        const metadata = `${file.name}-${file.size}-${file.lastModified}-${file.type}`;
+
+        // If small file (< 50MB), hash entire content
+        if (file.size < 50 * 1024 * 1024) {
+            const arrayBuffer = await file.arrayBuffer();
+            // Combine metadata + content
+            const metaBuffer = new TextEncoder().encode(metadata);
+            const combined = new Uint8Array(metaBuffer.length + arrayBuffer.byteLength);
+            combined.set(metaBuffer);
+            combined.set(new Uint8Array(arrayBuffer), metaBuffer.length);
+
+            const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // For large files, hash first 1MB + middle 1MB + last 1MB + metadata
+        const chunkSize = 1024 * 1024;
+        const chunks: Blob[] = [];
+
+        chunks.push(file.slice(0, chunkSize)); // Start
+
+        if (file.size > chunkSize * 2) {
+            const mid = Math.floor(file.size / 2);
+            chunks.push(file.slice(mid, mid + chunkSize)); // Middle
+        }
+
+        if (file.size > chunkSize) {
+            chunks.push(file.slice(file.size - chunkSize, file.size)); // End
+        }
+
+        const buffers = await Promise.all(chunks.map(c => c.arrayBuffer()));
+        const metaBuffer = new TextEncoder().encode(metadata);
+
+        // Calculate total length
+        let totalLen = metaBuffer.length;
+        buffers.forEach(b => totalLen += b.byteLength);
+
+        const combined = new Uint8Array(totalLen);
+        let offset = 0;
+        combined.set(metaBuffer, offset);
+        offset += metaBuffer.length;
+
+        for (const buf of buffers) {
+            combined.set(new Uint8Array(buf), offset);
+            offset += buf.byteLength;
+        }
+
+        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     /**

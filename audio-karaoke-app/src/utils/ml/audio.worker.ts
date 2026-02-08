@@ -47,7 +47,7 @@ export type WorkerResponse =
 
 // Helper to send progress
 interface WorkerScope {
-    postMessage(message: any, transfer?: Transferable[]): void;
+    postMessage(message: unknown, transfer?: Transferable[]): void;
 }
 const ctx = self as unknown as WorkerScope;
 
