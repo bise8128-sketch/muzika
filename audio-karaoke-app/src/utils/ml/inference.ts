@@ -4,17 +4,25 @@ import { ModelType } from '@/types/model';
 import type { InferenceStrategy } from './inference/types';
 import { WaveformInferenceStrategy } from './inference/waveformStrategy';
 import { SpectralInferenceStrategy } from './inference/spectralStrategy';
+import { WebGPUInferenceStrategy } from './inference/webgpuStrategy';
 
 /**
  * Factory to create the appropriate inference strategy.
  */
-function createStrategy(modelInfo: ModelInfo): InferenceStrategy {
+function createStrategy(modelInfo: ModelInfo, session: ort.InferenceSession): InferenceStrategy {
+    // Check if session is WebGPU enabled to use optimized strategy
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isWebGPU = (session as any).handler === 'webgpu';
+
     switch (modelInfo.type) {
         case ModelType.DEMUCS:
         case ModelType.BS_ROFORMER:
             return new SpectralInferenceStrategy(modelInfo.config || {});
         case ModelType.MDX:
         default:
+            if (isWebGPU) {
+                return new WebGPUInferenceStrategy(modelInfo.config || {});
+            }
             return new WaveformInferenceStrategy();
     }
 }
@@ -28,7 +36,7 @@ export class InferenceEngine {
 
     constructor(session: ort.InferenceSession, modelInfo: ModelInfo) {
         this.session = session;
-        this.strategy = createStrategy(modelInfo);
+        this.strategy = createStrategy(modelInfo, session);
     }
 
     async init() {
