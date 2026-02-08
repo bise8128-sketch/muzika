@@ -1,4 +1,4 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
+mnbmimport { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 import { IFileSource } from '../io/types';
 import { decodeArrayBuffer } from './audioDecoder';
@@ -114,9 +114,16 @@ export class AudioSegmenter {
             // Clean up output file immediately
             await ffmpeg.deleteFile(outputName);
 
+            let arrayBuffer: ArrayBuffer;
+            if (typeof data === 'string') {
+                const encoder = new TextEncoder();
+                arrayBuffer = encoder.encode(data).buffer;
+            } else {
+                arrayBuffer = data.buffer;
+            }
+
             // Decode the WAV chunk to AudioBuffer
-            // We can use the browser's decodeAudioData since the chunk is small
-            const audioBuffer = await decodeArrayBuffer(data.buffer as ArrayBuffer);
+            const audioBuffer = await decodeArrayBuffer(arrayBuffer);
 
             yield {
                 data: audioBuffer,
@@ -131,7 +138,7 @@ export class AudioSegmenter {
 
     async dispose() {
         if (this.ffmpeg) {
-            this.ffmpeg.terminate(); // or simple cleanup if API differs
+            this.ffmpeg.terminate();
             this.ffmpeg = null;
             this.isInitialized = false;
         }

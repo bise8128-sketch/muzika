@@ -24,6 +24,9 @@ export interface SeparationMetrics {
 // Define worker message types
 export type WorkerMessage =
     | { type: 'START_SEPARATION'; payload: SeparationRequest }
+    | { type: 'INIT_STREAM_SESSION'; payload: { modelInfo: ModelInfo; sessionId: string } }
+    | { type: 'PROCESS_STREAM_CHUNK'; payload: { chunk: Float32Array; chunkIndex: number; sessionId: string; channels: number; sampleRate: number } }
+    | { type: 'END_STREAM_SESSION'; payload: { sessionId: string } }
     | { type: 'ABORT' };
 
 export interface SeparationRequest {
@@ -38,6 +41,8 @@ export type WorkerResponse =
     | { type: 'PROGRESS'; payload: ProcessingProgress }
     | { type: 'CHUNK_PLAYBACK'; payload: { vocals: Float32Array; instrumentals: Float32Array; position: number } }
     | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: SeparationMetrics } }
+    | { type: 'STREAM_READY'; payload: { sessionId: string } }
+    | { type: 'CHUNK_PROCESSED'; payload: { vocals: Float32Array; instrumentals: Float32Array; chunkIndex: number; sessionId: string } }
     | { type: 'ERROR'; payload: { message: string } };
 
 // Helper to send progress
@@ -47,6 +52,7 @@ const sendProgress = (progress: ProcessingProgress) => {
 
 let abortController: AbortController | null = null;
 let isAborted = false;
+let activeSession: { id: string; engine: InferenceEngine } | null = null;
 
 // Interface for SimpleAudioBuffer used in segmentAudio
 interface SimpleAudioBuffer {
@@ -59,13 +65,66 @@ interface SimpleAudioBuffer {
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
-    console.log('[audio.worker] Worker message received:', type);
+    // console.log('[audio.worker] Worker message received:', type);
 
     if (type === 'ABORT') {
         console.log('[audio.worker] Abort signal received');
         isAborted = true;
         if (abortController) {
             abortController.abort();
+        }
+        if (activeSession) {
+            activeSession.engine.dispose();
+            activeSession = null;
+        }
+        return;
+    }
+
+    if (type === 'INIT_STREAM_SESSION') {
+        const { modelInfo, sessionId } = e.data.payload;
+        console.log('[audio.worker] Initializing stream session:', sessionId);
+
+        try {
+            const engine = await loadModel(modelInfo);
+            activeSession = { id: sessionId, engine };
+            self.postMessage({ type: 'STREAM_READY', payload: { sessionId } });
+        } catch (err) {
+            self.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+        }
+        return;
+    }
+
+    if (type === 'PROCESS_STREAM_CHUNK') {
+        const { chunk, chunkIndex, sessionId, channels, sampleRate } = e.data.payload;
+
+        if (!activeSession || activeSession.id !== sessionId) {
+            self.postMessage({ type: 'ERROR', payload: { message: 'Session not initialized or mismatch' } });
+            return;
+        }
+
+        try {
+            const result = await activeSession.engine.processChunk(chunk, channels, sampleRate);
+
+            self.postMessage({
+                type: 'CHUNK_PROCESSED',
+                payload: {
+                    vocals: result.vocals,
+                    instrumentals: result.instrumentals,
+                    chunkIndex,
+                    sessionId
+                }
+            }, [result.vocals.buffer as ArrayBuffer, result.instrumentals.buffer as ArrayBuffer]); // Transfer buffers
+        } catch (err) {
+            self.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+        }
+        return;
+    }
+
+    if (type === 'END_STREAM_SESSION') {
+        const { sessionId } = e.data.payload;
+        if (activeSession && activeSession.id === sessionId) {
+            activeSession.engine.dispose();
+            activeSession = null;
         }
         return;
     }
