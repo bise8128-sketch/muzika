@@ -27,6 +27,19 @@ export interface SeparationMetrics {
  * Separate audio into vocals and instrumentals using a Web Worker.
  * Supports progressive streaming and WebGPU acceleration.
  *
+ * TODO: REFACTOR TO USE WorkerPool
+ * Currently, this function instantiates a raw Worker directly. To improve resource management
+ * and prevent browser freezing when multiple separations are requested, we should integrate
+ * with the `WorkerPool` class (src/utils/worker/WorkerPool.ts).
+ * 
+ * Migration Strategy:
+ * 1. Extend `WorkerPool` or `WorkerWrapper` to support long-lived tasks with streaming events.
+ *    The current `WorkerPool` is request-response oriented (Promise-based).
+ *    We need support for intermediate events like 'CHUNK_PLAYBACK'.
+ * 2. Alternatively, modify the worker protocol to batch chunks and return them in 'PROGRESS' events
+ *    if `WorkerPool` supports payload in progress events.
+ * 3. Use `workerPool.acquire()` (if implemented) to get a dedicated worker for the duration of the stream.
+ * 
  * @param file - Audio file to process
  * @param options - Separation options including model info and callbacks
  * @returns Separation result with vocals and instrumentals AudioBuffers
