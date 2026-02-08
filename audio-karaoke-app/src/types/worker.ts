@@ -36,3 +36,25 @@ export interface InitEnginePayload {
     canvas?: OffscreenCanvas;
     visualSettings?: any; // VisualSettings
 }
+
+// --- Worker Pool Types ---
+
+export type TaskPriority = 'HIGH' | 'NORMAL' | 'LOW';
+
+export interface WorkerTask<TPayload = any, TResult = any> {
+    id: string;
+    type: string;
+    priority: TaskPriority;
+    payload: TPayload;
+    transferables?: Transferable[];
+    onProgress?: (progress: number) => void;
+    resolve: (result: TResult) => void;
+    reject: (error: Error) => void;
+}
+
+export interface WorkerPoolConfig {
+    minWorkers?: number;
+    maxWorkers?: number;
+    idleTimeout?: number;
+    workerScript: string;
+}
