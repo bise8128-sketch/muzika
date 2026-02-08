@@ -1,4 +1,4 @@
-mnbmimport { FFmpeg } from '@ffmpeg/ffmpeg';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 import { IFileSource } from '../io/types';
 import { decodeArrayBuffer } from './audioDecoder';
