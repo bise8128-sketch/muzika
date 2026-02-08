@@ -6,9 +6,10 @@ import { useModels } from '@/hooks/useModels';
 import YouTubeInput from '@/components/YouTubeInput';
 import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
 import { DirectKaraokeUpload } from './DirectKaraokeUpload';
+import { ExtractedMetadata } from '@/types/schema';
 
 interface AudioUploadProps {
-    onUpload: (files: File[], isKaraokeMode?: boolean) => void;
+    onUpload: (files: File[], isKaraokeMode?: boolean, metadata?: ExtractedMetadata[]) => void;
     isLoading?: boolean;
     autoStartKaraoke?: boolean;
     onAutoStartToggle?: (value: boolean) => void;
@@ -129,9 +130,8 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     <div className="p-2">
                         <DirectKaraokeUpload
                             onUpload={(files, metadata) => {
-                                // In a real implementation, we would pass metadata up
                                 console.log('Karaoke metadata extracted:', metadata);
-                                onUpload(files, true);
+                                onUpload(files, true, metadata);
                             }}
                             onCancel={() => setIsKaraokeMode(false)}
                         />

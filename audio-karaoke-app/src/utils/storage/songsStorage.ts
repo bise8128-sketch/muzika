@@ -8,6 +8,7 @@ import { db } from './audioDatabase';
 import type { SongEntry } from '@/types/storage';
 import { audioCache } from './audioCache';
 import * as mm from 'music-metadata-browser';
+import { ExtractedMetadata } from '@/types/schema';
 
 export class SongsStorage {
     /**
@@ -44,23 +45,45 @@ export class SongsStorage {
     /**
      * Save a direct karaoke upload (bypassing separation)
      */
-    async saveDirectKaraoke(file: File): Promise<number> {
+    async saveDirectKaraoke(file: File, providedMetadata?: ExtractedMetadata): Promise<number> {
         const arrayBuffer = await file.arrayBuffer();
         let metadata;
 
-        try {
-            metadata = await mm.parseBlob(file);
-        } catch (e) {
-            console.warn('Failed to parse metadata:', e);
-            metadata = { common: {}, format: {} };
+        if (providedMetadata) {
+            metadata = {
+                common: {
+                    title: providedMetadata.title,
+                    artist: providedMetadata.artist,
+                    album: providedMetadata.album,
+                    year: providedMetadata.year,
+                    genre: providedMetadata.genre,
+                    picture: providedMetadata.picture ? [{
+                        format: providedMetadata.picture.format,
+                        data: providedMetadata.picture.data
+                    }] : undefined
+                },
+                format: {
+                    duration: providedMetadata.duration
+                }
+            };
+        } else {
+            try {
+                metadata = await mm.parseBlob(file);
+            } catch (e) {
+                console.warn('Failed to parse metadata:', e);
+                metadata = { common: {}, format: {} };
+            }
         }
 
         const fileHash = await audioCache.hashFile(file);
 
         const newEntry: SongEntry = {
             type: 'direct_karaoke',
-            title: metadata.common.title || file.name,
+            title: metadata.common.title || file.name.replace(/\.[^/.]+$/, ""),
             artist: metadata.common.artist,
+            album: metadata.common.album,
+            genre: metadata.common.genre,
+            year: metadata.common.year,
             versionName: 'Original Upload',
             instrumentalData: arrayBuffer,
             originalHash: fileHash,

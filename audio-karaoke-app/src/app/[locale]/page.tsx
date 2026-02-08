@@ -47,6 +47,7 @@ const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManage
 });
 
 import { SeparationResult as ISeparationResult } from '@/types/audio';
+import { ExtractedMetadata } from '@/types/schema';
 
 type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
 
@@ -327,13 +328,15 @@ export default function Home() {
     }
   }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError]);
 
-  const handleUpload = async (files: File[], isKaraokeMode: boolean = false) => {
+  const handleUpload = async (files: File[], isKaraokeMode: boolean = false, metadata?: ExtractedMetadata[]) => {
     if (files.length === 0) return;
 
     if (isKaraokeMode) {
       try {
-        for (const file of files) {
-          await songsStorage.saveDirectKaraoke(file);
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const fileMetadata = metadata ? metadata[i] : undefined;
+          await songsStorage.saveDirectKaraoke(file, fileMetadata);
         }
         // Navigate to library or show success
         router.push('/library');
