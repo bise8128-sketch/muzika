@@ -3,6 +3,7 @@
 ## Faza 1: Preduvjeti
 
 ### Potreban software
+
 ```bash
 Node.js 18+ LTS (https://nodejs.org/)
 npm ili yarn (dolazi s Node.js)
@@ -11,6 +12,7 @@ VS Code (https://code.visualstudio.com/)
 ```
 
 ### Provjera instalacije
+
 ```bash
 node --version    # trebalo bi v18+
 npm --version     # trebalo bi v9+
@@ -22,6 +24,7 @@ git --version     # bilo koja verzija
 ## Faza 2: Inicijalizacija projekta
 
 ### Korak 1: Kreiranje Next.js aplikacije
+
 ```bash
 # Opcija A: Korištenje create-next-app (preporučeno)
 npx create-next-app@latest audio-karaoke-app --typescript --tailwind
@@ -33,6 +36,7 @@ npm init -y
 ```
 
 ### Korak 2: Instalacija ključnih zavisnosti
+
 ```bash
 cd audio-karaoke-app
 
@@ -64,7 +68,9 @@ npm install -D eslint next-eslint-config-prettier prettier
 ```
 
 ### Korak 3: Konfiguriranje TypeScript
+
 Kreiraj `tsconfig.json`:
+
 ```json
 {
   "compilerOptions": {
@@ -92,7 +98,9 @@ Kreiraj `tsconfig.json`:
 ```
 
 ### Korak 4: Konfiguriranje Next.js
+
 Kreiraj `next.config.js`:
+
 ```javascript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -124,11 +132,13 @@ module.exports = nextConfig;
 ```
 
 ### Korak 5: Tailwind CSS setup
+
 ```bash
 npx tailwindcss init -p
 ```
 
 Uredi `tailwind.config.js`:
+
 ```javascript
 module.exports = {
   content: [
@@ -148,6 +158,7 @@ module.exports = {
 ## Faza 3: Struktura projekta
 
 ### Kreiraj direktorijume
+
 ```bash
 mkdir -p src/{components,workers,utils,hooks,types,pages,styles}
 
@@ -161,6 +172,7 @@ mkdir -p public/{models,fonts}
 ```
 
 ### Primjer strukture datoteka
+
 ```
 audio-karaoke-app/
 ├── src/
@@ -217,6 +229,7 @@ audio-karaoke-app/
 ## Faza 4: Inicijalni setup datoteke
 
 ### `src/pages/_app.tsx`
+
 ```typescript
 import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
@@ -233,6 +246,7 @@ export default function App({ Component, pageProps }: AppProps) {
 ```
 
 ### `src/pages/index.tsx`
+
 ```typescript
 import Head from 'next/head';
 import AudioUpload from '@/components/AudioUpload/AudioUpload';
@@ -255,6 +269,7 @@ export default function Home() {
 ```
 
 ### `src/types/audio.ts`
+
 ```typescript
 export interface AudioBuffer {
   channelData: Float32Array[];
@@ -283,6 +298,7 @@ export interface LyricLine {
 ```
 
 ### `src/utils/storage/indexedDBStore.ts`
+
 ```typescript
 import Dexie, { Table } from 'dexie';
 
@@ -335,9 +351,66 @@ Otvori browser na `http://localhost:3000`
 
 ---
 
+## Faza 5.5: Python Backend Setup (Opciono)
+
+Aplikacija uključuje opcioni Python backend za poboljšano preuzimanje sa YouTube-a i server-side audio procesiranje.
+
+### Brzi Setup
+
+```bash
+# Navigiraj do python-audio-cli direktorijuma
+cd ../python-audio-cli
+
+# Pokreni setup skriptu (kreira venv i instalira zavisnosti)
+bash setup.sh
+
+# Vrati se u glavni app
+cd ../audio-karaoke-app
+```
+
+### Automatsko Pokretanje
+
+Kada pokrenete `npm run dev`, i Next.js frontend i Python backend će se automatski pokrenuti.
+
+**Napomena**: Ako želite pokrenuti samo Next.js app bez Python backend-a:
+
+```bash
+npm run dev:next-only
+```
+
+### Manualna Kontrola Backend-a
+
+```bash
+# Pokreni backend manualno
+cd ../python-audio-cli
+bash start-backend.sh
+
+# Zaustavi backend
+# Pritisni Ctrl+C u terminalu koji pokreće backend
+```
+
+### Što Backend Pruža
+
+- ✅ Stabilno preuzimanje YouTube audio-a koristeći yt-dlp
+- ✅ Server-side audio procesiranje sa Demucs
+- ✅ Cloud biblioteka za preuzete pjesme
+- ✅ Trajno skladištenje na serveru
+
+### Provjera Backend-a
+
+```bash
+# Provjeri da li backend radi
+curl http://localhost:8000/api/library
+
+# Trebalo bi vratiti JSON sa listom pjesama
+```
+
+---
+
 ## Faza 6: Validacija setup-a
 
 ### Checklist
+
 - [ ] Node.js instaliran (`node --version` vraća v18+)
 - [ ] npm instaliran (`npm --version` vraća v9+)
 - [ ] Next.js projekt kreiran
@@ -352,6 +425,7 @@ Otvori browser na `http://localhost:3000`
 ## Faza 7: Dodatne alate (Opciono)
 
 ### ESLint i Prettier
+
 ```bash
 npm install -D eslint prettier eslint-config-prettier
 
@@ -370,6 +444,7 @@ echo '{
 ```
 
 ### Git setup
+
 ```bash
 git init
 echo "node_modules/
@@ -385,15 +460,19 @@ git commit -m "Initial commit"
 ## Troubleshooting
 
 ### Problem: "WebGPU not available"
+
 **Rješenje**: Koristi Chrome 113+ ili Edge 113+. Za razvoj, koristi --enable-features=Vulkan ili --enable-features=Direct3D12.
 
 ### Problem: "Out of Memory"
+
 **Rješenje**: Node.js je iscrpio memoriju. Pokrenite s većom alokacijom:
+
 ```bash
 NODE_OPTIONS="--max-old-space-size=4096" npm run dev
 ```
 
 ### Problem: "Module not found"
+
 **Rješenje**: Provjerite putanju u `tsconfig.json` paths i `next.config.js` resolve.alias.
 
 ---

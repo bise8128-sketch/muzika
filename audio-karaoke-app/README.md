@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Muzika - AI-Powered Karaoke Application
 
-## Getting Started
+A modern web application for AI-powered vocal separation and karaoke. Process audio files locally in your browser or use the Python backend for enhanced features.
 
-First, run the development server:
+## Features
+
+- 🎤 **AI Vocal Separation** - Separate vocals from instrumentals using ONNX models
+- 🎵 **Karaoke Mode** - Real-time pitch shifting and tempo control
+- 📚 **Song Library** - Manage your processed songs with IndexedDB
+- 🌐 **YouTube Integration** - Download and process YouTube videos
+- 🐍 **Python Backend** - Optional server-side processing with Demucs
+- 💾 **Cloud Library** - Access songs processed on the backend server
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. (Optional) Set Up Python Backend
+
+For enhanced YouTube downloading and server-side processing:
+
+```bash
+cd ../python-audio-cli
+bash setup.sh
+cd ../audio-karaoke-app
+```
+
+### 3. Start Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This will start:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js app** on <http://localhost:3000>
+- **Python backend** on <http://localhost:8000> (if configured)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open <http://localhost:3000> in your browser.
+
+### Run Without Backend
+
+If you only want the Next.js app:
+
+```bash
+npm run dev:next-only
+```
+
+## Backend Features
+
+The Python backend provides:
+
+- ✅ Stable YouTube audio extraction using yt-dlp
+- ✅ Server-side audio processing with Demucs
+- ✅ Cloud library for downloaded songs
+- ✅ Persistent storage on the server
+
+## Available Scripts
+
+- `npm run dev` - Start both Next.js and Python backend
+- `npm run dev:next-only` - Start only Next.js (no backend)
+- `npm run dev:next` - Start Next.js server only
+- `npm run dev:python` - Start Python backend only
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run test` - Run tests
+
+## Technology Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **Styling**: Tailwind CSS 4
+- **AI/ML**: ONNX Runtime Web, WebGPU
+- **Storage**: IndexedDB (Dexie.js)
+- **Audio**: Web Audio API, SoundTouch.js
+- **Backend**: FastAPI, yt-dlp, Demucs (optional)
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Project Architecture](../1_PROJECT_ARCHITECTURE.md)
+- [Setup Guide](../2_SETUP_GUIDE.md)
+- [API Specification](../3_API_SPECIFICATION.md)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment instructions.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
