@@ -1,5 +1,6 @@
 import { WorkerPool } from '../WorkerPool';
-import { WorkerTask } from '../../../types/worker';
+// We need to import types, but for test purposes we can use 'any' where types are complex
+// import { WorkerTask } from '../../../types/worker';
 
 // Mock Worker class
 class MockWorker {
@@ -14,7 +15,7 @@ class MockWorker {
             // Simulate async processing
             setTimeout(() => {
                 if (this.onmessage) {
-                    // Echo back the ID and simulate success
+                    // Echo back the ID and simulate success if not an error test
                     const response = {
                         type: 'SUCCESS',
                         id: message.id,
@@ -27,22 +28,21 @@ class MockWorker {
     }
 }
 
-// Replace global Worker with MockWorker
-global.Worker = MockWorker as any;
-
 describe('WorkerPool', () => {
     let pool: WorkerPool;
+    const originalWorker = global.Worker;
 
     beforeEach(() => {
         jest.useFakeTimers();
-        // Reset MockWorker specific mocks if needed, but since we instantiate new ones each time, it's fine.
-        // However, we might want to spy on the constructor or instances.
+        // @ts-ignore
+        global.Worker = MockWorker;
     });
 
     afterEach(() => {
         if (pool) {
             pool.terminate();
         }
+        global.Worker = originalWorker;
         jest.useRealTimers();
     });
 
@@ -70,7 +70,7 @@ describe('WorkerPool', () => {
         const payload = { data: 'test' };
         const promise = pool.addTask('TEST_TASK', payload);
 
-        // Fast-forward time for the setTimeout in MockWorker
+        // Fast-forward time
         jest.runAllTimers();
 
         const result = await promise;
@@ -91,9 +91,6 @@ describe('WorkerPool', () => {
 
         let stats = pool.getStats();
         // Should have 2 workers busy, 1 task in queue
-        // Note: addTask is synchronous until the promise, but the worker creation might be sync.
-        // MockWorker.postMessage uses setTimeout, so workers become busy immediately but don't finish yet.
-
         expect(stats.totalWorkers).toBe(2);
         expect(stats.busyWorkers).toBe(2);
         expect(stats.queueLength).toBe(1);
@@ -123,8 +120,6 @@ describe('WorkerPool', () => {
         jest.runAllTimers();
         await p2;
 
-        // Since maxWorkers is 1, it must reuse the same worker (or a new one replacing it, but logic should reuse)
-        // We can't easily check identity without spying on internal map, but stats show count stays at 1
         const stats = pool.getStats();
         expect(stats.totalWorkers).toBe(1);
     });
@@ -176,8 +171,8 @@ describe('WorkerPool', () => {
         }
 
         // Override global worker for this test
-        const originalWorker = global.Worker;
-        global.Worker = ErrorWorker as any;
+        // @ts-ignore
+        global.Worker = ErrorWorker;
 
         pool = new WorkerPool({
             minWorkers: 1,
@@ -189,12 +184,9 @@ describe('WorkerPool', () => {
             const p = pool.addTask('FAIL_TASK', {});
             jest.runAllTimers();
             await p;
-            fail('Should have thrown an error');
+            throw new Error('Should have thrown an error');
         } catch (e: any) {
             expect(e.message).toBe('Worker failed');
         }
-
-        // Restore
-        global.Worker = originalWorker;
     });
 });
