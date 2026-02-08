@@ -15,10 +15,10 @@ describe('FileValidator', () => {
         global.URL.revokeObjectURL = jest.fn();
 
         // Mock Audio
-        // @ts-ignore
+        // @ts-expect-error - Mocking global Audio constructor
         global.Audio = class {
             onloadedmetadata: (() => void) | null = null;
-            onerror: ((e: any) => void) | null = null;
+            onerror: ((e: unknown) => void) | null = null;
             duration: number = 0;
             src: string = '';
 
@@ -121,7 +121,7 @@ describe('FileValidator', () => {
         validator = new FileValidator(configWithDuration);
 
         // Mock Audio to return specific duration
-        // @ts-ignore
+        // @ts-expect-error - Mocking Audio
         global.Audio = class {
             onloadedmetadata: (() => void) | null = null;
             duration: number = 0;
@@ -139,7 +139,7 @@ describe('FileValidator', () => {
         expect(result.errors.some(e => e.includes('too short'))).toBe(true);
 
         // Test too long
-        // @ts-ignore
+        // @ts-expect-error - Mocking Audio
         global.Audio = class {
             onloadedmetadata: (() => void) | null = null;
             duration: number = 0;
