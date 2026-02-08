@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
 import YouTubeInput from '@/components/YouTubeInput';
+import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
 
 interface AudioUploadProps {
     onUpload: (files: File[], isKaraokeMode?: boolean) => void;
@@ -33,22 +34,33 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const validateFiles = useCallback((files: File[]): boolean => {
-        const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac'];
-        const maxSize = 50 * 1024 * 1024; // 50MB
+    const validateFiles = useCallback(async (files: File[]): Promise<boolean> => {
+        const config: ValidationConfig = {
+            maxFileSize: 50 * 1024 * 1024, // 50MB
+            allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/m4a'],
+            // Optional: minFreeStorage could be added here if we had a way to estimate it reliably in the browser for all users
+        };
+
+        const validator = new FileValidator(config);
+
+        // Clear previous errors
+        setError(null);
 
         for (const file of files) {
-            if (!validTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && !file.name.endsWith('.flac')) {
-                setError(t('errorFormat', { name: file.name }));
+            const result = await validator.validate(file);
+
+            if (!result.isValid) {
+                // Show the first error
+                setError(result.errors[0] || t('errorFormat', { name: file.name }));
                 return false;
             }
-            if (file.size > maxSize) {
-                setError(t('errorSize', { name: file.name }));
-                return false;
+
+            // Show warnings if any (optional, maybe as toast or console)
+            if (result.warnings.length > 0) {
+                console.warn(`Validation warnings for ${file.name}:`, result.warnings);
             }
         }
 
-        setError(null);
         return true;
     }, [t]);
 
@@ -62,20 +74,26 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
         setIsDragging(false);
     }, []);
 
-    const handleDrop = useCallback((e: React.DragEvent) => {
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && validateFiles(files)) {
-            onUpload(files, isKaraokeMode);
+        if (files.length > 0) {
+            const isValid = await validateFiles(files);
+            if (isValid) {
+                onUpload(files, isKaraokeMode);
+            }
         }
     }, [onUpload, isKaraokeMode, validateFiles]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files ? Array.from(e.target.files) : [];
-        if (files.length > 0 && validateFiles(files)) {
-            onUpload(files, isKaraokeMode);
+        if (files.length > 0) {
+            const isValid = await validateFiles(files);
+            if (isValid) {
+                onUpload(files, isKaraokeMode);
+            }
         }
     };
 
