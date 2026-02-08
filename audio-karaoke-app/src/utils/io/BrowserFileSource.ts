@@ -4,7 +4,7 @@ import { IFileSource } from './types';
  * Implementation of IFileSource for Browser File/Blob objects.
  */
 export class BrowserFileSource implements IFileSource {
-    private readonly blob: Blob;
+    readonly blob: Blob;
     private readonly filename?: string;
 
     constructor(source: Blob | File) {
