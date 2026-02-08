@@ -119,7 +119,7 @@ export class AudioSegmenter {
                 const encoder = new TextEncoder();
                 arrayBuffer = encoder.encode(data).buffer;
             } else {
-                arrayBuffer = data.buffer;
+                arrayBuffer = data.buffer as ArrayBuffer;
             }
 
             // Decode the WAV chunk to AudioBuffer

@@ -46,8 +46,13 @@ export type WorkerResponse =
     | { type: 'ERROR'; payload: { message: string } };
 
 // Helper to send progress
+interface WorkerScope {
+    postMessage(message: any, transfer?: Transferable[]): void;
+}
+const ctx = self as unknown as WorkerScope;
+
 const sendProgress = (progress: ProcessingProgress) => {
-    self.postMessage({ type: 'PROGRESS', payload: progress });
+    ctx.postMessage({ type: 'PROGRESS', payload: progress });
 };
 
 let abortController: AbortController | null = null;
@@ -87,9 +92,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         try {
             const engine = await loadModel(modelInfo);
             activeSession = { id: sessionId, engine };
-            self.postMessage({ type: 'STREAM_READY', payload: { sessionId } });
+            ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId } });
         } catch (err) {
-            self.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+            ctx.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
         }
         return;
     }
@@ -98,14 +103,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         const { chunk, chunkIndex, sessionId, channels, sampleRate } = e.data.payload;
 
         if (!activeSession || activeSession.id !== sessionId) {
-            self.postMessage({ type: 'ERROR', payload: { message: 'Session not initialized or mismatch' } });
+            ctx.postMessage({ type: 'ERROR', payload: { message: 'Session not initialized or mismatch' } });
             return;
         }
 
         try {
             const result = await activeSession.engine.processChunk(chunk, channels, sampleRate);
 
-            self.postMessage({
+            ctx.postMessage({
                 type: 'CHUNK_PROCESSED',
                 payload: {
                     vocals: result.vocals,
@@ -115,7 +120,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 }
             }, [result.vocals.buffer as ArrayBuffer, result.instrumentals.buffer as ArrayBuffer]); // Transfer buffers
         } catch (err) {
-            self.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+            ctx.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
         }
         return;
     }
@@ -128,7 +133,6 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         }
         return;
     }
-
     if (type === 'START_SEPARATION') {
         const { file, decodedData, sampleRate, modelInfo, skipCache } = e.data.payload;
         console.log('[audio.worker] Starting separation for file:', file.name, 'model:', modelInfo.id);
