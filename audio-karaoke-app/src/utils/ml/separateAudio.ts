@@ -194,13 +194,8 @@ export async function separateAudio(
         worker.postMessage({ type: 'END_STREAM_SESSION', payload: { sessionId } });
 
         const finalBuffers = bufferManager.getAllAudioBuffers();
-        const metrics: SeparationMetrics = {
-            ttfa: 0,
-            totalTime: progressTracker.state.elapsed,
-            numSegments: chunkIndex
-        };
 
-        // Cache attempt 
+        // Cache attempt
         // Note: For very large files, createAudioBuffer in bufferManager might fail if it tries to allocate huge buffers.
         // But for typical songs it's fine. For 1 hour mix, it might crash.
         // We're robust for streaming, but final result aggregation is still memory heavy.
@@ -273,7 +268,10 @@ async function serverSeparateAudio(
             onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
 
             // Fetch and decode stems
-            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : null;
+            if (!AudioContextClass) {
+                throw new Error('AudioContext not supported in this environment');
+            }
             const ctx = new AudioContextClass();
 
             const fetchAndDecode = async (url: string) => {

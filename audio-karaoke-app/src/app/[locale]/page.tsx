@@ -155,7 +155,10 @@ export default function Home() {
 
             // Load audio files
             try {
-              const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+              if (!AudioContextClass) {
+                throw new Error("AudioContext not supported");
+              }
               const ctx = new AudioContextClass();
 
               const [vocalsBuffer, instrumentalBuffer, originalBuffer] = await Promise.all([
@@ -383,7 +386,10 @@ export default function Home() {
       } else if (track.blob instanceof Blob) {
         // Convert Blob to AudioBuffer
         const arrayBuffer = await track.blob.arrayBuffer();
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+        if (!AudioContextClass) {
+          throw new Error("AudioContext not supported");
+        }
         const audioContext = new AudioContextClass();
         buffer = await audioContext.decodeAudioData(arrayBuffer);
       } else {

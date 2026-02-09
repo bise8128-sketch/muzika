@@ -21,7 +21,11 @@ export function getAudioContext(): AudioContext {
     }
 
     if (!audioContext) {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+        const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null);
+        if (!AudioContextClass) {
+            throw new Error('AudioContext not supported in this environment');
+        }
+        audioContext = new AudioContextClass({
             sampleRate: 44100,
             latencyHint: 'interactive',
         });
@@ -176,6 +180,7 @@ export function getAudioContextState(): AudioContextState | null {
  * Check if Web Audio API is supported
  */
 export function isWebAudioSupported(): boolean {
+    if (typeof window === 'undefined') return false;
     return !!(window.AudioContext || (window as any).webkitAudioContext);
 }
 
@@ -183,6 +188,7 @@ export function isWebAudioSupported(): boolean {
  * Check if AudioWorklet is supported
  */
 export function isAudioWorkletSupported(): boolean {
+    if (typeof window === 'undefined') return false;
     return !!(window.AudioContext && (window.AudioContext.prototype as any).audioWorklet);
 }
 

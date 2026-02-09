@@ -58,6 +58,11 @@ export class AudioEngine {
     async play() {
         await this.initialize();
 
+        if (!this.player.buffer.loaded) {
+            console.warn('AudioEngine: Buffer not loaded, cannot play');
+            return;
+        }
+
         if (this.player.state === 'started') return;
 
         // If we are at the end, restart
@@ -112,7 +117,7 @@ export class AudioEngine {
 
         this._currentTime = Math.max(0, Math.min(time, this._duration));
 
-        if (wasPlaying) {
+        if (wasPlaying && this.player.buffer.loaded) {
             this.player.start(getContext().now(), this._currentTime);
         }
 

@@ -152,8 +152,16 @@ export class RealtimeAudioProcessor {
         this.sampleRate = sampleRate;
 
         // Check if AudioWorklet is supported
-        if (typeof AudioContext !== 'undefined' || typeof (window as any).webkitAudioContext !== 'undefined') {
-            this.isWorkletSupported = 'audioWorklet' in AudioContext.prototype;
+        if (typeof window !== 'undefined') {
+            // Fetch and decode stems
+            const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : null;
+            if (!AudioContextClass) {
+                throw new Error('AudioContext not supported in this environment');
+            }
+            // The original code had a syntax error here.
+            // The intention was likely to check for AudioWorklet support on the AudioContextClass prototype.
+            // Reverting to the original logic for checking AudioWorklet support, as the provided snippet was malformed.
+            this.isWorkletSupported = 'audioWorklet' in AudioContextClass.prototype;
         }
 
         if (!this.isWorkletSupported) {
