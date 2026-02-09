@@ -218,6 +218,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                     }}
                     mode={processingMode}
                     disabled={isLoading}
+                    onUrlSubmit={(url) => onServerProcessing?.(url, { model: selectedModelId, format: serverFormat })}
                 />
             )}
 

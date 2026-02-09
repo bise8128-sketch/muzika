@@ -1,6 +1,6 @@
 import { StreamableBufferManager } from '@/utils/audio/StreamableBufferManager';
 import { getAudioContext } from '@/utils/audio/audioContext';
-import type { ModelInfo } from '@/types/model';
+import { ModelType, ModelInfo } from '@/types/model';
 import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 import { audioCache } from '@/utils/storage/audioCache';
 import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
@@ -60,6 +60,13 @@ export async function separateAudio(
     let segmenter: BrowserAudioSegmenter | null = null;
     let fileSource: BrowserFileSource | null = null;
     let sessionId: string | null = null;
+
+    const fileHash = await audioCache.hashFile(file);
+    const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
+
+    if (serverModels.includes(modelInfo.type)) {
+        return serverSeparateAudio(file, options, fileHash);
+    }
 
     try {
         const ctx = getAudioContext();
@@ -217,3 +224,83 @@ export async function separateAudio(
         await segmenter?.dispose();
     }
 }
+
+async function serverSeparateAudio(
+    file: File,
+    options: SeparationOptions,
+    fileHash: string
+): Promise<SeparationResult> {
+    const { modelInfo, onProgress } = options;
+
+    try {
+        onProgress?.({ phase: 'decoding', percentage: 0, message: 'Uploading to server...', currentSegment: 0, totalSegments: 0 });
+
+        // 1. Upload file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch('/api/backend-upload', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!uploadRes.ok) {
+            const err = await uploadRes.json();
+            throw new Error(err.error || 'Upload failed');
+        }
+
+        const uploadData = await uploadRes.json();
+        const filename = uploadData.filename;
+
+        onProgress?.({ phase: 'separating', percentage: 10, message: 'Starting server-side separation...', currentSegment: 0, totalSegments: 0 });
+
+        // 2. Start separation
+        const processRes = await fetch('/api/python-processing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, model: modelInfo.id })
+        });
+
+        if (!processRes.ok) {
+            const err = await processRes.json();
+            throw new Error(err.error || 'Separation request failed');
+        }
+
+        const processData = await processRes.json();
+
+        // If the API returns 'completed' directly (sync)
+        if (processData.status === 'completed') {
+            onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
+
+            // Fetch and decode stems
+            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            const ctx = new AudioContextClass();
+
+            const fetchAndDecode = async (url: string) => {
+                const res = await fetch(url);
+                const arrayBuffer = await res.arrayBuffer();
+                return await ctx.decodeAudioData(arrayBuffer);
+            };
+
+            const [vocals, instrumentals] = await Promise.all([
+                fetchAndDecode(processData.stems.vocals),
+                fetchAndDecode(processData.stems.other || processData.stems.instrumental || processData.stems.accompaniment)
+            ]);
+
+            return {
+                vocals,
+                instrumentals,
+                originalAudio: null,
+                fileHash,
+                timestamp: Date.now()
+            };
+        }
+
+        throw new Error('Async processing not yet implemented in separateAudio');
+
+    } catch (err) {
+        console.error('[serverSeparateAudio] Error:', err);
+        throw err;
+    }
+}
+

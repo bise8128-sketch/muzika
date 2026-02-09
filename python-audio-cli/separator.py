@@ -1,69 +1,127 @@
 import torch
 import torchaudio
-from torchaudio.pipelines import HDEMUCS_HIGH_MUSDB_PLUS
+from torchaudio.pipelines import HDEMUCS_HIGH_MUSDB_PLUS, HDEMUCS_HIGH_MUSDB
 import os
 import logging
+import gc
 from utils import ensure_dir
 
 logger = logging.getLogger('Separator')
+
+# Configurable model mapping
+# format: key -> (pipeline_bundle, display_name, description)
+MODEL_REGISTRY = {
+    "htdemucs": {
+        "bundle": HDEMUCS_HIGH_MUSDB_PLUS,
+        "name": "Demucs v4 High Quality",
+        "description": "High fidelity separation (slower)",
+        "type": "demucs"
+    },
+    "htdemucs_ft": {
+        "bundle": HDEMUCS_HIGH_MUSDB,
+        "name": "Demucs v4 Fine-Tuned",
+        "description": "Balanced speed and quality",
+        "type": "demucs"
+    },
+    "bs_roformer": {
+        "bundle": None, # Placeholder for future implementation
+        "name": "BS-Roformer",
+        "description": "State of the art (requires external weights)",
+        "type": "custom"
+    }
+}
 
 class AudioSeparator:
     def __init__(self, output_dir="separated"):
         self.output_dir = output_dir
         ensure_dir(self.output_dir)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        
         self.mock_mode = os.environ.get("MOCK_SEPARATION", "false").lower() == "true"
         
+        self.current_model_name = None
+        self.model = None
+        self.sample_rate = 44100
+        
+        logger.info(f"Separator initialized on {self.device}. Mock mode: {self.mock_mode}")
+
+    def get_available_models(self):
+        return [
+            {"id": k, "name": v["name"], "description": v["description"]} 
+            for k, v in MODEL_REGISTRY.items()
+        ]
+
+    def load_model(self, model_name):
         if self.mock_mode:
-            logger.info("Initializing in MOCK MODE. Skipping model load.")
-            self.model = None
+            logger.info("Mock mode: skipping model load")
             return
 
-        logger.info(f"Initializing Demucs on {self.device}...")
+        if model_name not in MODEL_REGISTRY:
+            # Fallback for unknown models (e.g. if frontend sends something else)
+            logger.warning(f"Unknown model: {model_name}, falling back to htdemucs")
+            model_name = "htdemucs"
+            
+        if self.current_model_name == model_name and self.model is not None:
+            return # Already loaded
+
+        # Unload previous model
+        if self.model is not None:
+            logger.info(f"Unloading {self.current_model_name}...")
+            del self.model
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        logger.info(f"Loading model: {model_name}...")
+        config = MODEL_REGISTRY[model_name]
         
         try:
-            self.bundle = HDEMUCS_HIGH_MUSDB_PLUS
-            self.model = self.bundle.get_model().to(self.device)
-            self.sample_rate = self.bundle.sample_rate
-            self.model.eval()
-            logger.info("Model loaded successfully.")
+            if config["type"] == "demucs":
+                bundle = config["bundle"]
+                self.model = bundle.get_model().to(self.device)
+                self.sample_rate = bundle.sample_rate
+                self.model.eval()
+            elif config["type"] == "custom" and model_name == "bs_roformer":
+                 raise NotImplementedError("BS-Roformer support not yet installed.")
+            
+            self.current_model_name = model_name
+            logger.info(f"Model {model_name} loaded successfully.")
         except Exception as e:
-            logger.error(f"Failed to load model: {e}")
+            logger.error(f"Failed to load model {model_name}: {e}")
+            self.current_model_name = None
+            self.model = None
             raise
 
-    def separate(self, audio_path):
+    def separate(self, audio_path, model_name="htdemucs"):
         """
-        Separates audio into stems.
+        Separates audio into stems using the specified model.
         Returns a dictionary of stem paths.
         """
-        logger.info(f"Separating: {audio_path}")
+        logger.info(f"Separating: {audio_path} using {model_name}")
         
-        # MOCK SEPARATION FOR VERIFICATION (Resource Constrained Environment)
-        # If real separation fails, we return dummy files to verify the API workflow
-        mock_mode = self.mock_mode
-        
+        # Use subfolder for model to differentiate results
         track_name = os.path.splitext(os.path.basename(audio_path))[0]
-        track_dir = os.path.join(self.output_dir, track_name)
+        track_dir = os.path.join(self.output_dir, model_name, track_name)
         ensure_dir(track_dir)
+        
         stem_names = ["drums", "bass", "other", "vocals"]
         results = {}
 
-        if mock_mode:
-            logger.warning("Running in MOCK SEPARATION mode for verification.")
+        # MOCK MODE
+        if self.mock_mode:
+            logger.warning("Running in MOCK SEPARATION mode.")
             import shutil
             for name in stem_names:
                 dst = os.path.join(track_dir, f"{name}.wav")
-                # Just copy the original file as a placeholder or create silence
-                # Creating silence is safer to avoid confusion
-                # For now, let's just copy the input to allow playback testing
-                shutil.copy2(audio_path, dst)
+                if not os.path.exists(dst):
+                     shutil.copy2(audio_path, dst)
                 results[name] = dst
             return results
 
         try:
-            # Real separation logic (attempting...)
-            # Load audio using soundfile directly
+            # Ensure correct model is loaded
+            self.load_model(model_name)
+            
+            # Real separation logic
             import soundfile as sf
             data, samplerate = sf.read(audio_path)
             
@@ -107,13 +165,4 @@ class AudioSeparator:
 
         except Exception as e:
             logger.error(f"Separation failed: {e}")
-            logger.info("Falling back to mock separation due to failure.")
-            # Fallback
-            import shutil
-            for name in stem_names:
-                dst = os.path.join(track_dir, f"{name}.wav")
-                if not os.path.exists(dst):
-                    shutil.copy2(audio_path, dst)
-                results[name] = dst
-            return results
-
+            raise

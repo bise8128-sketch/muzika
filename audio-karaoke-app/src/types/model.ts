@@ -4,8 +4,10 @@
 
 export enum ModelType {
     MDX = 'mdx',
-    DEMUCS = 'demucs',
-    BS_ROFORMER = 'bs_roformer'
+    DEMUCS = 'demucs', // WASM Demucs
+    BS_ROFORMER = 'bs_roformer',
+    HTDEMUCS = 'htdemucs', // Python Backend
+    HTDEMUCS_FT = 'htdemucs_ft' // Python Backend
 }
 
 export interface ModelConfig {

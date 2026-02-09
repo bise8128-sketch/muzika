@@ -45,14 +45,40 @@ class DownloadRequest(BaseModel):
 
 class SeparateRequest(BaseModel):
     filename: str
+    model: str = "htdemucs"
+
+@app.get("/api/models")
+async def list_models():
+    if separator is None:
+        return {"models": []}
+    return {"models": separator.get_available_models()}
 
 @app.get("/api/health")
 async def health_check():
     return {
         "status": "healthy",
         "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "separator_initialized": separator is not None
+        "separator_initialized": separator is not None,
+        "current_model": separator.current_model_name if separator else None
     }
+
+from fastapi import UploadFile, File
+import shutil
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        file_path = os.path.join(DOWNLOADS_DIR, file.filename)
+        # Ensure dir exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"status": "success", "filename": file.filename}
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/download")
 async def download_audio(request: DownloadRequest):
@@ -76,8 +102,8 @@ async def separate_audio(request: SeparateRequest):
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
-        logger.info(f"Starting separation for: {file_path}")
-        stems = separator.separate(file_path)
+        logger.info(f"Starting separation for: {file_path} with model {request.model}")
+        stems = separator.separate(file_path, model_name=request.model)
         
         # Make paths relative for the response
         relative_stems = {k: os.path.relpath(v, OUTPUT_DIR) for k, v in stems.items()}
