@@ -30,7 +30,7 @@ export interface ProcessingLog {
 }
 
 export interface SongEntry {
-    id?: number | string;
+    id?: number;
     type: 'ai_separated' | 'direct_karaoke';
     title: string;
     artist?: string;

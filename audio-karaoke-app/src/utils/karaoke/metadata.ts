@@ -30,6 +30,7 @@ export async function extractMetadata(file: File): Promise<ExtractedMetadata> {
             duration: duration,
             genre: metadata.common.genre,
             year: metadata.common.year,
+            bpm: metadata.common.bpm,
             picture: pictureData,
         };
     } catch (error) {

@@ -68,6 +68,7 @@ export interface ExtractedMetadata {
     duration?: number;
     genre?: string[];
     year?: number;
+    bpm?: number;
     picture?: {
         format: string;
         data: Uint8Array;
