@@ -13,12 +13,28 @@ export async function downloadModel(
         throw new Error(`No URL provided for model ${modelInfo.id}`);
     }
 
+    // Construct full URL for Web Worker context
+    // Web Workers don't automatically inherit the page's base URL
+    let fetchUrl = modelInfo.url;
+    if (fetchUrl.startsWith('/')) {
+        // Get the origin from the current context (works in both main thread and worker)
+        let origin = '';
+        if (typeof window !== 'undefined') {
+            origin = window.location.origin;
+        } else if (typeof self !== 'undefined') {
+            // Type assertion for Web Worker context
+            const workerSelf = self as { location?: { origin: string } };
+            origin = workerSelf.location?.origin || '';
+        }
+        fetchUrl = `${origin}${fetchUrl}`;
+    }
+
     let response: Response;
     try {
-        response = await fetch(modelInfo.url);
+        response = await fetch(fetchUrl);
     } catch (err) {
-        console.error(`[modelDownloader] fetch failed for ${modelInfo.url}:`, err);
-        throw new Error(`Failed to fetch model from ${modelInfo.url}. This may be due to CORS, network issues, or an invalid URL.`);
+        console.error(`[modelDownloader] fetch failed for ${fetchUrl}:`, err);
+        throw new Error(`Failed to fetch model from ${fetchUrl}. This may be due to CORS, network issues, or an invalid URL.`);
     }
 
     if (!response.ok) {
