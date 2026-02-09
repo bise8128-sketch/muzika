@@ -42,4 +42,5 @@ mkdir -p output/downloads output/stems
 
 # Start the server
 echo -e "${GREEN}[Python Backend]${NC} Server starting on http://localhost:8000"
-uvicorn api:app --reload --port 8000 --log-level warning
+# Exclude output and venv from reload watch to prevent infinite reload loops
+uvicorn api:app --reload --port 8000 --log-level info --reload-exclude "output/*" --reload-exclude "venv/*"
