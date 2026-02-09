@@ -32,7 +32,10 @@ class AudioSeparator:
         logger.info(f"Separating: {audio_path}")
         try:
             # Load audio
-            waveform, sr = torchaudio.load(audio_path)
+            if os.name == 'nt':
+                torchaudio.set_audio_backend("soundfile") # Windows usually needs this
+            
+            waveform, sr = torchaudio.load(audio_path, backend="soundfile")
             
             # Resample if needed
             if sr != self.sample_rate:
