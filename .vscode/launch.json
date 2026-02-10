@@ -6,6 +6,21 @@
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/audio-karaoke-app",
+            "runtimeExecutable": "/home/k/.local/share/flatpak/exports/bin/com.google.Chrome",
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+            "runtimeArgs": [
+                "--remote-allow-origins=*",
+                "--no-first-run",
+                "--no-default-browser-check"
+            ]
+        },
+        {
+            "name": "Chrome: Attach",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/audio-karaoke-app"
         },
         {
