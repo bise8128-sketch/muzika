@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-python.python",
+        "dsznajder.es7-react-js-snippets",
+        "yoavbls.pretty-ts-errors",
+        "formulahendry.auto-rename-tag",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-playwright.playwright",
+        "firsttris.vscode-jest-runner",
+        "usernamehw.errorlens",
+        "eamodio.gitlens",
+        "vscode-icons-team.vscode-icons"
+    ]
+}
