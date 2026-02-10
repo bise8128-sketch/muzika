@@ -23,7 +23,7 @@ export interface SeparationMetrics {
     averageInferenceTime?: number;
 }
 
-function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 120000): Promise<T> {
+function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 300000): Promise<T> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             cleanup();
@@ -144,7 +144,7 @@ export async function separateAudio(
 
         onProgress?.({ phase: 'separating', percentage: 0, message: 'Starting separation...', currentSegment: 0, totalSegments: 0 });
 
-        const segmentGenerator = segmenter.segmentFile(fileSource, 15);
+        const segmentGenerator = segmenter.segmentFile(fileSource, 5);
 
         for await (const segment of segmentGenerator) {
             if (signal?.aborted) throw new Error('Aborted');
