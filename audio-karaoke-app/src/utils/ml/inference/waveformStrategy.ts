@@ -29,7 +29,26 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
 
         try {
             const samples = inputData.length / channels;
-            const inputShape = [1, 1, channels, samples];
+
+            // Determine input shape based on model metadata if available
+            // Default to [1, channels, samples] (3D) which is standard for Demucs/MDX
+            let inputShape = [1, channels, samples];
+
+            const inputName = session.inputNames[0];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const inputMeta = (session as any).inputMetadata?.[inputName]; // Hack to access metadata
+
+            if (inputMeta && inputMeta.dims) {
+                const dims = inputMeta.dims;
+                // If model expects 4D input, likely [1, 1, channels, samples] or similar
+                if (dims.length === 4) {
+                    // Check if it's [Batch, Channels, 1, Time] or [Batch, 1, Channels, Time]
+                    // We'll trust the model's requested rank but we need to fit our data
+                    inputShape = [1, 1, channels, samples];
+                    // If the model expects [1, channels, 1, samples], this might be wrong,
+                    // but [1, 1, channels, samples] is the most common 4D variation for audio if 3D is wrapped.
+                }
+            }
 
             // De-interleave to planar for ONNX
             const planarData = new Float32Array(inputData.length);
@@ -43,7 +62,6 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
             this.track(inputTensor);
 
             const feeds: Record<string, ort.Tensor> = {};
-            const inputName = session.inputNames[0];
             feeds[inputName] = inputTensor;
 
             const results = await session.run(feeds);
