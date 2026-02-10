@@ -1,2 +1,3 @@
-2026/02/11-00:43:22.647 27 Creating DB /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/shared_proto_db/metadata since it was missing.
-2026/02/11-00:43:22.739 27 Reusing MANIFEST /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/shared_proto_db/metadata/MANIFEST-000001
+2026/02/11-00:50:47.105 27 Reusing MANIFEST /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/shared_proto_db/metadata/MANIFEST-000001
+2026/02/11-00:50:47.106 27 Recovering log #3
+2026/02/11-00:50:47.129 27 Reusing old log /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/shared_proto_db/metadata/000003.log 
