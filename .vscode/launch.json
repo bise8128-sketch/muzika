@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Next.js: Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/audio-karaoke-app"
+        },
+        {
+            "name": "Python: FastAPI",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "api:app",
+                "--reload",
+                "--port",
+                "8000"
+            ],
+            "cwd": "${workspaceFolder}/python-audio-cli",
+            "jinja": true,
+            "justMyCode": true
+        },
+        {
+            "name": "Next.js: Server-side",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/audio-karaoke-app",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run-script", "dev:next-only"],
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack Launch",
+            "configurations": ["Next.js: Server-side", "Python: FastAPI", "Next.js: Chrome"]
+        }
+    ]
+}
