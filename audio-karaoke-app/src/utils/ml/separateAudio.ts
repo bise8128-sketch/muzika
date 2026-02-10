@@ -23,7 +23,7 @@ export interface SeparationMetrics {
     averageInferenceTime?: number;
 }
 
-function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 30000): Promise<T> {
+function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 120000): Promise<T> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             cleanup();
@@ -40,12 +40,19 @@ function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeout
             }
         };
 
+        const errorHandler = (e: ErrorEvent) => {
+            cleanup();
+            reject(new Error(`Worker error: ${e.message}`));
+        };
+
         const cleanup = () => {
             clearTimeout(timeout);
             worker.removeEventListener('message', handler);
+            worker.removeEventListener('error', errorHandler);
         };
 
         worker.addEventListener('message', handler);
+        worker.addEventListener('error', errorHandler);
     });
 }
 
