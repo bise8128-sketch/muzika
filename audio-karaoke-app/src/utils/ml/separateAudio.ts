@@ -149,9 +149,12 @@ export async function separateAudio(
         for await (const segment of segmentGenerator) {
             if (signal?.aborted) throw new Error('Aborted');
 
+            console.log(`[separateAudio] Received chunk ${chunkIndex} from segmenter`);
+
             const { data: interleaved, startTime, sampleRate, channelCount, duration } = segment;
 
             // Send to worker
+            console.log(`[separateAudio] Sending chunk ${chunkIndex} to worker`);
             worker.postMessage({
                 type: 'PROCESS_STREAM_CHUNK',
                 payload: {

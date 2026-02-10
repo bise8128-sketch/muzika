@@ -58,6 +58,7 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
         inputData: Float32Array,
         channels: number
     ): Promise<InferenceOutput> {
+        console.log(`[SpectralInferenceStrategy] Processing chunk. Length: ${inputData.length}, Channels: ${channels}`);
         try {
             // 1. STFT
             // Note: inputData is interleaved [L, R, L, R...]
