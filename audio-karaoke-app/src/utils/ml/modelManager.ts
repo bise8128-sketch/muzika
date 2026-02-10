@@ -50,7 +50,32 @@ export async function loadModel(
     // Create InferenceSession
     try {
         console.log(`[modelManager] Creating InferenceSession for model ${modelInfo.id}...`);
-        const session = await ort.InferenceSession.create(modelData, options);
+        let session: ort.InferenceSession;
+
+        try {
+            session = await ort.InferenceSession.create(modelData, options);
+        } catch (webGpuError) {
+            // Check if we were trying to use WebGPU
+            const usedWebGPU = options.executionProviders &&
+                (Array.isArray(options.executionProviders) ?
+                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')) :
+                    false);
+
+            if (usedWebGPU) {
+                console.warn(`[modelManager] WebGPU initialization failed for model ${modelInfo.id}. Falling back to CPU (WASM)...`, webGpuError);
+
+                // Fallback options: remove WebGPU from execution providers
+                const fallbackOptions = { ...options };
+                fallbackOptions.executionProviders = ['wasm'];
+
+                // Create session with fallback options
+                session = await ort.InferenceSession.create(modelData, fallbackOptions);
+                console.log(`[modelManager] Fallback InferenceSession created successfully (CPU/WASM) for model ${modelInfo.id}`);
+            } else {
+                throw webGpuError;
+            }
+        }
+
         console.log(`[modelManager] InferenceSession created successfully for model ${modelInfo.id}`);
 
         // We do NOT cache the engine directly because engines are stateful (strategies might be stateful)
