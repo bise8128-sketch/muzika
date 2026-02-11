@@ -6,12 +6,26 @@
 import { db } from './audioDatabase';
 import type { CachedAudio } from '@/types/storage';
 
+/**
+ * Check if we're in a browser context with required APIs
+ */
+function isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof indexedDB !== 'undefined' && typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+}
+
 export class AudioCache {
     /**
      * Generate SHA-256 hash of a file for cache lookup
      * Optimized for large files by hashing only start/end chunks + metadata
      */
     async hashFile(file: File): Promise<string> {
+        // SSR guard: Return deterministic fallback hash if crypto.subtle is not available
+        if (!isBrowser()) {
+            // Create a simple deterministic hash from metadata
+            const metadata = `${file.name}-${file.size}-${file.lastModified}-${file.type}`;
+            return 'ssr-' + btoa(metadata).replace(/[^a-zA-Z0-9]/g, '').substring(0, 64);
+        }
+
         // Include metadata in hash input
         const metadata = `${file.name}-${file.size}-${file.lastModified}-${file.type}`;
 
@@ -77,6 +91,12 @@ export class AudioCache {
         sampleRate: number,
         modelUsed: string
     ): Promise<void> {
+        // SSR guard
+        if (!isBrowser()) {
+            console.warn('[AudioCache] cacheAudioResult called during SSR - skipping');
+            return;
+        }
+
         const cacheData: CachedAudio = {
             fileHash,
             fileName,
@@ -114,6 +134,11 @@ export class AudioCache {
      * Retrieve cached audio results
      */
     async getCachedAudio(fileHash: string, modelUsed?: string): Promise<CachedAudio | null> {
+        // SSR guard
+        if (!isBrowser()) {
+            return null;
+        }
+
         let cached: CachedAudio | undefined;
 
         if (modelUsed) {
@@ -140,6 +165,11 @@ export class AudioCache {
      * Delete cached audio by file hash
      */
     async deleteCachedAudio(fileHash: string): Promise<void> {
+        // SSR guard
+        if (!isBrowser()) {
+            return;
+        }
+
         await db.cachedAudio.where('fileHash').equals(fileHash).delete();
         console.log(`❌ Deleted cached audio for hash: ${fileHash.substring(0, 8)}...`);
     }
@@ -148,6 +178,11 @@ export class AudioCache {
      * Clear all cached audio
      */
     async clearAudioCache(): Promise<void> {
+        // SSR guard
+        if (!isBrowser()) {
+            return;
+        }
+
         const count = await db.cachedAudio.count();
         await db.cachedAudio.clear();
         console.log(`❌ Cleared ${count} cached audio files`);
@@ -157,6 +192,11 @@ export class AudioCache {
      * Get all cached audio entries
      */
     async getAllCachedAudio(): Promise<CachedAudio[]> {
+        // SSR guard
+        if (!isBrowser()) {
+            return [];
+        }
+
         return await db.cachedAudio.toArray();
     }
 

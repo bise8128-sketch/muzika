@@ -96,6 +96,18 @@ export class AudioKaraokeDB extends Dexie {
 // Lazy database initialization to prevent SSR/Worker issues
 let dbInstance: AudioKaraokeDB | null = null;
 
+// Create a mock DB that returns safe no-op values for SSR contexts
+const createMockDB = (): any => ({
+    models: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    cachedAudio: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => null, delete: async () => {} }) }), orderBy: () => ({ toArray: async () => [] }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    processingLogs: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    songs: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    playlists: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    queue: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    clearAll: async () => {},
+    getDatabaseSize: async () => 0,
+});
+
 export const db = new Proxy({} as AudioKaraokeDB, {
     get(target, prop) {
         // Initialize database on first access
@@ -104,7 +116,11 @@ export const db = new Proxy({} as AudioKaraokeDB, {
             if (typeof indexedDB !== 'undefined') {
                 dbInstance = new AudioKaraokeDB();
             } else {
-                throw new Error('IndexedDB is not available in this context');
+                // Return mock DB for SSR/non-browser contexts
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('[AudioKaraokeDB] Accessed during SSR - returning mock database');
+                }
+                return createMockDB()[prop];
             }
         }
         return (dbInstance as any)[prop];
