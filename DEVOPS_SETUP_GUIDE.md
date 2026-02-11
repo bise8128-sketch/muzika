@@ -1,4 +1,4 @@
-# Muzika Karaoke - Local Development Setup Guide
+# Muzika Karaoke - Local Development Setup Guide (Fish Shell)
 
 ## Overview
 
@@ -46,7 +46,7 @@ The application can run in two modes:
 
 #### For Linux (Ubuntu/Debian)
 
-```bash
+```fish
 # Update package list
 sudo apt update
 
@@ -69,9 +69,9 @@ sudo apt install -y build-essential
 
 #### For macOS
 
-```bash
+```fish
 # Install Homebrew if not already installed
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+/bin/bash -c "(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install Node.js
 brew install node
@@ -103,7 +103,7 @@ brew install ffmpeg
 
 Get the application running in 3-5 commands:
 
-```bash
+```fish
 # 1. Navigate to the project directory
 cd /home/k/Downloads/muzika
 
@@ -119,7 +119,7 @@ Open your browser to: **http://localhost:3030**
 
 ### Quick Start with Backend (Full-Stack Mode)
 
-```bash
+```fish
 # 1. Navigate to the project directory
 cd /home/k/Downloads/muzika
 
@@ -148,9 +148,9 @@ The Python backend will be available at: **http://localhost:8000**
 
 #### Linux (Ubuntu/Debian)
 
-```bash
+```fish
 # Update system packages
-sudo apt update && sudo apt upgrade -y
+sudo apt update; and sudo apt upgrade -y
 
 # Install Node.js 20.x
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -178,7 +178,7 @@ sudo apt install -y libasound2-dev libpulse-dev
 
 #### macOS
 
-```bash
+```fish
 # Update Homebrew
 brew update
 
@@ -204,7 +204,7 @@ ffmpeg -version
 
 ### Step 2: Set Up Python Backend
 
-```bash
+```fish
 # Navigate to the Python backend directory
 cd python-audio-cli
 
@@ -219,12 +219,12 @@ The setup script will:
 
 **Manual Setup (if script fails)**:
 
-```bash
+```fish
 # Create virtual environment
 python3 -m venv venv
 
 # Activate virtual environment
-source venv/bin/activate  # Linux/macOS
+source venv/bin/activate.fish  # Linux/macOS with fish shell
 # venv\Scripts\activate   # Windows
 
 # Upgrade pip
@@ -242,7 +242,7 @@ deactivate
 
 ### Step 3: Set Up Next.js Frontend
 
-```bash
+```fish
 # Navigate to the frontend directory
 cd audio-karaoke-app
 
@@ -257,26 +257,26 @@ npm run type-check  # Check TypeScript types
 
 Create a `.env.local` file in the `audio-karaoke-app` directory:
 
-```bash
+```fish
 # Backend API URL
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+set -x NEXT_PUBLIC_BACKEND_URL http://localhost:8000
 
 # Model configuration
-NEXT_PUBLIC_DEFAULT_MODEL=mdx-net
-NEXT_PUBLIC_MODEL_CACHE_SIZE=1000000000  # 1GB in bytes
+set -x NEXT_PUBLIC_DEFAULT_MODEL mdx-net
+set -x NEXT_PUBLIC_MODEL_CACHE_SIZE 1000000000  # 1GB in bytes
 
 # Audio processing
-NEXT_PUBLIC_MAX_AUDIO_SIZE=104857600  # 100MB in bytes
-NEXT_PUBLIC_CHUNK_SIZE=30  # seconds
-NEXT_PUBLIC_SAMPLE_RATE=44100
+set -x NEXT_PUBLIC_MAX_AUDIO_SIZE 104857600  # 100MB in bytes
+set -x NEXT_PUBLIC_CHUNK_SIZE 30  # seconds
+set -x NEXT_PUBLIC_SAMPLE_RATE 44100
 
 # Feature flags
-NEXT_PUBLIC_ENABLE_WEBGPU=true
-NEXT_PUBLIC_ENABLE_YOUTUBE=true
-NEXT_PUBLIC_ENABLE_BATCH_PROCESSING=true
+set -x NEXT_PUBLIC_ENABLE_WEBGPU true
+set -x NEXT_PUBLIC_ENABLE_YOUTUBE true
+set -x NEXT_PUBLIC_ENABLE_BATCH_PROCESSING true
 
 # Development
-NEXT_PUBLIC_DEV_MODE=true
+set -x NEXT_PUBLIC_DEV_MODE true
 ```
 
 **Environment Variable Defaults**:
@@ -298,7 +298,7 @@ NEXT_PUBLIC_DEV_MODE=true
 
 #### Option A: Start Both Servers (Full-Stack Mode)
 
-```bash
+```fish
 cd audio-karaoke-app
 npm run dev
 ```
@@ -309,7 +309,7 @@ This will start:
 
 #### Option B: Start Frontend Only
 
-```bash
+```fish
 cd audio-karaoke-app
 npm run dev:next-only
 ```
@@ -318,7 +318,7 @@ This will start only the Next.js frontend on `http://localhost:3030`
 
 #### Option C: Start Backend Only
 
-```bash
+```fish
 cd python-audio-cli
 bash start-backend.sh
 ```
@@ -327,7 +327,7 @@ This will start only the Python backend on `http://localhost:8000`
 
 #### Option D: Start Frontend and Backend Separately
 
-```bash
+```fish
 # Terminal 1: Start Python backend
 cd python-audio-cli
 bash start-backend.sh
@@ -568,7 +568,7 @@ POST /api/extract-youtube     # YouTube extraction
 **Error**: `Error: listen EADDRINUSE: address already in use :::3030` or `:::8000`
 
 **Solution**:
-```bash
+```fish
 # Kill process on port 3030
 fuser -k 3030/tcp  # Linux
 lsof -ti:3030 | xargs kill -9  # macOS
@@ -583,7 +583,7 @@ lsof -ti:8000 | xargs kill -9  # macOS
 **Error**: `ModuleNotFoundError: No module named 'fastapi'`
 
 **Solution**:
-```bash
+```fish
 cd python-audio-cli
 
 # Remove existing virtual environment
@@ -593,7 +593,7 @@ rm -rf venv
 python3 -m venv venv
 
 # Activate and install dependencies
-source venv/bin/activate
+source venv/bin/activate.fish
 pip install -r requirements.txt
 ```
 
@@ -602,7 +602,7 @@ pip install -r requirements.txt
 **Error**: `ffmpeg: command not found`
 
 **Solution**:
-```bash
+```fish
 # Ubuntu/Debian
 sudo apt install ffmpeg
 
@@ -618,7 +618,7 @@ ffmpeg -version
 **Error**: `Error: The module was compiled against a different Node.js version`
 
 **Solution**:
-```bash
+```fish
 # Remove node_modules and package-lock.json
 cd audio-karaoke-app
 rm -rf node_modules package-lock.json
@@ -641,13 +641,13 @@ npm install
 **Error**: `JavaScript heap out of memory` or `Process finished with exit code 137`
 
 **Solution**:
-```bash
+```fish
 # Increase Node.js memory limit
-export NODE_OPTIONS="--max-old-space-size=4096"
+set -x NODE_OPTIONS "--max-old-space-size=4096"
 
 # Or use smaller audio files
 # Reduce chunk size in .env.local
-NEXT_PUBLIC_CHUNK_SIZE=15
+set -x NEXT_PUBLIC_CHUNK_SIZE 15
 ```
 
 #### 7. CORS Errors
@@ -664,10 +664,10 @@ NEXT_PUBLIC_CHUNK_SIZE=15
 **Error**: `ERROR: [youtube] Unable to download webpage`
 
 **Solution**:
-```bash
+```fish
 # Update yt-dlp
 cd python-audio-cli
-source venv/bin/activate
+source venv/bin/activate.fish
 pip install --upgrade yt-dlp
 ```
 
@@ -687,26 +687,26 @@ pip install --upgrade yt-dlp
 **Solution**:
 - Clear browser data for the application
 - Reduce cache size in `.env.local`:
-  ```bash
-  NEXT_PUBLIC_MODEL_CACHE_SIZE=500000000  # 500MB
+  ```fish
+  set -x NEXT_PUBLIC_MODEL_CACHE_SIZE 500000000  # 500MB
   ```
 
 ### Debug Mode
 
 Enable debug logging:
 
-```bash
+```fish
 # Frontend
-NEXT_PUBLIC_DEV_MODE=true
-NEXT_PUBLIC_LOG_LEVEL=debug
+set -x NEXT_PUBLIC_DEV_MODE true
+set -x NEXT_PUBLIC_LOG_LEVEL debug
 
 # Backend
-export LOG_LEVEL=debug
+set -x LOG_LEVEL debug
 ```
 
 ### Check System Status
 
-```bash
+```fish
 # Check Node.js version
 node --version
 
@@ -749,7 +749,7 @@ vm_stat  # macOS
 
 ### 3. Running Tests
 
-```bash
+```fish
 # Run all tests
 npm test
 
@@ -765,7 +765,7 @@ npx playwright test
 
 ### 4. Type Checking
 
-```bash
+```fish
 # Check TypeScript types
 npm run type-check
 
@@ -775,7 +775,7 @@ npx tsc --noEmit --watch
 
 ### 5. Linting
 
-```bash
+```fish
 # Run ESLint
 npm run lint
 
@@ -785,7 +785,7 @@ npm run lint -- --fix
 
 ### 6. Building for Production
 
-```bash
+```fish
 # Build the application
 npm run build
 
@@ -798,7 +798,7 @@ npm run analyze
 
 ### 7. Git Workflow
 
-```bash
+```fish
 # Create a new branch
 git checkout -b feature/your-feature-name
 
@@ -938,6 +938,7 @@ MIT License - See LICENSE file for details.
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2024-02-11 | Initial DevOps setup guide |
+| 1.1.0 | 2024-02-11 | Updated for fish shell syntax |
 
 ---
 

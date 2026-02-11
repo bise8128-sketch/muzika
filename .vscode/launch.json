@@ -1,11 +1,12 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Next.js: Chrome",
             "type": "chrome",
             "request": "launch",
-            "url": "http://localhost:3000",
+            "url": "http://localhost:3030",
             "webRoot": "${workspaceFolder}/audio-karaoke-app",
             "runtimeExecutable": "/home/k/.local/share/flatpak/exports/bin/com.google.Chrome",
             "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
