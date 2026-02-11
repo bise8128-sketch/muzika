@@ -56,7 +56,8 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
     async processChunk(
         session: ort.InferenceSession,
         inputData: Float32Array,
-        channels: number
+        channels: number,
+        sampleRate: number
     ): Promise<InferenceOutput> {
         console.log(`[SpectralInferenceStrategy] Processing chunk. Length: ${inputData.length}, Channels: ${channels}`);
         try {

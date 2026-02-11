@@ -18,7 +18,8 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
     async processChunk(
         session: ort.InferenceSession,
         inputData: Float32Array,
-        channels: number
+        channels: number,
+        sampleRate: number
     ): Promise<InferenceOutput> {
         // Reset memory manager for this chunk
         // Note: We don't dispose previous chunk here, as the caller might handle lifecycle,

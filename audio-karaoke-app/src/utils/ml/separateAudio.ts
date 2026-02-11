@@ -25,23 +25,29 @@ export interface SeparationMetrics {
 
 function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 300000): Promise<T> {
     return new Promise((resolve, reject) => {
+        console.log(`[waitForWorkerMessage] Waiting for message type: ${type}, timeout: ${timeoutMs}ms`);
         const timeout = setTimeout(() => {
             cleanup();
+            console.error(`[waitForWorkerMessage] TIMEOUT waiting for: ${type}`);
             reject(new Error(`Timeout waiting for worker message: ${type}`));
         }, timeoutMs);
 
         const handler = (e: MessageEvent) => {
+            console.log(`[waitForWorkerMessage] Received message type: ${e.data.type}, waiting for: ${type}`);
             if (e.data.type === type) {
                 cleanup();
+                console.log(`[waitForWorkerMessage] Received expected message: ${type}`);
                 resolve(e.data.payload as T);
             } else if (e.data.type === 'ERROR') {
                 cleanup();
+                console.error(`[waitForWorkerMessage] Worker error:`, e.data.payload.message);
                 reject(new Error(e.data.payload.message));
             }
         };
 
         const errorHandler = (e: ErrorEvent) => {
             cleanup();
+            console.error(`[waitForWorkerMessage] Worker error event:`, e.message);
             reject(new Error(`Worker error: ${e.message}`));
         };
 
