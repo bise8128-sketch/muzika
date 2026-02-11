@@ -216,6 +216,17 @@ export class AudioCache {
             modelUsed: string;
         }>;
     }> {
+        // SSR guard - return safe defaults
+        if (!isBrowser()) {
+            return {
+                totalFiles: 0,
+                totalSizeGB: 0,
+                oldestFile: null,
+                newestFile: null,
+                files: []
+            };
+        }
+
         const files = await db.cachedAudio.toArray();
 
         const totalSizeBytes = files.reduce(
@@ -252,6 +263,11 @@ export class AudioCache {
      * LRU eviction policy - Remove oldest entries if quota is exceeded
      */
     async evictOldestIfNeeded(maxSizeGB: number = 1): Promise<void> {
+        // SSR guard
+        if (!isBrowser()) {
+            return;
+        }
+
         const maxSizeBytes = maxSizeGB * 1024 * 1024 * 1024;
 
         // Check if we need to evict based on total size first
