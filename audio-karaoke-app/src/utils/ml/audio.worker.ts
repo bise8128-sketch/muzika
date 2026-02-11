@@ -88,28 +88,39 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     if (type === 'INIT_STREAM_SESSION') {
         const { modelInfo, sessionId } = e.data.payload;
-        console.log('[audio.worker] Initializing stream session:', sessionId);
+        console.log('[audio.worker] Initializing stream session:', sessionId, 'Model:', modelInfo.id);
 
         try {
+            console.log('[audio.worker] Loading model...');
             const engine = await loadModel(modelInfo);
+            console.log('[audio.worker] Model loaded successfully');
+            
             activeSession = { id: sessionId, engine };
+            console.log('[audio.worker] Session initialized, sending STREAM_READY');
             ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId } });
         } catch (err) {
-            ctx.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+            const errorMsg = `Failed to load model: ${(err as Error).message}`;
+            console.error('[audio.worker]', errorMsg, err);
+            ctx.postMessage({ type: 'ERROR', payload: { message: errorMsg } });
         }
         return;
     }
 
     if (type === 'PROCESS_STREAM_CHUNK') {
         const { chunk, chunkIndex, sessionId, channels, sampleRate } = e.data.payload;
+        console.log(`[audio.worker] Processing chunk ${chunkIndex} for session ${sessionId}`);
 
         if (!activeSession || activeSession.id !== sessionId) {
-            ctx.postMessage({ type: 'ERROR', payload: { message: 'Session not initialized or mismatch' } });
+            const errorMsg = `Session not initialized or mismatch. Active: ${activeSession?.id}, Requested: ${sessionId}`;
+            console.error(`[audio.worker] ${errorMsg}`);
+            ctx.postMessage({ type: 'ERROR', payload: { message: errorMsg } });
             return;
         }
 
         try {
+            console.log(`[audio.worker] Calling engine.processChunk for chunk ${chunkIndex}...`);
             const result = await activeSession.engine.processChunk(chunk, channels, sampleRate);
+            console.log(`[audio.worker] Chunk ${chunkIndex} processed successfully`);
 
             ctx.postMessage({
                 type: 'CHUNK_PROCESSED',
@@ -120,8 +131,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     sessionId
                 }
             }, [result.vocals.buffer as ArrayBuffer, result.instrumentals.buffer as ArrayBuffer]); // Transfer buffers
+            console.log(`[audio.worker] Sent CHUNK_PROCESSED message for chunk ${chunkIndex}`);
         } catch (err) {
-            ctx.postMessage({ type: 'ERROR', payload: { message: (err as Error).message } });
+            const errorMsg = `Error processing chunk ${chunkIndex}: ${(err as Error).message}`;
+            console.error(`[audio.worker] ${errorMsg}`, err);
+            ctx.postMessage({ type: 'ERROR', payload: { message: errorMsg } });
         }
         return;
     }
