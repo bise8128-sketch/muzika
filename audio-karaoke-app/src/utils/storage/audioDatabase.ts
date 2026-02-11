@@ -93,5 +93,20 @@ export class AudioKaraokeDB extends Dexie {
     }
 }
 
-// Create and export database instance
-export const db = new AudioKaraokeDB();
+// Lazy database initialization to prevent SSR/Worker issues
+let dbInstance: AudioKaraokeDB | null = null;
+
+export const db = new Proxy({} as AudioKaraokeDB, {
+    get(target, prop) {
+        // Initialize database on first access
+        if (!dbInstance) {
+            // Only initialize if we're in a browser context with IndexedDB
+            if (typeof indexedDB !== 'undefined') {
+                dbInstance = new AudioKaraokeDB();
+            } else {
+                throw new Error('IndexedDB is not available in this context');
+            }
+        }
+        return (dbInstance as any)[prop];
+    }
+});
