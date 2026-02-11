@@ -21,6 +21,8 @@ export function useModels() {
                 setModels(data.models);
             } catch (err) {
                 console.error('Error fetching models:', err);
+                // Note: If you see "getaddrinfo ENOTFOUND", it means the server cannot reach external model repositories.
+                // Models must be downloaded from the internet. Please check your network connection.
                 setError(err instanceof Error ? err.message : 'Unknown error');
                 // Fallback models are already set
             } finally {
