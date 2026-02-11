@@ -1,9 +1,13 @@
 
 import type { NextConfig } from "next";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import createNextIntlPlugin from 'next-intl/plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
+
+const __filename = fileURLToPath(import.meta.url);
+
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
