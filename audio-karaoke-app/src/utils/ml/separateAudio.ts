@@ -60,6 +60,11 @@ export async function separateAudio(
     file: File,
     options: SeparationOptions
 ): Promise<SeparationResult> {
+    if (typeof window === "undefined") {
+        // This function should not be called on the server
+        // Return a dummy promise that never resolves or rejects
+        return new Promise(() => {});
+    }
     const { modelInfo, onProgress, onChunk, skipCache = false, signal } = options;
     const progressTracker = new ProgressTracker();
     let worker: Worker | null = null;
@@ -68,14 +73,19 @@ export async function separateAudio(
     let fileSource: BrowserFileSource | null = null;
     let sessionId: string | null = null;
 
-    const fileHash = await audioCache.hashFile(file);
-    const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
-
-    if (serverModels.includes(modelInfo.type)) {
-        return serverSeparateAudio(file, options, fileHash);
+    // Additional safety check for window
+    if (typeof window === 'undefined') {
+        throw new Error('separateAudio must be called in a browser environment');
     }
 
     try {
+        const fileHash = await audioCache.hashFile(file);
+        const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
+
+        if (serverModels.includes(modelInfo.type)) {
+            return serverSeparateAudio(file, options, fileHash);
+        }
+
         const ctx = getAudioContext();
         bufferManager = new StreamableBufferManager(ctx);
         segmenter = new BrowserAudioSegmenter();
@@ -103,7 +113,7 @@ export async function separateAudio(
         progressTracker.start();
         onProgress?.({ phase: 'decoding', percentage: 0, message: 'Analyzing file...', currentSegment: 0, totalSegments: 0 });
 
-        const fileHash = await audioCache.hashFile(file);
+        // fileHash is already calculated above
 
         if (!skipCache) {
             const cached = await audioCache.getCachedAudio(fileHash, modelInfo.id);
@@ -221,8 +231,11 @@ export async function separateAudio(
             timestamp: Date.now()
         };
 
-    } catch (err) {
+    } catch (err: any) {
         console.error('Separation failed:', err);
+        if (err?.message === 'window is not defined' || err?.toString().includes('window is not defined')) {
+             throw new Error('Separation failed: Browser environment required (window is undefined).');
+        }
         throw err;
     } finally {
         worker?.terminate();

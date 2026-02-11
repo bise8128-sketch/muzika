@@ -1,2 +1,3 @@
-2026/02/11-00:53:18.974 27 Creating DB /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3000.indexeddb.leveldb since it was missing.
-2026/02/11-00:53:19.005 27 Reusing MANIFEST /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3000.indexeddb.leveldb/MANIFEST-000001
+2026/02/11-01:16:17.625 27 Reusing MANIFEST /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3000.indexeddb.leveldb/MANIFEST-000001
+2026/02/11-01:16:17.626 27 Recovering log #3
+2026/02/11-01:16:17.652 27 Reusing old log /home/k/Downloads/muzika/.vscode/chrome-debug-profile/Default/IndexedDB/http_localhost_3000.indexeddb.leveldb/000003.log 
