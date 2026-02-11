@@ -49,7 +49,8 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     // Set log level based on environment or settings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isDev = process.env.NODE_ENV === 'development';
-    (ort as any).env.logLevel = isDev ? 'verbose' : 'error';
+    // Use 'warning' or 'error' to avoid verbose logs like "Unknown CPU vendor" which are harmless
+    (ort as any).env.logLevel = isDev ? 'warning' : 'error';
 
     // Enable WebGPU profiling in development
     if (hasWebGPU) {
