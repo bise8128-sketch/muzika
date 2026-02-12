@@ -9,27 +9,24 @@ import { parseLRC } from '@/utils/karaoke/lrcParser';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
-import { PlayerControls } from '../PlayerControls/PlayerControls';
-import { EffectsPanel } from './EffectsPanel';
-import { StemIsolationPanel } from './StemIsolationPanel';
-import { PitchVisualizer } from './PitchVisualizer';
-import { LyricDisplay, LyricTheme } from './LyricDisplay';
-import { LyricEditor } from './LyricEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { VideoExporter } from '@/utils/audio/videoExport';
-import { CDGRenderer } from './CDGRenderer';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { exportAudio, renderProcessedAudio, MP3ExportError, getErrorMessage } from '@/utils/audio/audioExporter';
 import { useTranslations } from 'next-intl';
-import { SettingsPanel } from '../UI/SettingsPanel';
 import { usePractice } from '@/hooks/usePractice';
-import { PracticePanel } from './PracticePanel';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
-import { RoomLobby } from '../Room/RoomLobby';
-import { RoomView } from '../Room/RoomView';
 import { useVoiceTransform } from '@/hooks/useVoiceTransform';
-import { VoiceTransformPanel } from './VoiceTransformPanel';
+import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
+
+// New Components
+import { VisualizerContainer } from './Visualizer/VisualizerContainer';
+import { KaraokeControls } from './Controls/KaraokeControls';
+import { EffectsPanel } from './EffectsPanel';
+import { StemIsolationPanel } from './StemIsolationPanel';
+import { PitchVisualizer } from './PitchVisualizer';
+import { LyricTheme } from './LyricDisplay';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -75,6 +72,13 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
 
+    // Use Shortcut Hook
+    useKaraokeShortcuts({
+        playback,
+        showEditor,
+        setIsStageMode
+    });
+
     // Initialize Worker
     useEffect(() => {
         workerRef.current = new Worker(new URL('../../workers/karaokeEngine.worker.ts', import.meta.url));
@@ -101,8 +105,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const handlePlay = () => workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: controller.getCurrentTime() } });
         const handlePause = () => workerRef.current?.postMessage({ type: 'PAUSE' });
         const handleSeek = (data: any) => {
-            // For seek, we can send PLAY with new time if playing, or SYNC if paused
-            // But simpler is to just send SYNC_TIME
             workerRef.current?.postMessage({ type: 'SYNC_TIME', payload: { currentTime: data.currentTime } });
             if (controller.getIsPlaying()) {
                 workerRef.current?.postMessage({ type: 'PLAY', payload: { startTime: data.currentTime } });
@@ -111,10 +113,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
         controller.on('play', handlePlay);
         controller.on('pause', handlePause);
-        controller.on('seeked', handleSeek); // Assuming seek event exists or we use timeupdate
-
-        // Manual hook for seek since PlaybackController might not emit 'seeked' specifically
-        // But usePlayback's seek function calls controller.setCurrentTime
+        controller.on('seeked', handleSeek);
 
         return () => {
             controller.off('play', handlePlay);
@@ -127,7 +126,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     useEffect(() => {
         if (!workerRef.current) return;
 
-        // Reset lyric state when song changes
         setLyricState({ lineIndex: -1, wordIndex: -1 });
 
         workerRef.current.postMessage({
@@ -181,61 +179,12 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         setTheme(settings.theme);
         setIsStageMode(settings.stageModeEnabled);
 
-        // Apply default volume balance if available
         const bal = settings.defaultVolumeBalance;
         const vVol = Math.min(1, bal * 2);
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); // Vocals
         playback.setVolume(iVol, 1); // Instrumental
     }, [playback]);
-
-    // Keyboard Shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't trigger if user is typing in an input or editor
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || showEditor) return;
-
-            switch (e.key) {
-                case ' ':
-                    e.preventDefault();
-                    if (playback.isPlaying) {
-                        playback.pause();
-                    } else {
-                        playback.play();
-                    }
-                    break;
-                case 'm':
-                case 'M':
-                    // Toggle Mute (quick way to 0 volume)
-                    const isMuted = playback.vocalsVolume === 0 && playback.instrumentalVolume === 0;
-                    if (isMuted) {
-                        playback.setVolume(0.8, 0);
-                        playback.setVolume(0.8, 1);
-                    } else {
-                        playback.setVolume(0, 0);
-                        playback.setVolume(0, 1);
-                    }
-                    break;
-                case 'f':
-                case 'F':
-                    setIsStageMode(prev => {
-                        const next = !prev;
-                        saveSettings({ stageModeEnabled: next });
-                        return next;
-                    });
-                    break;
-                case 'ArrowLeft':
-                    playback.seek(Math.max(0, playback.currentTime - 5));
-                    break;
-                case 'ArrowRight':
-                    playback.seek(Math.min(playback.duration, playback.currentTime + 5));
-                    break;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [playback, showEditor]);
 
     useEffect(() => {
         if (recorder.recordedBuffer) {
@@ -251,7 +200,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
         const gainNodes = controller.getGainNodes();
         if (gainNodes.length > 0) {
-            // Connect all gain nodes to visualizer
             gainNodes.forEach(node => visualizerRef.current?.setSource(node));
         }
 
@@ -332,81 +280,37 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [showPractice, setShowPractice] = useState(false);
 
-    // Hooks
-    const tCommon = useTranslations('Karaoke');
-    const {
-        isListening,
-        currentPitch,
-        currentScore,
-        overallScore,
-        pitchHistory,
-        startAnalysis,
-        stopAnalysis,
-        resetAnalysis
-    } = usePitchAnalysis(controller);
-
+    const usePracticeHook = usePractice(controller);
     const {
         isPracticing,
-        isComplete: isPracticeComplete,
-        sections: practiceSections,
-        currentIndex: practiceIndex,
-        attemptNumber,
-        currentTempo,
         currentSection,
-        overallImprovement,
-        startPractice,
-        recordAttempt,
-        skipSection,
-        stopPractice
-    } = usePractice(controller);
+        pitchHistory: practicePitchHistory,
+        recordAttempt
+    } = usePracticeHook;
 
-    const {
-        isConnected: isRoomConnected,
-        room,
-        participants,
-        messages,
-        currentUser: roomUser,
-        isHost: isRoomHost,
-        joinRoom,
-        leaveRoom,
-        sendChat
-    } = useKaraokeRoom(controller);
-
-
-
+    const useRoomHook = useKaraokeRoom(controller);
     const [showRoom, setShowRoom] = useState(false);
 
+    const useVoiceHook = useVoiceTransform();
     const {
         isInitialized: isVoiceFxInitialized,
-        currentPreset: voicePreset,
-        settings: voiceSettings,
-        isMonitoring: isVoiceMonitoring,
-        initProcessor: initVoiceFx,
-        setPreset: setVoicePreset,
-        updateSettings: updateVoiceSettings,
-        toggleMonitoring: toggleVoiceMonitoring,
-        getProcessedStream
-    } = useVoiceTransform();
-
+        initProcessor: initVoiceFx
+    } = useVoiceHook;
     const [showVoiceFx, setShowVoiceFx] = useState(false);
 
     // Auto-record practice attempts when section ends
     useEffect(() => {
         if (isPracticing && currentSection) {
-            // Check if we just finished playing the section
             const currentTime = controller.getCurrentTime();
-            // If we're near the end of the section (within 0.5s)
             if (Math.abs(currentTime - currentSection.endTime) < 0.5) {
-               // Calculate score for this run (using last few seconds of pitch history)
-               // Simple approximation: take last N frames
-               const recentFrames = pitchHistory.slice(-currentSection.frameCount);
+               const recentFrames = pitchAnalysis.pitchHistory.slice(-currentSection.frameCount);
                if (recentFrames.length > 0) {
                    const avgAccuracy = recentFrames.reduce((s, f) => s + f.accuracy, 0) / recentFrames.length;
                    recordAttempt(avgAccuracy);
                }
             }
         }
-    }, [isPracticing, currentSection, controller, pitchHistory, recordAttempt]);
+    }, [isPracticing, currentSection, controller, pitchAnalysis.pitchHistory, recordAttempt]);
 
     const handleVideoExport = async () => {
         if (!lyrics) return;
@@ -419,7 +323,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 height: 720,
                 fps: 30,
                 lyrics,
-                audioBuffers: controller.getAudioBuffers(), // Accessing through getter
+                audioBuffers: controller.getAudioBuffers(),
                 voiceBuffer: recorder.recordedBuffer
             });
 
@@ -440,8 +344,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const handleAudioDownload = async (format: 'wav' | 'mp3') => {
         setIsExportingAudio(true);
         try {
-            // controller['audioBuffers'] is private but used here for the feature logic
-            // In a real app we'd expose a getter or pass them via context
             const processedBuffer = await renderProcessedAudio(
                 controller.getAudioBuffers(),
                 [playback.vocalsVolume, playback.instrumentalVolume],
@@ -483,372 +385,103 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     return (
         <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
-            {/* Stage Mode Toggle (Always visible in stage mode) */}
-            {isStageMode && (
-                <button
-                    onClick={() => {
-                        setIsStageMode(false);
-                        saveSettings({ stageModeEnabled: false });
-                    }}
-                    className="absolute top-4 md:top-8 left-4 md:left-8 z-[110] p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring"
-                    title="Exit Stage Mode (F)"
-                    aria-label="Exit Stage Mode"
-                >
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            )}
+            
+            <button
+                onClick={() => {
+                    setIsStageMode(false);
+                    saveSettings({ stageModeEnabled: false });
+                }}
+                className={`absolute top-4 md:top-8 left-4 md:left-8 z-[110] p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring ${!isStageMode ? 'hidden' : ''}`}
+                title="Exit Stage Mode (F)"
+                aria-label="Exit Stage Mode"
+            >
+                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-            {/* Visualizer and Lyrics Area */}
-            <div className={`relative bg-zinc-950/60 rounded-3xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-6 md:p-8 group transition-all duration-700 ${isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-transparent' : 'aspect-[4/3] md:aspect-[21/9]'
-                }`}>
-                {/* Background Visualizer */}
-                <canvas
-                    ref={canvasRef}
-                    className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${isStageMode ? 'opacity-40' : 'opacity-30'}`}
-                    width={1200}
-                    height={400}
-                />
+            <VisualizerContainer
+                canvasRef={canvasRef}
+                lyrics={lyrics}
+                cdgData={cdgData}
+                currentLineIndex={lyricState.lineIndex}
+                currentWordIndex={lyricState.wordIndex}
+                theme={theme}
+                visualSettings={visualSettings}
+                isStageMode={isStageMode}
+                showEditor={showEditor}
+                showPractice={showPractice}
+                showRoom={showRoom}
+                showVoiceFx={showVoiceFx}
+                showSettings={showSettings}
+                isVisualSettingsOpen={isVisualSettingsOpen}
+                recorder={recorder}
+                
+                // Props for sub-panels
+                voiceFxProps={{
+                    currentPreset: useVoiceHook.currentPreset,
+                    settings: useVoiceHook.settings,
+                    isMonitoring: useVoiceHook.isMonitoring,
+                    onPresetChange: useVoiceHook.setPreset,
+                    onSettingsChange: useVoiceHook.updateSettings,
+                    onToggleMonitoring: useVoiceHook.toggleMonitoring
+                }}
+                practiceProps={{
+                    ...usePracticeHook,
+                    startPractice: usePracticeHook.startPractice // ensure bound
+                }}
+                roomProps={{
+                    ...useRoomHook,
+                    onJoin: useRoomHook.joinRoom,
+                    onLeave: useRoomHook.leaveRoom
+                }}
 
-                {/* Lyrics Layer */}
-                <div className={`relative z-10 w-full flex flex-col items-center transition-all duration-700 ${isStageMode ? 'scale-125' : ''}`}>
-                    {cdgData && (
-                        <div className="mb-4 scale-150 transform">
-                            <CDGRenderer onCanvasReady={handleCanvasReady} />
-                        </div>
-                    )}
+                // Handlers
+                onCanvasReady={handleCanvasReady}
+                onLRCUpload={handleLRCUpload}
+                onThemeChange={(t) => {
+                    setTheme(t);
+                    saveSettings({ theme: t });
+                }}
+                onToggleStageMode={(val) => {
+                    setIsStageMode(val);
+                    saveSettings({ stageModeEnabled: val });
+                }}
+                onTogglePractice={() => setShowPractice(!showPractice)}
+                onToggleRoom={() => setShowRoom(!showRoom)}
+                onToggleVoiceFx={async () => {
+                    if (!isVoiceFxInitialized) await initVoiceFx();
+                    setShowVoiceFx(!showVoiceFx);
+                }}
+                onToggleSettings={() => setShowSettings(!showSettings)}
+                onToggleEditor={setShowEditor}
+                onSaveLRC={handleSaveLRC}
+                onVisualSettingsChange={setVisualSettings}
+                onCloseVisualSettings={() => setIsVisualSettingsOpen(false)}
+                onCloseVoiceFx={() => setShowVoiceFx(false)}
+                onClosePractice={() => setShowPractice(false)}
+                onCloseRoom={() => setShowRoom(false)}
+            />
 
-                    {showEditor ? (
-                        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl p-4 overflow-y-auto">
-                            <div className="flex justify-end mb-4">
-                                <button
-                                    onClick={() => setShowEditor(false)}
-                                    className="p-2 hover:bg-white/10 rounded-full text-white"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <LyricEditor
-                                currentTime={playback.currentTime}
-                                onSave={handleSaveLRC}
-                                initialLRC={lyrics}
-                            />
-                        </div>
-                    ) : (
-                        <LyricDisplay
-                            lyrics={lyrics}
-                            currentLineIndex={lyricState.lineIndex}
-                            currentWordIndex={lyricState.wordIndex}
-                            theme={theme}
-                            visualSettings={visualSettings}
-                        />
-                    )}
-                </div>
+            <KaraokeControls
+                playback={playback}
+                recorder={recorder}
+                lyrics={lyrics}
+                isExporting={isExporting}
+                isExportingAudio={isExportingAudio}
+                exportProgress={exportProgress}
+                isStageMode={isStageMode}
+                voiceFx={{
+                    isInitialized: isVoiceFxInitialized,
+                    init: initVoiceFx,
+                    getProcessedStream: useVoiceHook.getProcessedStream
+                }}
+                onBalanceChange={handleBalanceChange}
+                onAudioDownload={handleAudioDownload}
+                onVideoExport={handleVideoExport}
+            />
 
-                {/* Overlays */}
-                {!lyrics && !cdgData && !showEditor && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                        <div className="flex gap-4">
-                            <label className="cursor-pointer focus-ring rounded-full">
-                                <input type="file" accept=".lrc,.cdg" onChange={handleLRCUpload} className="sr-only" />
-                                <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 hover:bg-white/20 transition-all text-white font-bold text-sm uppercase tracking-wider">
-                                    {t('uploadLrc')}
-                                </div>
-                            </label>
-                            <button
-                                onClick={() => setShowEditor(true)}
-                                className="bg-primary/20 backdrop-blur-md px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/30 transition-all text-white font-bold text-sm uppercase tracking-wider focus-ring"
-                            >
-                                {t('createLyrics')}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {(lyrics || cdgData) && !showEditor && (
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                        <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10">
-                            {(['modern', 'neon', 'classic', 'retro'] as LyricTheme[]).map(t => (
-                                <button
-                                    key={t}
-                                    onClick={() => {
-                                        setTheme(t);
-                                        saveSettings({ theme: t });
-                                    }}
-                                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${theme === t ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                                        }`}
-                                >
-                                    {t}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Practice Mode Toggle */}
-                        <button
-                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showPractice ? 'bg-primary/50' : ''}`}
-                            onClick={() => setShowPractice(!showPractice)}
-                            title="Smart Practice Mode"
-                        >
-                            🎯
-                        </button>
-
-                        {/* Room Toggle */}
-                        <button
-                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showRoom ? 'bg-primary/50' : ''}`}
-                            onClick={() => setShowRoom(!showRoom)}
-                            title="Collaborative Room"
-                        >
-                            👥
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                setIsStageMode(true);
-                                saveSettings({ stageModeEnabled: true });
-                            }}
-                            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2"
-                            title="Stage Mode (F)"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                            </svg>
-                        </button>
-                        <button
-                            onClick={() => setShowEditor(true)}
-                            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2"
-                            title="Edit Lyrics"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                        <button
-                            onClick={() => setIsVisualSettingsOpen(true)}
-                            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2"
-                            title={t('visualSettings') || "Visual Settings"}
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </button>
-                        <button
-                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showSettings ? 'bg-primary/50' : ''}`}
-                            onClick={() => setShowSettings(!showSettings)}
-                            title="Settings"
-                        >
-                            ⚙️
-                        </button>
-                        
-                        {/* Voice FX Toggle */}
-                        <button
-                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showVoiceFx ? 'bg-primary/50' : ''}`}
-                            onClick={() => {
-                                if (!isVoiceFxInitialized) initVoiceFx();
-                                setShowVoiceFx(!showVoiceFx);
-                            }}
-                            title="Voice Effects"
-                        >
-                            🎤
-                        </button>
-                    </div>
-                )} 
-
-                {/* Overlays */}
-                {showVoiceFx && (
-                    <div className="absolute top-20 right-4 z-50">
-                        <VoiceTransformPanel
-                            currentPreset={voicePreset}
-                            settings={voiceSettings}
-                            isMonitoring={isVoiceMonitoring}
-                            onPresetChange={setVoicePreset}
-                            onSettingsChange={updateVoiceSettings}
-                            onToggleMonitoring={toggleVoiceMonitoring}
-                            onClose={() => setShowVoiceFx(false)}
-                        />
-                    </div>
-                )}
-                {showPractice && (
-                    <div className="absolute top-20 right-4 z-50 w-80">
-                        <PracticePanel
-                            isPracticing={isPracticing}
-                            isComplete={isPracticeComplete}
-                            sections={practiceSections}
-                            currentIndex={practiceIndex}
-                            attemptNumber={attemptNumber}
-                            currentTempo={currentTempo}
-                            currentSection={currentSection}
-                            overallImprovement={overallImprovement}
-                            onSkipSection={skipSection}
-                            onStopPractice={() => {
-                                stopPractice();
-                                setShowPractice(false);
-                            }}
-                        />
-                        {!isPracticing && !isPracticeComplete && (
-                            <div className="mt-2 text-center">
-                                <button 
-                                    className="w-full px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/80 transition"
-                                    onClick={() => startPractice(pitchHistory)}
-                                    disabled={pitchHistory.length === 0}
-                                >
-                                    Start Practice From History
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {showRoom && (
-                    <div className="absolute top-20 right-4 z-50">
-                        {!isRoomConnected || !room ? (
-                                <RoomLobby 
-                                onJoin={joinRoom} 
-                                onCancel={() => setShowRoom(false)} 
-                                />
-                        ) : (
-                            <RoomView 
-                                room={room}
-                                participants={participants}
-                                messages={messages}
-                                currentUser={roomUser}
-                                isHost={isRoomHost}
-                                onLeave={leaveRoom}
-                                onSendMessage={sendChat}
-                            />
-                        )}
-                    </div>
-                )}
-
-                {/* Recording Status */}
-                {recorder.isRecording && (
-                    <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-500/20 text-red-500 px-3 py-1 rounded-full border border-red-500/30 animate-pulse font-bold text-xs uppercase tracking-widest">
-                        <div className="w-2 h-2 bg-red-500 rounded-full" />
-                        {t('recording')}
-                    </div>
-                )}
-            </div>
-
-            {/* Controls */}
-            <div className={`flex flex-col gap-4 ${isStageMode ? 'max-w-4xl mx-auto w-full' : ''}`}>
-                <PlayerControls
-                    isPlaying={playback.isPlaying}
-                    currentTime={playback.currentTime}
-                    duration={playback.duration}
-                    vocalsVolume={playback.vocalsVolume}
-                    instrumentalVolume={playback.instrumentalVolume}
-                    lyrics={lyrics}
-                    onPlay={playback.play}
-                    onPause={playback.pause}
-                    onSeek={playback.seek}
-                    onBalanceChange={handleBalanceChange}
-                />
-
-                {/* Recording Controls */}
-                <div className="flex justify-center items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
-                    {!recorder.isRecording ? (
-                        <button
-                            onClick={async () => {
-                                if (!isVoiceFxInitialized) await initVoiceFx();
-                                // Wait a tick for initialization if needed, or getProcessedStream handles it?
-                                // getProcessedStream returns MediaStream | undefined
-                                const stream = getProcessedStream();
-                                recorder.startRecording(stream);
-                            }}
-                            className="flex items-center gap-2 px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full font-bold transition-all shadow-lg shadow-red-500/20"
-                        >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                            </svg>
-                            {t('recordVocals')}
-                        </button>
-                    ) : (
-                        <button
-                            onClick={recorder.stopRecording}
-                            className="flex items-center gap-2 px-6 py-2 bg-white text-black rounded-full font-bold transition-all animate-pulse"
-                        >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                            </svg>
-                            {t('stopRecording')}
-                        </button>
-                    )}
-
-                    {recorder.recordedBuffer && (
-                        <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/10">
-                            <span className="text-white/60 text-sm">{t('voiceRecorded')}</span>
-                            <button
-                                onClick={recorder.clearRecording}
-                                className="text-white/40 hover:text-red-400 transition-colors"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
-
-                    {lyrics && (
-                        <div className="ml-auto flex items-center gap-2">
-                            <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
-                                <button
-                                    disabled={isExportingAudio}
-                                    onClick={() => handleAudioDownload('wav')}
-                                    className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/10 text-white flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {isExportingAudio ? (
-                                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                    )}
-                                    WAV
-                                </button>
-                                <button
-                                    disabled={isExportingAudio}
-                                    onClick={() => handleAudioDownload('mp3')}
-                                    className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/10 text-white flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {isExportingAudio ? (
-                                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                    )}
-                                    MP3
-                                </button>
-                            </div>
-
-                            <button
-                                disabled={isExporting}
-                                onClick={handleVideoExport}
-                                className="flex items-center gap-2 px-6 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-full font-bold transition-all disabled:opacity-50"
-                            >
-                                {isExporting ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                        {t('exporting', { progress: Math.round(exportProgress * 100) })}
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        {t('video')}
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Advanced Effects */}
+            {/* Advanced Effects & Global Controls */}
             <EffectsPanel
                 pitch={pitch}
                 tempo={tempo}
@@ -867,10 +500,9 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onReset={handleResetEffects}
             />
 
-            {/* Stem Isolation Controls */}
             <StemIsolationPanel controller={controller} />
 
-            {/* Pitch Analysis */}
+            {/* Pitch Analysis Indicator */}
             <div className="space-y-2">
                 <div className="flex items-center gap-3">
                     <button
@@ -915,14 +547,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     />
                 )}
             </div>
-
-            {/* Visual Settings Panel */}
-            <SettingsPanel
-                isOpen={isVisualSettingsOpen}
-                onClose={() => setIsVisualSettingsOpen(false)}
-                visualSettings={visualSettings}
-                onVisualSettingsChange={setVisualSettings}
-            />
         </div>
     );
 };
