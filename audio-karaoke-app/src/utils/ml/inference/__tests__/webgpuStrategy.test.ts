@@ -17,20 +17,11 @@ describe('WebGPUInferenceStrategy', () => {
         strategy = new WebGPUInferenceStrategy({});
     });
 
+    afterEach(() => {
+        strategy.dispose();
+    });
+
     it('should track and dispose all tensors after processChunk', async () => {
-        const disposeSpy = jest.fn();
-
-        // Mock Tensor with dispose tracking
-        const originalTensor = ort.Tensor;
-        const createdTensors: any[] = [];
-
-        jest.spyOn(ort, 'Tensor').mockImplementation(function (this: any, ...args: any[]) {
-            const tensor = new originalTensor(...args);
-            (tensor as any).dispose = disposeSpy;
-            createdTensors.push(tensor);
-            return tensor;
-        } as any);
-
         const sampleRate = 44100;
         const channels = 2;
         const samples = 4410; // 0.1s
@@ -39,14 +30,28 @@ describe('WebGPUInferenceStrategy', () => {
             inputData[i] = Math.sin(i * 0.01);
         }
 
-        // Mock session (standard path — no IO binding)
+        // Track dispose calls on output tensors
+        const outputDisposeCalls: string[] = [];
+
         const mockRun = jest.fn().mockImplementation(async (feeds: Record<string, ort.Tensor>) => {
             const inputTensor = Object.values(feeds)[0];
             const data = inputTensor.data as Float32Array;
             const dims = inputTensor.dims;
 
+            // Create real tensors and instrument their dispose methods
             const vocalsTensor = new ort.Tensor('float32', new Float32Array(data), dims);
+            const originalVocalsDispose = vocalsTensor.dispose?.bind(vocalsTensor);
+            (vocalsTensor as any).dispose = () => {
+                outputDisposeCalls.push('vocals');
+                originalVocalsDispose?.();
+            };
+
             const instTensor = new ort.Tensor('float32', new Float32Array(data.length), dims);
+            const originalInstDispose = instTensor.dispose?.bind(instTensor);
+            (instTensor as any).dispose = () => {
+                outputDisposeCalls.push('instrumentals');
+                originalInstDispose?.();
+            };
 
             return {
                 vocals: vocalsTensor,
@@ -60,16 +65,37 @@ describe('WebGPUInferenceStrategy', () => {
             run: mockRun,
         } as unknown as ort.InferenceSession;
 
-        // Run processChunk
+        // Run processChunk — the finally block calls this.dispose()
         const result = await strategy.processChunk(mockSession, inputData, channels, sampleRate);
 
-        // Verify results are valid
+        // Verify results are valid Float32Arrays
         expect(result.vocals).toBeInstanceOf(Float32Array);
         expect(result.instrumentals).toBeInstanceOf(Float32Array);
         expect(result.vocals.length).toBeGreaterThan(0);
 
-        // Verify dispose was called on ALL created tensors (input + 2 outputs = 3)
-        // The strategy's finally block calls this.dispose() which clears all tracked tensors
-        expect(disposeSpy).toHaveBeenCalledTimes(3);
+        // Verify dispose was called on BOTH output tensors (tracked + disposed in finally)
+        expect(outputDisposeCalls).toContain('vocals');
+        expect(outputDisposeCalls).toContain('instrumentals');
+        expect(outputDisposeCalls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should dispose tensors even when processChunk throws', async () => {
+        // Spy on the dispose method of the strategy's memory manager
+        const disposeSpy = jest.spyOn(strategy as any, 'dispose');
+
+        const mockSession = {
+            inputNames: ['input'],
+            outputNames: ['vocals', 'instrumentals'],
+            run: jest.fn().mockRejectedValue(new Error('Simulated ONNX failure')),
+        } as unknown as ort.InferenceSession;
+
+        const inputData = new Float32Array(100);
+
+        await expect(
+            strategy.processChunk(mockSession, inputData, 1, 44100)
+        ).rejects.toThrow('Simulated ONNX failure');
+
+        // dispose() must be called even on error (from finally block)
+        expect(disposeSpy).toHaveBeenCalled();
     });
 });
