@@ -28,6 +28,8 @@ import { PracticePanel } from './PracticePanel';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { RoomLobby } from '../Room/RoomLobby';
 import { RoomView } from '../Room/RoomView';
+import { useVoiceTransform } from '@/hooks/useVoiceTransform';
+import { VoiceTransformPanel } from './VoiceTransformPanel';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -384,6 +386,20 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     const [showRoom, setShowRoom] = useState(false);
 
+    const {
+        isInitialized: isVoiceFxInitialized,
+        currentPreset: voicePreset,
+        settings: voiceSettings,
+        isMonitoring: isVoiceMonitoring,
+        initProcessor: initVoiceFx,
+        setPreset: setVoicePreset,
+        updateSettings: updateVoiceSettings,
+        toggleMonitoring: toggleVoiceMonitoring,
+        getProcessedStream
+    } = useVoiceTransform();
+
+    const [showVoiceFx, setShowVoiceFx] = useState(false);
+
     // Auto-record practice attempts when section ends
     useEffect(() => {
         if (isPracticing && currentSection) {
@@ -636,10 +652,35 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         >
                             ⚙️
                         </button>
+                        
+                        {/* Voice FX Toggle */}
+                        <button
+                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showVoiceFx ? 'bg-primary/50' : ''}`}
+                            onClick={() => {
+                                if (!isVoiceFxInitialized) initVoiceFx();
+                                setShowVoiceFx(!showVoiceFx);
+                            }}
+                            title="Voice Effects"
+                        >
+                            🎤
+                        </button>
                     </div>
-                )}
+                )} 
 
                 {/* Overlays */}
+                {showVoiceFx && (
+                    <div className="absolute top-20 right-4 z-50">
+                        <VoiceTransformPanel
+                            currentPreset={voicePreset}
+                            settings={voiceSettings}
+                            isMonitoring={isVoiceMonitoring}
+                            onPresetChange={setVoicePreset}
+                            onSettingsChange={updateVoiceSettings}
+                            onToggleMonitoring={toggleVoiceMonitoring}
+                            onClose={() => setShowVoiceFx(false)}
+                        />
+                    </div>
+                )}
                 {showPractice && (
                     <div className="absolute top-20 right-4 z-50 w-80">
                         <PracticePanel
@@ -720,7 +761,13 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 <div className="flex justify-center items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
                     {!recorder.isRecording ? (
                         <button
-                            onClick={recorder.startRecording}
+                            onClick={async () => {
+                                if (!isVoiceFxInitialized) await initVoiceFx();
+                                // Wait a tick for initialization if needed, or getProcessedStream handles it?
+                                // getProcessedStream returns MediaStream | undefined
+                                const stream = getProcessedStream();
+                                recorder.startRecording(stream);
+                            }}
                             className="flex items-center gap-2 px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full font-bold transition-all shadow-lg shadow-red-500/20"
                         >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
