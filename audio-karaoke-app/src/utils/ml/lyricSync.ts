@@ -215,8 +215,8 @@ export function alignLyricsToTranscription(
 
         lines.push({
             text: lyricTexts[ld.lineIdx],
-            timestamp: lineStart === Infinity ? 0 : lineStart,
-            endTimestamp: lineEnd,
+            startTime: lineStart === Infinity ? 0 : lineStart,
+            endTime: lineEnd,
             words,
         });
     }

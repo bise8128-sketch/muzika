@@ -54,7 +54,7 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
         setEditedLines(prev => {
             if (!prev) return prev;
             const updated = [...prev];
-            updated[lineIdx] = { ...updated[lineIdx], timestamp: newTime };
+            updated[lineIdx] = { ...updated[lineIdx], startTime: newTime };
             return updated;
         });
     }, []);
@@ -146,7 +146,7 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
                     <div key={idx} className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group">
                         {/* Timestamp */}
                         <span className="font-mono text-xs text-purple-400/70 min-w-[65px]">
-                            {formatTime(line.timestamp)}
+                            {formatTime(line.startTime)}
                         </span>
 
                         {/* Lyric text */}
@@ -157,14 +157,14 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
                         {/* Fine-tune controls */}
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                                onClick={() => handleTimestampChange(idx, Math.max(0, line.timestamp - 0.1))}
+                                onClick={() => handleTimestampChange(idx, Math.max(0, line.startTime - 0.1))}
                                 className="w-6 h-6 rounded bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60 text-xs flex items-center justify-center"
                                 title="-0.1s"
                             >
                                 ◀
                             </button>
                             <button
-                                onClick={() => handleTimestampChange(idx, line.timestamp + 0.1)}
+                                onClick={() => handleTimestampChange(idx, line.startTime + 0.1)}
                                 className="w-6 h-6 rounded bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60 text-xs flex items-center justify-center"
                                 title="+0.1s"
                             >
