@@ -35,8 +35,8 @@ export class HarmonyGenerator {
                     delayTime: 0,
                     feedback: 0
                 });
-                const gain = new Tone.Gain(setting.gain);
-                const panner = new Tone.Panner(0); // Center by default
+                const gain = new Tone.Gain(setting.volume);
+                const panner = new Tone.Panner(setting.pan); // Use setting.pan
 
                 // Chain: Input -> Shifter -> Gain -> Panner -> Output
                 this.input.connect(shifter);
@@ -49,13 +49,14 @@ export class HarmonyGenerator {
             } else {
                 // Update implementation
                 nodes.shifter.pitch = setting.interval;
-                nodes.gain.gain.value = setting.gain;
+                nodes.gain.gain.value = setting.volume;
+                nodes.panner.pan.value = setting.pan;
             }
         });
     }
 
     private getVoiceId(setting: HarmonyVoice): string {
-        return `${setting.interval}_${setting.gain}`; // Simple ID
+        return `${setting.interval}_${setting.volume}`; // ID based on interval and volume
     }
     
     connect(destination: Tone.InputNode) {

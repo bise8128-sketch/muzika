@@ -259,26 +259,28 @@ export interface HarmonyVoice {
 /** Settings controlling voice transformation */
 export interface VoiceTransformSettings {
     preset: VoicePreset;
-    formantShift: number;          // semitones (-12 to +12)
-    pitchShift: number;            // semitones (additive, on top of existing)
+    formantShift: number;          // factor (0.5 to 2.0) or semitones? Utils use factor, UI uses factor.
+    pitchShift: number;            // semitones
     harmonies: HarmonyVoice[];     // up to 3 harmony voices
+    reverbMix: number;             // 0 to 1
     dryWet: number;                // 0 (dry) to 1 (fully transformed)
 }
 
 /** Preset definitions for voice presets */
 export const VOICE_PRESETS: Record<VoicePreset, Omit<VoiceTransformSettings, 'preset'>> = {
-    original: { formantShift: 0, pitchShift: 0, harmonies: [], dryWet: 0 },
-    deep: { formantShift: -4, pitchShift: -2, harmonies: [], dryWet: 0.8 },
-    high: { formantShift: 4, pitchShift: 2, harmonies: [], dryWet: 0.8 },
-    robot: { formantShift: 0, pitchShift: 0, harmonies: [], dryWet: 1.0 },
-    chipmunk: { formantShift: 8, pitchShift: 5, harmonies: [], dryWet: 1.0 },
+    original: { formantShift: 1.0, pitchShift: 0, harmonies: [], reverbMix: 0, dryWet: 0 },
+    deep: { formantShift: 0.8, pitchShift: -4, harmonies: [], reverbMix: 0.2, dryWet: 0.8 },
+    high: { formantShift: 1.2, pitchShift: 4, harmonies: [], reverbMix: 0.1, dryWet: 0.8 },
+    robot: { formantShift: 1.0, pitchShift: 0, harmonies: [], reverbMix: 0.1, dryWet: 1.0 }, // Robot usually handled by special DSP, here just placeholder
+    chipmunk: { formantShift: 1.5, pitchShift: 12, harmonies: [], reverbMix: 0, dryWet: 1.0 },
     harmony: {
-        formantShift: 0,
+        formantShift: 1.0,
         pitchShift: 0,
         harmonies: [
-            { interval: 4, volume: 0.5, pan: -0.5, enabled: true },
+            { interval: 3, volume: 0.5, pan: -0.5, enabled: true },
             { interval: 7, volume: 0.4, pan: 0.5, enabled: true },
         ],
-        dryWet: 0.6,
+        reverbMix: 0.3,
+        dryWet: 0.5,
     },
 };

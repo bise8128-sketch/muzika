@@ -1,5 +1,5 @@
 import React from 'react';
-import { VoiceTransformSettings, VoicePreset, VOICE_PRESETS, HarmonyVoice } from '@/types/audio';
+import { VoiceTransformSettings, VoicePreset } from '@/types/audio';
 
 interface VoiceTransformPanelProps {
     currentPreset: VoicePreset;
@@ -21,12 +21,12 @@ export const VoiceTransformPanel: React.FC<VoiceTransformPanelProps> = ({
     onClose
 }) => {
     
-    const presets: VoicePreset[] = ['basic', 'professional', 'robot', 'chipmunk', 'deep', 'ethereal'];
+    const presets: VoicePreset[] = ['original', 'deep', 'high', 'robot', 'chipmunk', 'harmony'];
 
     return (
         <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6 w-80 text-white shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <h3 className="text-xl font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                     Voice Effects
                 </h3>
                 <button onClick={onClose} className="text-white/40 hover:text-white">
@@ -133,7 +133,7 @@ export const VoiceTransformPanel: React.FC<VoiceTransformPanelProps> = ({
                                 onClick={() => {
                                     const newHarmonies = isActive 
                                         ? settings.harmonies.filter(h => h.interval !== interval)
-                                        : [...settings.harmonies, { interval, gain: 0.5 }];
+                                        : [...settings.harmonies, { interval, volume: 0.5, pan: interval > 0 ? 0.5 : -0.5, enabled: true }];
                                     onSettingsChange({ harmonies: newHarmonies });
                                 }}
                                 className={`flex-1 py-2 rounded text-xs font-bold border transition-all ${

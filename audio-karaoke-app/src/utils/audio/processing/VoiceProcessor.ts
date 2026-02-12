@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { VoiceTransformSettings, VoicePreset, HarmonyVoice, VOICE_PRESETS } from '@/types/audio';
+import { VoiceTransformSettings } from '@/types/audio';
 import { FormantShifter } from './FormantShifter';
 import { HarmonyGenerator } from './HarmonyGenerator';
 
@@ -118,7 +118,7 @@ export class VoiceProcessor {
         
         // 3. Spatial Effects
         this.reverb.wet.value = settings.reverbMix;
-        this.reverb.decay.value = settings.reverbSize * 10 || 1.5; // simplistic mapping
+        this.reverb.decay.value = 1.5 + (settings.reverbMix * 2); // Dynamic decay based on mix
         
         // 4. Robot Effect (using short delay/feedback or RingMod if available, currently just pitch fix)
         // If robot mode, we might want to set pitch shift to 0 feedback? 
@@ -147,7 +147,7 @@ export class VoiceProcessor {
         this.output.gain.rampTo(enabled ? 1 : 0, 0.1);
     }
     
-    setPreampGain(value: number) {
+    setPreampGain(_value: number) {
         // Input gain not directly on UserMedia, but we can add a pre-gain node if needed.
         // For now, assume hardware gain / normalization.
     }

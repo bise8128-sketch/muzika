@@ -5,8 +5,11 @@ import { VoiceTransformSettings, VOICE_PRESETS, VoicePreset } from '@/types/audi
 export const useVoiceTransform = () => {
     const processorRef = useRef<VoiceProcessor | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
-    const [currentPreset, setCurrentPreset] = useState<VoicePreset>('basic');
-    const [settings, setSettings] = useState<VoiceTransformSettings>(VOICE_PRESETS.basic);
+    const [currentPreset, setCurrentPreset] = useState<VoicePreset>('original');
+    const [settings, setSettings] = useState<VoiceTransformSettings>({
+        preset: 'original',
+        ...VOICE_PRESETS.original
+    });
     const [isMonitoring, setIsMonitoring] = useState(false);
 
     useEffect(() => {
@@ -30,7 +33,10 @@ export const useVoiceTransform = () => {
 
     const setPreset = useCallback((preset: VoicePreset) => {
         setCurrentPreset(preset);
-        const newSettings = VOICE_PRESETS[preset];
+        const newSettings = {
+            preset,
+            ...VOICE_PRESETS[preset]
+        };
         setSettings(newSettings);
         if (processorRef.current) {
             processorRef.current.applySettings(newSettings);
