@@ -1,62 +1,43 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { ErrorBoundary } from '@/components/UI/ErrorBoundary';
+import dynamic from 'next/dynamic';
 
 import { PlaybackController } from '@/utils/audio/playbackController';
-import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
-import { BatchQueue } from '@/components/Batch/BatchQueue';
-import { useBatchSeparation, QueueItem } from '@/hooks/useBatchSeparation';
-import { exportAudio, MP3ExportError, getErrorMessage } from '@/utils/audio/audioExporter';
-import { getHistorySessions, restoreSession, clearHistory as dbClearHistory, HistorySession } from '@/utils/storage/historyStore';
-import { float32ArrayToAudioBuffer } from '@/utils/audio/audioDecoder';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { songsStorage } from '@/utils/storage/songsStorage';
 import { DEFAULT_MODEL_ID } from '@/utils/constants';
+
+// Hooks
 import { useSeparation } from '@/hooks/useSeparation';
+import { useBatchSeparation } from '@/hooks/useBatchSeparation';
 import { useModels } from '@/hooks/useModels';
+import { useServerProcessing } from '@/hooks/useServerProcessing';
+import { useHistoryManagement } from '@/hooks/useHistoryManagement';
+import { useAudioExport } from '@/hooks/useAudioExport';
+import { useAppState } from '@/hooks/useAppState';
+
+// Views
+import { UploadView } from '@/components/Page/UploadView';
+import { ProcessingView } from '@/components/Page/ProcessingView';
+import { ResultsView } from '@/components/Page/ResultsView';
+import { KaraokeView } from '@/components/Page/KaraokeView';
+import { ModelsView } from '@/components/Page/ModelsView';
+import { BatchView } from '@/components/Page/BatchView';
+
+import { ExtractedMetadata } from '@/types/schema';
 import LanguageSwitcher from '@/components/UI/LanguageSwitcher';
 
-const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
-  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Karaoke Player...</div>,
-  ssr: false
-});
-
-const ResultsDisplay = dynamic(() => import('@/components/SeparationEngine/ResultsDisplay').then(mod => mod.ResultsDisplay), {
-  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Preparing results...</div>,
-  ssr: false
-});
-
 const SettingsPanel = dynamic(() => import('@/components/UI/SettingsPanel').then(mod => mod.SettingsPanel), {
-  ssr: false
-});
-
-const History = dynamic(() => import('@/components/UI/History').then(mod => mod.History), {
   ssr: false
 });
 
 const Onboarding = dynamic(() => import('@/components/UI/Onboarding').then(mod => mod.Onboarding), {
   ssr: false
 });
-
-const ModelManager = dynamic(() => import('@/components/ModelManager/ModelManager').then(mod => mod.ModelManager), {
-  loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Model Manager...</div>,
-  ssr: false
-});
-
-import { SeparationResult as ISeparationResult } from '@/types/audio';
-import { ExtractedMetadata } from '@/types/schema';
-
-type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
-
-interface DownloadTrack {
-  id: string;
-  name: string;
-  blob: Blob | AudioBuffer | null;
-}
 
 // Backend Status Component
 function BackendStatus() {
@@ -78,7 +59,7 @@ function BackendStatus() {
       }
     };
     checkStatus();
-    const interval = setInterval(checkStatus, 30000); // Check every 30s
+    const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -103,231 +84,48 @@ export default function Home() {
   const t = useTranslations('HomePage');
   const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
-  const [state, setState] = useState<AppState>('upload');
-  const [controller, setController] = useState<PlaybackController | null>(null);
 
+  // PlaybackController
+  const [controller, setController] = useState<PlaybackController | null>(null);
   useEffect(() => {
     setController(new PlaybackController());
   }, []);
+  useEffect(() => {
+    return () => { if (controller) controller.dispose(); };
+  }, [controller]);
+
+  // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [autoStartKaraoke, setAutoStartKaraoke] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return getSettings().autoStartKaraoke;
-    }
+    if (typeof window !== 'undefined') return getSettings().autoStartKaraoke;
     return false;
   });
-
-  // Result state (from hook OR from restoration)
-  const [restoredResult, setRestoredResult] = useState<ISeparationResult | null>(null);
-
-  // Model Selection
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
 
-  // Separation Hook
-  const {
-    separate,
-    progress: separationProgress,
-    status: separationStatus,
-    message: separationMessage,
-    error: separationError,
-    result: separationResult,
-    reset: resetSeparation
-  } = useSeparation();
-
-  // Batch Hook
+  // Domain hooks
+  const separation = useSeparation();
   const batch = useBatchSeparation();
+  const serverProcessing = useServerProcessing();
+  const history = useHistoryManagement();
+  const { handleDownload, handleBatchDownload } = useAudioExport();
 
-  // Server-side Processing State
-  const [serverJobId, setServerJobId] = useState<string | null>(null);
-  const [serverLogs, setServerLogs] = useState<string>('');
+  const { state, setState, activeResult, handleRestart, handleTryKaraoke } = useAppState({
+    separationStatus: separation.status,
+    separationResult: separation.result,
+    separationError: separation.error,
+    serverProcessingResult: serverProcessing.result,
+    serverProcessingError: serverProcessing.error,
+    autoStartKaraoke,
+    controller,
+    onHistoryRefresh: history.loadHistory,
+    onResetSeparation: separation.reset,
+    onResetServerProcessing: serverProcessing.reset,
+    onClearRestoredResult: history.clearRestoredResult,
+    restoredResult: history.restoredResult,
+  });
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    const abortCtrl = new AbortController();
-    const { signal } = abortCtrl;
-
-    if (serverJobId && state === 'processing') {
-      const checkStatus = async () => {
-        try {
-          const res = await fetch(`/api/python-processing?jobId=${serverJobId}`, { signal });
-          if (!res.ok || signal.aborted) return;
-
-          const data = await res.json();
-          if (signal.aborted) return;
-
-          if (data.status === 'completed') {
-            clearInterval(interval);
-
-            // Load audio files
-            try {
-              const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-              if (!AudioContextClass) {
-                throw new Error("AudioContext not supported");
-              }
-              const ctx = new AudioContextClass();
-
-              const [vocalsBuffer, instrumentalBuffer, originalBuffer] = await Promise.all([
-                data.stems.vocals ? fetch(data.stems.vocals, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
-                data.stems.other ? fetch(data.stems.other, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
-                data.original ? fetch(data.original, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null
-              ]);
-
-              if (signal.aborted) return;
-
-              let finalInstrumental = instrumentalBuffer;
-
-              if (data.stems.drums && data.stems.bass && data.stems.other) {
-                const fetchAndDecode = (url: string) => fetch(url, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
-                const [drums, bass, other] = await Promise.all([
-                  fetchAndDecode(data.stems.drums),
-                  fetchAndDecode(data.stems.bass),
-                  fetchAndDecode(data.stems.other)
-                ]);
-
-                if (signal.aborted) return;
-
-                const length = vocalsBuffer?.length || drums.length;
-                const mixed = ctx.createBuffer(2, length, ctx.sampleRate);
-                for (let c = 0; c < 2; c++) {
-                  const d = drums.getChannelData(c);
-                  const b = bass.getChannelData(c);
-                  const o = other.getChannelData(c);
-                  const out = mixed.getChannelData(c);
-                  for (let i = 0; i < length; i++) {
-                    out[i] = d[i] + b[i] + o[i];
-                  }
-                }
-                finalInstrumental = mixed;
-              }
-
-              if (!vocalsBuffer || !finalInstrumental) {
-                throw new Error("Missing audio stems from server response");
-              }
-
-              setRestoredResult({
-                vocals: vocalsBuffer,
-                instrumentals: finalInstrumental,
-                originalAudio: originalBuffer,
-                timestamp: Date.now(),
-                fileHash: serverJobId || 'server-job'
-              });
-
-              setServerJobId(null);
-              setState('results');
-
-            } catch (e) {
-              if (signal.aborted) return;
-              console.error("Failed to load server results", e);
-              alert("Failed to load processed audio.");
-              setState('upload');
-            }
-
-          } else if (data.status === 'error') {
-            clearInterval(interval);
-            if (!signal.aborted) {
-              alert(`Server Error: ${data.error}`);
-              setState('upload');
-            }
-          } else if (data.status === 'processing') {
-            if (data.logs && !signal.aborted) setServerLogs(data.logs);
-          }
-        } catch (e) {
-          if (!signal.aborted) console.error("Polling error", e);
-        }
-      };
-
-      interval = setInterval(checkStatus, 2000);
-      checkStatus(); // Initial check
-    }
-    return () => {
-      clearInterval(interval);
-      abortCtrl.abort();
-    };
-  }, [serverJobId, state]);
-
-  const handleServerProcessing = async (url: string, config: { model: string, format: string }) => {
-    try {
-      setState('processing');
-      const res = await fetch('/api/python-processing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, ...config })
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Server request failed');
-      }
-
-      const data = await res.json();
-      setServerJobId(data.jobId);
-    } catch (e) {
-      console.error(e);
-      alert(e instanceof Error ? e.message : "Failed to start processing");
-      setState('upload');
-    }
-  };
-
-  const handleBatchDownload = async (item: QueueItem) => {
-    if (!item.result) return;
-    const baseName = item.file.name.replace(/\.[^/.]+$/, "");
-    await exportAudio(item.result.vocals, 'mp3', `${baseName}_vocals.mp3`);
-    await exportAudio(item.result.instrumentals, 'mp3', `${baseName}_instrumental.mp3`);
-  };
-
-  // History state
-  const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
-
-  const loadHistory = async () => {
-    const sessions = await getHistorySessions();
-    setHistoryItems(sessions);
-  };
-
-  // Load history on mount
-  useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-      const sessions = await getHistorySessions();
-      if (mounted) {
-        setHistoryItems(sessions);
-      }
-    };
-    init();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Dispose controller on unmount
-  useEffect(() => {
-    return () => {
-      if (controller) controller.dispose();
-    };
-  }, [controller]);
-
-  // Update UI based on separation status
-  useEffect(() => {
-    if (separationStatus === 'completed' && separationResult) {
-      // Refresh history
-      loadHistory();
-
-      // If auto-start is enabled, set buffers and go to karaoke
-      if (autoStartKaraoke && controller) {
-        controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
-        setState('karaoke');
-      } else {
-        // Short delay for smooth transition
-        const timer = setTimeout(() => setState('results'), 500);
-        return () => clearTimeout(timer);
-      }
-    } else if (separationStatus === 'error') {
-      console.error("Separation Error:", separationError);
-      setState('upload');
-      alert(`Error: ${separationError || 'Unknown error'}`);
-    }
-  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError]);
-
+  // Upload handler
   const handleUpload = async (files: File[], isKaraokeMode: boolean = false, metadata?: ExtractedMetadata[]) => {
     if (files.length === 0) return;
 
@@ -338,7 +136,6 @@ export default function Home() {
           const fileMetadata = metadata ? metadata[i] : undefined;
           await songsStorage.saveDirectKaraoke(file, fileMetadata);
         }
-        // Navigate to library or show success
         router.push('/library');
       } catch (e) {
         console.error("Failed to save karaoke song:", e);
@@ -362,163 +159,62 @@ export default function Home() {
 
     try {
       setState('processing');
-      await separate(file, modelInfo);
+      await separation.separate(file, modelInfo);
     } catch (e) {
       console.error("Upload/Separation failed immediately:", e);
     }
   };
 
-  const handleDownload = async (track: DownloadTrack, format: 'wav' | 'mp3') => {
-    if (!track.blob) {
-      alert('Track data not available for download');
-      return;
-    }
-
-    try {
-      let buffer: AudioBuffer;
-
-      // Handle both Blob and AudioBuffer types
-      if (track.blob instanceof AudioBuffer) {
-        buffer = track.blob;
-      } else if (track.blob instanceof Blob) {
-        // Convert Blob to AudioBuffer
-        const arrayBuffer = await track.blob.arrayBuffer();
-        const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-        if (!AudioContextClass) {
-          throw new Error("AudioContext not supported");
-        }
-        const audioContext = new AudioContextClass();
-        buffer = await audioContext.decodeAudioData(arrayBuffer);
-      } else {
-        throw new Error('Invalid track data type');
-      }
-
-      const filename = `${track.name.toLowerCase()}_${Date.now()}.${format}`;
-      await exportAudio(buffer, format, filename);
-    } catch (e) {
-      console.error('Download failed:', e);
-      if (e instanceof MP3ExportError) {
-        alert(getErrorMessage(e));
-      } else {
-        alert('Failed to export audio. Check console for details.');
-      }
-    }
-  };
-
+  // Restore handler (bridges history hook result → state transition)
   const handleRestore = async (fileHash: string) => {
     try {
-      const session = await restoreSession(fileHash);
-      if (!session) {
-        alert('Could not find session data');
-        return;
-      }
-
-      const vocals = float32ArrayToAudioBuffer(new Float32Array(session.vocals), session.sampleRate, 2);
-      const instrumentals = float32ArrayToAudioBuffer(new Float32Array(session.instrumentals), session.sampleRate, 2);
-
-      setRestoredResult({
-        vocals,
-        instrumentals,
-        originalAudio: null,
-        timestamp: session.processedAt,
-        fileHash: session.fileHash
-      });
-
+      await history.handleRestore(fileHash);
       setState('results');
-    } catch (e) {
-      console.error('Restore failed:', e);
+    } catch {
       alert('Failed to restore session from database.');
     }
   };
 
-  const handleRestart = () => {
-    setState('upload');
-    resetSeparation();
-    setRestoredResult(null);
-  };
-
-  const handleTryKaraoke = () => {
-    const activeResult = separationResult || restoredResult;
-    if (activeResult && controller) {
-      controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
-    }
-    setState('karaoke');
-  };
-
-  const clearHistory = async () => {
-    await dbClearHistory();
-    setHistoryItems([]);
+  // Server processing handler (bridges to state transition)
+  const handleServerProcessing = async (url: string, config: { model: string; format: string }) => {
+    setState('processing');
+    await serverProcessing.handleServerProcessing(url, config);
   };
 
   const renderContent = () => {
     switch (state) {
       case 'upload':
         return (
-          <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
-            <AudioUpload
-              onUpload={handleUpload}
-              isLoading={separationStatus === 'processing'}
-              autoStartKaraoke={autoStartKaraoke}
-              onAutoStartToggle={(val) => {
-                setAutoStartKaraoke(val);
-                saveSettings({ autoStartKaraoke: val });
-              }}
-              selectedModelId={selectedModelId}
-              onModelChange={setSelectedModelId}
-              onServerProcessing={handleServerProcessing}
-            />
-            <div className="mt-16">
-              <History
-                items={historyItems.map(h => ({
-                  id: h.fileHash,
-                  fileName: h.fileName,
-                  date: new Date(h.date).toLocaleDateString(),
-                  duration: `${Math.floor(h.duration / 60)}:${(h.duration % 60).toString().padStart(2, '0')}`
-                }))}
-                onRestore={handleRestore}
-                onClear={clearHistory}
-              />
-            </div>
-          </div>
+          <UploadView
+            onUpload={handleUpload}
+            isLoading={separation.status === 'processing'}
+            autoStartKaraoke={autoStartKaraoke}
+            onAutoStartToggle={(val) => {
+              setAutoStartKaraoke(val);
+              saveSettings({ autoStartKaraoke: val });
+            }}
+            selectedModelId={selectedModelId}
+            onModelChange={setSelectedModelId}
+            onServerProcessing={handleServerProcessing}
+            historyItems={history.historyItems}
+            onRestore={handleRestore}
+            onClearHistory={history.clearHistory}
+          />
         );
 
       case 'processing':
         return (
-          <div className="max-w-2xl mx-auto py-20 text-center animate-in zoom-in-95 duration-500">
-            <div className="relative inline-block mb-12">
-              <div className="w-32 h-32 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl">
-                {Math.round(separationProgress)}%
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold mb-4 text-gradient">{t('separatingAudio')}</h2>
-            <p className="text-muted-foreground animate-pulse">
-              {separationMessage || t('runningModels')}
-            </p>
-
-            <div className="mt-12 space-y-2 max-w-sm mx-auto">
-              <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">
-                <span>{t('status', { status: separationStatus })}</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-linear-to-r from-primary to-accent transition-all duration-300"
-                  style={{ width: `${separationProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
+          <ProcessingView
+            progress={separation.progress}
+            message={separation.message}
+            status={separation.status}
+          />
         );
 
       case 'results':
-        const activeResult = separationResult || restoredResult;
         return (
-          <ResultsDisplay
-            tracks={[
-              { id: 'original', name: t('original'), blob: activeResult?.originalAudio || null },
-              { id: 'vocals', name: t('vocals'), blob: activeResult?.vocals || null },
-              { id: 'instrumental', name: t('instrumental'), blob: activeResult?.instrumentals || null }
-            ]}
+          <ResultsView
+            activeResult={activeResult}
             onDownload={handleDownload}
             onRestart={handleRestart}
             onTryKaraoke={handleTryKaraoke}
@@ -526,70 +222,31 @@ export default function Home() {
         );
 
       case 'karaoke':
-        return (
-          <div className="animate-in fade-in duration-700">
-            <button
-              onClick={() => setState('results')}
-              className="mb-8 flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              {t('backToResults')}
-            </button>
-            {controller && <KaraokePlayer controller={controller} />}
-          </div>
-        );
+        return controller ? (
+          <KaraokeView
+            controller={controller}
+            onBack={() => setState('results')}
+          />
+        ) : null;
 
       case 'models':
         return (
-          <div className="animate-in fade-in duration-500">
-            <button
-              onClick={() => setState('upload')}
-              className="mb-8 flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              {t('backToHome')}
-            </button>
-            <ModelManager />
-          </div>
+          <ModelsView onBack={() => setState('upload')} />
         );
 
       case 'batch':
         return (
-          <div className="animate-in fade-in slide-in-from-bottom-10 duration-500">
-            <div className="flex justify-between items-center mb-6">
-              <button onClick={() => setState('upload')} className="text-sm hover:text-white flex items-center gap-2">
-                <span>←</span> {t('back')}
-              </button>
-              <div className="space-x-4">
-                <button
-                  onClick={batch.clearQueue}
-                  disabled={batch.isProcessing}
-                  className="text-red-400 hover:text-red-300 disabled:opacity-50 text-sm font-medium"
-                >
-                  {t('clearAll')}
-                </button>
-                <button
-                  onClick={() => {
-                    const model = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
-                    if (model) batch.startBatch(model);
-                  }}
-                  disabled={batch.isProcessing || batch.queue.length === 0}
-                  className="bg-primary hover:bg-primary/90 px-6 py-2 rounded-full font-bold disabled:opacity-50 transition-all"
-                >
-                  {batch.isProcessing ? t('processing') : t('startBatch')}
-                </button>
-              </div>
-            </div>
-            <BatchQueue
-              queue={batch.queue}
-              onRemove={batch.removeFromQueue}
-              onDownload={handleBatchDownload}
-            />
-          </div>
+          <BatchView
+            queue={batch.queue}
+            isProcessing={batch.isProcessing}
+            onRemove={batch.removeFromQueue}
+            onClear={batch.clearQueue}
+            onStartBatch={batch.startBatch}
+            onBatchDownload={handleBatchDownload}
+            onBack={() => setState('upload')}
+            selectedModelId={selectedModelId}
+            models={AVAILABLE_MODELS}
+          />
         );
     }
   };
