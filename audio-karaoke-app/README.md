@@ -1,4 +1,16 @@
-# Muzika - AI-Powered Karaoke Application
+# 🎤 Muzika Karaoke Application
+
+![Build Status](https://github.com/username/muzika/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-0.1.0-green.svg)
+
+**Next-Gen Client-Side AI Karaoke Experience**
+
+🔗 **Quick Links:**
+- [📖 User Guide](./USER_GUIDE.md)
+- [🛠️ Developer Guide](./DEVELOPER_GUIDE.md)
+- [🚀 Deployment Guide](./DEPLOYMENT.md)
+
 
 A modern web application for AI-powered vocal separation and karaoke. Process audio files locally in your browser or use the Python backend for enhanced features.
 
