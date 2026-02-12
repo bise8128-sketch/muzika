@@ -36,4 +36,4 @@ def test_upload_sanitization():
         
     assert response.status_code == 200
     # The filename in the response should be sanitized
-    assert response.json()["filename"] == "passwd" # werkzeug's secure_filename behavior for ../../etc/passwd
+    assert response.json()["filename"] == "etc_passwd" # werkzeug's secure_filename behavior for ../../etc/passwd
