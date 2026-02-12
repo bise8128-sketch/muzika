@@ -8,8 +8,6 @@
 import {
     SyncMessage,
     SyncMessageType,
-    Room,
-    RoomParticipant,
     RoomPlaybackState
 } from '@/types/room';
 
@@ -116,12 +114,12 @@ export class SyncClient {
         }
     }
 
-    send(message: Omit<SyncMessage, 'timestamp'>) { // Timestamp added here or server? Added here for now
+    send(message: Omit<SyncMessage, 'timestamp'>) { 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             const fullMessage = {
                 ...message,
                 timestamp: Date.now()
-            };
+            } as SyncMessage;
             this.ws.send(JSON.stringify(fullMessage));
         }
     }

@@ -25,6 +25,9 @@ import { useTranslations } from 'next-intl';
 import { SettingsPanel } from '../UI/SettingsPanel';
 import { usePractice } from '@/hooks/usePractice';
 import { PracticePanel } from './PracticePanel';
+import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
+import { RoomLobby } from '../Room/RoomLobby';
+import { RoomView } from '../Room/RoomView';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -355,6 +358,32 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         stopPractice
     } = usePractice(controller);
 
+    const {
+        isConnected: isRoomConnected,
+        room,
+        participants,
+        messages,
+        currentUser: roomUser,
+        isHost: isRoomHost,
+        joinRoom,
+        leaveRoom,
+        sendChat
+    } = useKaraokeRoom(controller);
+
+    const {
+        isConnected: isRoomConnected,
+        room,
+        participants,
+        messages,
+        currentUser: roomUser,
+        isHost: isRoomHost,
+        joinRoom,
+        leaveRoom,
+        sendChat
+    } = useKaraokeRoom(controller);
+
+    const [showRoom, setShowRoom] = useState(false);
+
     // Auto-record practice attempts when section ends
     useEffect(() => {
         if (isPracticing && currentSection) {
@@ -534,7 +563,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 )}
 
                 {(lyrics || cdgData) && !showEditor && (
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                         <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10">
                             {(['modern', 'neon', 'classic', 'retro'] as LyricTheme[]).map(t => (
                                 <button
@@ -550,21 +579,25 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                                 </button>
                             ))}
                         </div>
-                        {/* Practice Mode Toggle */}
-                    <button
-                        className={`karaoke-player__btn ${showPractice ? 'active' : ''}`}
-                        onClick={() => setShowPractice(!showPractice)}
-                        title="Smart Practice Mode"
-                    >
-                        🎯 Practice
-                    </button>
 
-                    <button
-                        className={`karaoke-player__btn ${showSettings ? 'active' : ''}`}
-                        onClick={() => setShowSettings(!showSettings)}
-                    >
-                        ⚙️ Settings
-                    </button>
+                        {/* Practice Mode Toggle */}
+                        <button
+                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showPractice ? 'bg-primary/50' : ''}`}
+                            onClick={() => setShowPractice(!showPractice)}
+                            title="Smart Practice Mode"
+                        >
+                            🎯
+                        </button>
+
+                        {/* Room Toggle */}
+                        <button
+                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showRoom ? 'bg-primary/50' : ''}`}
+                            onClick={() => setShowRoom(!showRoom)}
+                            title="Collaborative Room"
+                        >
+                            👥
+                        </button>
+
                         <button
                             onClick={() => {
                                 setIsStageMode(true);
@@ -596,6 +629,66 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </button>
+                        <button
+                            className={`p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md ml-2 ${showSettings ? 'bg-primary/50' : ''}`}
+                            onClick={() => setShowSettings(!showSettings)}
+                            title="Settings"
+                        >
+                            ⚙️
+                        </button>
+                    </div>
+                )}
+
+                {/* Overlays */}
+                {showPractice && (
+                    <div className="absolute top-20 right-4 z-50 w-80">
+                        <PracticePanel
+                            isPracticing={isPracticing}
+                            isComplete={isPracticeComplete}
+                            sections={practiceSections}
+                            currentIndex={practiceIndex}
+                            attemptNumber={attemptNumber}
+                            currentTempo={currentTempo}
+                            currentSection={currentSection}
+                            overallImprovement={overallImprovement}
+                            onSkipSection={skipSection}
+                            onStopPractice={() => {
+                                stopPractice();
+                                setShowPractice(false);
+                            }}
+                        />
+                        {!isPracticing && !isPracticeComplete && (
+                            <div className="mt-2 text-center">
+                                <button 
+                                    className="w-full px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/80 transition"
+                                    onClick={() => startPractice(pitchHistory)}
+                                    disabled={pitchHistory.length === 0}
+                                >
+                                    Start Practice From History
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {showRoom && (
+                    <div className="absolute top-20 right-4 z-50">
+                        {!isRoomConnected || !room ? (
+                                <RoomLobby 
+                                onJoin={joinRoom} 
+                                onCancel={() => setShowRoom(false)} 
+                                />
+                        ) : (
+                            <RoomView 
+                                room={room}
+                                participants={participants}
+                                messages={messages}
+                                currentUser={roomUser}
+                                isHost={isRoomHost}
+                                onLeave={leaveRoom}
+                                onSendMessage={sendChat}
+                            />
+                        )}
                     </div>
                 )}
 
