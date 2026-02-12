@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import json
 import logging
 import torch
 from downloader import AudioDownloader
@@ -11,7 +12,7 @@ from separator import AudioSeparator
 from utils import setup_logging
 import asyncio
 import uuid
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from fastapi.concurrency import run_in_threadpool
 from werkzeug.utils import secure_filename
 
@@ -62,8 +63,48 @@ class JobStatus(BaseModel):
     error: Optional[str] = None
 
 # Global state
-jobs: Dict[str, Dict[str, Any]] = {}
 separation_lock = asyncio.Lock()
+
+# ── Redis-backed job storage (with in-memory fallback) ──────────
+try:
+    import redis
+    _redis = redis.Redis(
+        host=os.environ.get("REDIS_HOST", "localhost"),
+        port=int(os.environ.get("REDIS_PORT", 6379)),
+        db=0,
+        decode_responses=True,
+    )
+    _redis.ping()
+    _use_redis = True
+    logger.info("Redis connected — using persistent job storage")
+except Exception as e:
+    logger.warning(f"Redis unavailable ({e}) — falling back to in-memory job storage")
+    _use_redis = False
+    _redis = None
+
+_jobs_fallback: Dict[str, Dict[str, Any]] = {}
+_JOB_TTL = 3600  # 1 hour
+
+
+def set_job(job_id: str, data: Dict[str, Any]) -> None:
+    if _use_redis and _redis:
+        _redis.setex(f"job:{job_id}", _JOB_TTL, json.dumps(data))
+    else:
+        _jobs_fallback[job_id] = data
+
+
+def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    if _use_redis and _redis:
+        raw = _redis.get(f"job:{job_id}")
+        return json.loads(raw) if raw else None
+    return _jobs_fallback.get(job_id)
+
+
+def update_job(job_id: str, **kwargs: Any) -> None:
+    job = get_job(job_id)
+    if job:
+        job.update(kwargs)
+        set_job(job_id, job)
 
 @app.get("/api/models")
 async def list_models():
@@ -114,7 +155,7 @@ async def download_audio(request: DownloadRequest):
 async def run_separation_job(job_id: str, filename: str, model: str):
     async with separation_lock:
         try:
-            jobs[job_id]["status"] = "processing"
+            update_job(job_id, status="processing")
             file_path = os.path.join(DOWNLOADS_DIR, filename)
             
             if not os.path.exists(file_path):
@@ -127,13 +168,11 @@ async def run_separation_job(job_id: str, filename: str, model: str):
             # Make paths relative
             relative_stems = {k: os.path.relpath(v, OUTPUT_DIR) for k, v in stems.items()}
             
-            jobs[job_id]["result"] = relative_stems
-            jobs[job_id]["status"] = "completed"
+            update_job(job_id, result=relative_stems, status="completed")
             logger.info(f"Job {job_id} completed")
         except Exception as e:
             logger.error(f"Job {job_id} failed: {e}")
-            jobs[job_id]["status"] = "failed"
-            jobs[job_id]["error"] = str(e)
+            update_job(job_id, status="failed", error=str(e))
 
 @app.post("/api/separate", response_model=JobStatus)
 async def separate_audio(request: SeparateRequest, background_tasks: BackgroundTasks):
@@ -146,21 +185,23 @@ async def separate_audio(request: SeparateRequest, background_tasks: BackgroundT
         raise HTTPException(status_code=404, detail="File not found")
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
+    job_data = {
         "job_id": job_id,
         "status": "pending",
         "result": None,
         "error": None
     }
+    set_job(job_id, job_data)
     
     background_tasks.add_task(run_separation_job, job_id, secure_filename(request.filename), request.model)
-    return jobs[job_id]
+    return job_data
 
 @app.get("/api/jobs/{job_id}", response_model=JobStatus)
 async def get_job_status(job_id: str):
-    if job_id not in jobs:
+    job = get_job(job_id)
+    if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    return jobs[job_id]
+    return job
 
 @app.get("/api/library")
 async def get_library():
