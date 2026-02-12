@@ -149,3 +149,44 @@ export interface PlayerState {
     shuffleMode: boolean;
     repeatMode: 'off' | 'all' | 'one';
 }
+
+/**
+ * Stem isolation types for multi-track mixing
+ */
+export type StemType = 'vocals' | 'drums' | 'bass' | 'other' | 'instrumental';
+
+export interface StemSettings {
+    type: StemType;
+    label: string;
+    volume: number;   // 0 to 1
+    muted: boolean;
+    solo: boolean;
+    icon: string;      // Emoji icon for UI
+}
+
+export type StemPreset = 'full-mix' | 'karaoke' | 'a-capella' | 'drums-only' | 'bass-only';
+
+/**
+ * Pitch analysis types for vocal performance scoring
+ */
+export interface PitchAnalysisResult {
+    detectedPitch: number;    // Hz (0 = no pitch)
+    detectedMidi: number;     // MIDI note number
+    referencePitch: number;   // Hz
+    referenceMidi: number;    // MIDI note number
+    centDeviation: number;    // Deviation in cents (-100 to +100)
+    accuracy: number;         // 0 to 100%
+    timestamp: number;        // Seconds
+    confidence: number;       // 0 to 1
+}
+
+export type PerformanceGrade = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export interface PerformanceScore {
+    overallAccuracy: number;    // 0 to 100%
+    grade: PerformanceGrade;
+    notesHit: number;
+    totalNotes: number;
+    longestStreak: number;
+    history: PitchAnalysisResult[];
+}

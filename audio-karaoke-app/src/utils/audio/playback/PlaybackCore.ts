@@ -8,7 +8,7 @@
 import { getAudioContext } from '../audioContext';
 import { EffectsChain } from './EffectsChain';
 import { EventManager, EventType, EventCallback } from './EventManager';
-import type { ReverbSettings, EchoSettings, PitchCorrectionSettings } from '../../../types/audio';
+import type { ReverbSettings, EchoSettings, PitchCorrectionSettings, StemSettings, StemPreset, StemType } from '../../../types/audio';
 import type { ReverbProcessor } from '../reverbProcessor';
 import type { EchoProcessor } from '../echoProcessor';
 import type { PitchCorrector } from '../pitchCorrection';
@@ -29,6 +29,10 @@ export class PlaybackController {
     private voiceBuffer: AudioBuffer | null = null;
     private trackVolumes: number[] = [];
     private voiceVolume: number = 1.0;
+
+    // Stem isolation state
+    private stemStates: StemSettings[] = [];
+    private stemMutedVolumes: number[] = []; // remembered volumes for mute restore
 
     // Playback state
     private isPlaying: boolean = false;
@@ -251,6 +255,158 @@ export class PlaybackController {
     getReverbProcessor(): ReverbProcessor { return this.effects.getReverbProcessor(); }
     getEchoProcessor(): EchoProcessor { return this.effects.getEchoProcessor(); }
     getPitchCorrector(): PitchCorrector { return this.effects.getPitchCorrector(); }
+
+    // ─── Stem Isolation ────────────────────────────────────────────
+
+    private static readonly DEFAULT_STEM_LABELS: Record<StemType, { label: string; icon: string }> = {
+        vocals: { label: 'Vocals', icon: '🎤' },
+        drums: { label: 'Drums', icon: '🥁' },
+        bass: { label: 'Bass', icon: '🎸' },
+        other: { label: 'Other', icon: '🎹' },
+        instrumental: { label: 'Instrumental', icon: '🎵' },
+    };
+
+    /**
+     * Initialise stem states from the current audioBuffers.
+     * Called automatically when buffers are set, or manually to reset labels.
+     */
+    initStemStates(stemTypes?: StemType[]): void {
+        const count = this.audioBuffers.length;
+        const defaultOrder: StemType[] = ['vocals', 'instrumental', 'drums', 'bass', 'other'];
+        const types = stemTypes || defaultOrder.slice(0, count);
+
+        this.stemStates = types.map((type, i) => {
+            const meta = PlaybackController.DEFAULT_STEM_LABELS[type] || { label: type, icon: '🎵' };
+            return {
+                type,
+                label: meta.label,
+                volume: this.trackVolumes[i] ?? 1.0,
+                muted: false,
+                solo: false,
+                icon: meta.icon,
+            };
+        });
+        this.stemMutedVolumes = this.stemStates.map(s => s.volume);
+    }
+
+    getStemStates(): StemSettings[] {
+        // Lazy init
+        if (this.stemStates.length === 0 && this.audioBuffers.length > 0) {
+            this.initStemStates();
+        }
+        return [...this.stemStates];
+    }
+
+    setStemVolume(stemIndex: number, volume: number): void {
+        if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+        const clamped = Math.max(0, Math.min(1, volume));
+        this.stemStates[stemIndex].volume = clamped;
+        this.stemMutedVolumes[stemIndex] = clamped;
+
+        if (!this.stemStates[stemIndex].muted) {
+            this._applyStemGain(stemIndex, clamped);
+        }
+    }
+
+    toggleStemMute(stemIndex: number): void {
+        if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+        const stem = this.stemStates[stemIndex];
+        stem.muted = !stem.muted;
+
+        if (stem.muted) {
+            this._applyStemGain(stemIndex, 0);
+        } else {
+            this._applyStemGain(stemIndex, stem.volume);
+        }
+        this._enforceSoloState();
+    }
+
+    toggleStemSolo(stemIndex: number): void {
+        if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+        this.stemStates[stemIndex].solo = !this.stemStates[stemIndex].solo;
+        this._enforceSoloState();
+    }
+
+    resetStems(): void {
+        this.stemStates.forEach((stem, i) => {
+            stem.volume = 1.0;
+            stem.muted = false;
+            stem.solo = false;
+            this.stemMutedVolumes[i] = 1.0;
+            this._applyStemGain(i, 1.0);
+        });
+    }
+
+    applyStemPreset(preset: StemPreset): void {
+        // Start by resetting
+        this.resetStems();
+
+        switch (preset) {
+            case 'karaoke': {
+                const vocIdx = this.stemStates.findIndex(s => s.type === 'vocals');
+                if (vocIdx !== -1) {
+                    this.stemStates[vocIdx].muted = true;
+                    this._applyStemGain(vocIdx, 0);
+                }
+                break;
+            }
+            case 'a-capella': {
+                const vocIdx = this.stemStates.findIndex(s => s.type === 'vocals');
+                if (vocIdx !== -1) {
+                    this.stemStates[vocIdx].solo = true;
+                    this._enforceSoloState();
+                }
+                break;
+            }
+            case 'drums-only': {
+                const dIdx = this.stemStates.findIndex(s => s.type === 'drums');
+                if (dIdx !== -1) {
+                    this.stemStates[dIdx].solo = true;
+                    this._enforceSoloState();
+                }
+                break;
+            }
+            case 'bass-only': {
+                const bIdx = this.stemStates.findIndex(s => s.type === 'bass');
+                if (bIdx !== -1) {
+                    this.stemStates[bIdx].solo = true;
+                    this._enforceSoloState();
+                }
+                break;
+            }
+            case 'full-mix':
+            default:
+                break;
+        }
+    }
+
+    /** Apply the effective gain to a track, respecting solo state */
+    private _applyStemGain(index: number, value: number): void {
+        this.trackVolumes[index] = value;
+        if (this.gainNodes[index]) {
+            this.gainNodes[index].gain.setValueAtTime(
+                value,
+                this.audioContext.currentTime
+            );
+        }
+    }
+
+    /** When any stem has solo enabled, mute all non-solo and non-muted stems */
+    private _enforceSoloState(): void {
+        const anySolo = this.stemStates.some(s => s.solo);
+        this.stemStates.forEach((stem, i) => {
+            if (anySolo) {
+                if (stem.solo && !stem.muted) {
+                    this._applyStemGain(i, stem.volume);
+                } else {
+                    this._applyStemGain(i, 0);
+                }
+            } else {
+                // No solo active → respect mute state
+                this._applyStemGain(i, stem.muted ? 0 : stem.volume);
+            }
+        });
+    }
 
     // ─── Deprecated ScriptProcessor path ───────────────────────────
 
