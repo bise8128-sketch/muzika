@@ -2,7 +2,8 @@
  * Tests for /api/models endpoint
  */
 
-import { GET, AVAILABLE_MODELS } from '../models/route';
+import { GET } from '../models/route';
+import { AVAILABLE_MODELS } from '@/constants/models';
 import { NextResponse } from 'next/server';
 
 // Mock NextResponse

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { ModelInfo } from '@/types/model';
-import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/app/api/models/route';
+import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/constants/models';
 import { checkONNXSupport } from '@/utils/ml/onnxSetup';
 
 export function useModels() {
