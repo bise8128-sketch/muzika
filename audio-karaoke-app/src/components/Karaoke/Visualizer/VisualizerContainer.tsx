@@ -7,7 +7,7 @@ import { VoiceTransformPanel } from '../VoiceTransformPanel';
 import { PracticePanel } from '../PracticePanel';
 import { RoomLobby } from '../../Room/RoomLobby';
 import { RoomView } from '../../Room/RoomView';
-import { SettingsPanel } from '../../../UI/SettingsPanel';
+import { SettingsPanel } from '../../UI/SettingsPanel';
 import { useTranslations } from 'next-intl';
 
 interface VisualizerContainerProps {

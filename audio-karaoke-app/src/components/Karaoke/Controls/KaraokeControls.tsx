@@ -30,7 +30,7 @@ interface KaraokeControlsProps {
     voiceFx: {
         isInitialized: boolean;
         init: () => Promise<void>;
-        getProcessedStream: () => MediaStream | undefined;
+        getProcessedStream: () => MediaStream | null | undefined;
     };
     onBalanceChange: (balance: number) => void;
     onAudioDownload: (format: 'wav' | 'mp3') => void;
