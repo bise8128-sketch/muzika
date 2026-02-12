@@ -372,17 +372,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         sendChat
     } = useKaraokeRoom(controller);
 
-    const {
-        isConnected: isRoomConnected,
-        room,
-        participants,
-        messages,
-        currentUser: roomUser,
-        isHost: isRoomHost,
-        joinRoom,
-        leaveRoom,
-        sendChat
-    } = useKaraokeRoom(controller);
+
 
     const [showRoom, setShowRoom] = useState(false);
 
