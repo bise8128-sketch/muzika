@@ -6,11 +6,23 @@ import { db } from './audioDatabase';
 import { ModelType, type ModelInfo, type ModelStorageData } from '@/types/model';
 import type { StorageStats, StorageQuota } from '@/types/storage';
 
+/**
+ * Check if we're in a browser context with required APIs
+ */
+function isBrowser(): boolean {
+    return typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
+}
+
 export class ModelStorage {
     /**
      * Save an ONNX model to IndexedDB
      */
     async saveModel(modelInfo: ModelInfo, modelData: ArrayBuffer): Promise<number> {
+        if (!isBrowser()) {
+            console.warn('[ModelStorage] saveModel called during SSR - skipping');
+            return -1;
+        }
+
         const storageData: ModelStorageData = {
             modelId: modelInfo.id,
             name: modelInfo.name,
@@ -40,6 +52,8 @@ export class ModelStorage {
      * Retrieve a cached model from IndexedDB
      */
     async getModel(modelId: string): Promise<ArrayBuffer | null> {
+        if (!isBrowser()) return null;
+
         const model = await db.models.where('modelId').equals(modelId).first();
         return model ? model.data : null;
     }
@@ -48,6 +62,8 @@ export class ModelStorage {
      * Get model metadata
      */
     async getModelInfo(modelId: string): Promise<ModelStorageData | undefined> {
+        if (!isBrowser()) return undefined;
+
         return await db.models.where('modelId').equals(modelId).first();
     }
 
@@ -55,6 +71,8 @@ export class ModelStorage {
      * Delete a model from IndexedDB
      */
     async deleteModel(modelId: string): Promise<void> {
+        if (!isBrowser()) return;
+
         await db.models.where('modelId').equals(modelId).delete();
         console.log(`❌ Deleted model ${modelId}`);
     }
@@ -63,6 +81,8 @@ export class ModelStorage {
      * Get all stored models
      */
     async getAllModels(): Promise<ModelInfo[]> {
+        if (!isBrowser()) return [];
+
         const models = await db.models.toArray();
         return models.map(model => ({
             id: model.modelId,
@@ -78,6 +98,8 @@ export class ModelStorage {
      * Check if a model exists in cache
      */
     async modelExists(modelId: string): Promise<boolean> {
+        if (!isBrowser()) return false;
+
         const count = await db.models.where('modelId').equals(modelId).count();
         return count > 0;
     }
@@ -86,6 +108,8 @@ export class ModelStorage {
      * Clear all models (cache cleanup)
      */
     async clearAllModels(): Promise<void> {
+        if (!isBrowser()) return;
+
         const count = await db.models.count();
         await db.models.clear();
         console.log(`❌ Cleared ${count} models from cache`);
@@ -95,6 +119,10 @@ export class ModelStorage {
      * Export model (for backup)
      */
     async exportModel(modelId: string): Promise<Blob> {
+        if (!isBrowser()) {
+            throw new Error('exportModel is not available during SSR');
+        }
+
         const model = await this.getModel(modelId);
         if (!model) throw new Error(`Model ${modelId} not found`);
 
@@ -115,6 +143,17 @@ export class ModelStorage {
      * Get storage statistics
      */
     async getStorageStats(): Promise<StorageStats> {
+        if (!isBrowser()) {
+            return {
+                totalSize: 0,
+                modelsSize: 0,
+                audioSize: 0,
+                quota: { usage: 0, quota: 0, percentage: 0 },
+                cachedAudioCount: 0,
+                cachedModelsCount: 0,
+            };
+        }
+
         const models = await db.models.toArray();
         const audio = await db.cachedAudio.toArray();
 
@@ -165,3 +204,4 @@ export class ModelStorage {
 }
 
 export const modelStorage = new ModelStorage();
+
