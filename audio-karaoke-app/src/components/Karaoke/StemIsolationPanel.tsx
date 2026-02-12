@@ -145,7 +145,7 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
     if (stems.length === 0) return null;
 
     return (
-        <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.03] border border-white/10 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-2xl bg-linear-to-b from-white/8 to-white/3 border border-white/10 backdrop-blur-sm overflow-hidden">
             {/* Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
