@@ -1,41 +1,38 @@
-import { 
-    UserMedia, 
-    Gain, 
-    Reverb, 
-    FeedbackDelay, 
-    Compressor, 
-    PitchShift, 
-    Filter, 
-    Panner, 
-    getContext, 
-    InputNode 
-} from 'tone';
 import { VoiceTransformSettings, HarmonyVoice } from '@/types/audio';
 
+// Helper to load Tone.js dynamically
+async function loadTone() {
+    return await import('tone');
+}
+
 export class FormantShifter {
-    private shifter: PitchShift;
-    private filter: Filter;
-    private gain: Gain;
+    private shifter: any;
+    private filter: any;
+    private gain: any;
     public bypass: boolean = false;
+    private Tone: any;
 
     constructor() {
-        this.shifter = new PitchShift({
+        // Initialization moved to init()
+    }
+
+    async init(Tone: any) {
+        this.Tone = Tone;
+        this.shifter = new Tone.PitchShift({
             pitch: 0,
             windowSize: 0.1,
             delayTime: 0,
             feedback: 0
         });
 
-        // Formant filter attempt - using a peaking filter to emphasize/de-emphasize certain frequencies
-        // True formant shifting requires more complex DSP (e.g. LPC), but for MVP we use EQ + Pitch Shift
-        this.filter = new Filter({
+        this.filter = new Tone.Filter({
             type: "peaking",
             frequency: 1000,
             Q: 1,
             gain: 0
         });
 
-        this.gain = new Gain(1);
+        this.gain = new Tone.Gain(1);
 
         // Chain: Input -> Shifter -> Filter -> Gain -> Output
         this.shifter.connect(this.filter);
@@ -43,30 +40,21 @@ export class FormantShifter {
     }
 
     // Connect to an audio node
-    connect(destination: InputNode) {
-        this.gain.connect(destination);
+    connect(destination: any) {
+        if (this.gain) this.gain.connect(destination);
     }
 
     // Input node to connect sources to
-    get input(): InputNode {
+    get input(): any {
         return this.shifter;
     }
 
     setShift(semitones: number) {
-        this.shifter.pitch = semitones;
+        if (this.shifter) this.shifter.pitch = semitones;
     }
 
     setFormantFactor(factor: number) {
-        // factor 1.0 = normal
-        // factor > 1.0 = brighter/child-like (shift formants up)
-        // factor < 1.0 = darker/deeper (shift formants down)
-        
-        // Simple simulation:
-        // Use pitch shifting to change fundamental frequency
-        // Then try to "correct" formants or apply EQ to simulate
-        
-        // For distinct "Robot" or "Alien" effects, we might use RingModulator or other effects
-        // But here we focus on simple "formant-like" timbral changes via EQ
+        if (!this.filter) return;
         
         if (factor > 1.0) {
             // Emphasize highs, cut lows
@@ -81,12 +69,11 @@ export class FormantShifter {
     
     setBypass(bypass: boolean) {
         this.bypass = bypass;
+        if (!this.gain || !this.shifter) return;
+
         if (bypass) {
             this.shifter.disconnect();
             this.gain.disconnect(); 
-            // This logic is tricky with Tone.js connections. 
-            // Better to use a CrossFade or gain automation.
-            // For MVP, we'll just set gain to 0 or 1.
             this.gain.gain.value = 0;
         } else {
              this.gain.gain.value = 1;
@@ -94,23 +81,31 @@ export class FormantShifter {
     }
 
     dispose() {
-        this.shifter.dispose();
-        this.filter.dispose();
-        this.gain.dispose();
+        if (this.shifter) this.shifter.dispose();
+        if (this.filter) this.filter.dispose();
+        if (this.gain) this.gain.dispose();
     }
 }
 
 export class HarmonyGenerator {
-    private voices: Map<string, { shifter: PitchShift, gain: Gain, panner: Panner }> = new Map();
-    private output: Gain;
-    private input: Gain;
+    private voices: Map<string, { shifter: any, gain: any, panner: any }> = new Map();
+    private output: any;
+    private input: any;
+    private Tone: any;
 
     constructor() {
-        this.input = new Gain(1);
-        this.output = new Gain(1);
+    }
+
+    async init(Tone: any) {
+        this.Tone = Tone;
+        this.input = new Tone.Gain(1);
+        this.output = new Tone.Gain(1);
     }
 
     updateHarmonies(harmonySettings: HarmonyVoice[]) {
+        if (!this.Tone || !this.input) return;
+        const Tone = this.Tone;
+
         // Remove unused voices
         const activeIds = new Set(harmonySettings.map(h => this.getVoiceId(h)));
         for (const [id, nodes] of this.voices) {
@@ -128,14 +123,14 @@ export class HarmonyGenerator {
             let nodes = this.voices.get(id);
 
             if (!nodes) {
-                const shifter = new PitchShift({
+                const shifter = new Tone.PitchShift({
                     pitch: setting.interval,
                     windowSize: 0.1,
                     delayTime: 0,
                     feedback: 0
                 });
-                const gain = new Gain(setting.volume);
-                const panner = new Panner(setting.pan); // Use setting.pan
+                const gain = new Tone.Gain(setting.volume);
+                const panner = new Tone.Panner(setting.pan); 
 
                 // Chain: Input -> Shifter -> Gain -> Panner -> Output
                 this.input.connect(shifter);
@@ -155,14 +150,14 @@ export class HarmonyGenerator {
     }
 
     private getVoiceId(setting: HarmonyVoice): string {
-        return `${setting.interval}_${setting.volume}`; // ID based on interval and volume
+        return `${setting.interval}_${setting.volume}`; 
     }
     
-    connect(destination: InputNode) {
-        this.output.connect(destination);
+    connect(destination: any) {
+        if (this.output) this.output.connect(destination);
     }
     
-    getInput(): InputNode {
+    getInput(): any {
         return this.input;
     }
 
@@ -173,169 +168,159 @@ export class HarmonyGenerator {
             nodes.panner.dispose();
         });
         this.voices.clear();
-        this.input.dispose();
-        this.output.dispose();
+        if (this.input) this.input.dispose();
+        if (this.output) this.output.dispose();
     }
 }
 
 export class VoiceProcessor {
-    private input: UserMedia;
-    private output: Gain; // To speakers (monitoring)
-    private recordingDest: MediaStreamAudioDestinationNode; // To recorder
+    private input: any; // Tone.UserMedia
+    private output: any; // Tone.Gain
+    private recordingDest: MediaStreamAudioDestinationNode | null = null; 
     
     // Effects
     private formantShifter: FormantShifter;
     private harmonyGenerator: HarmonyGenerator;
-    private reverb: Reverb;
-    private delay: FeedbackDelay;
-    private compressor: Compressor;
+    private reverb: any;
+    private delay: any;
+    private compressor: any;
     
     // Internal routing
-    private dryGain: Gain;
-    private wetGain: Gain;
+    private dryGain: any;
+    private wetGain: any;
     
     private isInitialized: boolean = false;
+    private Tone: any;
 
     constructor() {
-        this.input = new UserMedia();
-        this.output = new Gain(1);
+        this.formantShifter = new FormantShifter();
+        this.harmonyGenerator = new HarmonyGenerator();
+    }
+
+    async init() {
+        if (this.isInitialized) return;
+        
+        const Tone = await loadTone();
+        this.Tone = Tone;
+
+        this.input = new Tone.UserMedia();
+        this.output = new Tone.Gain(1);
         
         // Create recording destination from raw context
-        const context = getContext().rawContext as AudioContext;
+        const context = Tone.getContext().rawContext as AudioContext;
         this.recordingDest = context.createMediaStreamDestination();
 
         // Initialize effects
-        this.formantShifter = new FormantShifter();
-        this.harmonyGenerator = new HarmonyGenerator();
+        await this.formantShifter.init(Tone);
+        await this.harmonyGenerator.init(Tone);
         
-        this.reverb = new Reverb({
+        this.reverb = new Tone.Reverb({
             decay: 1.5,
             preDelay: 0.01,
-            wet: 0 // Controlled by settings
+            wet: 0 
         });
         
-        this.delay = new FeedbackDelay({
+        this.delay = new Tone.FeedbackDelay({
             delayTime: 0.25,
             feedback: 0.3,
-            wet: 0 // Controlled by settings
+            wet: 0 
         });
 
-        this.compressor = new Compressor({
+        this.compressor = new Tone.Compressor({
             threshold: -20,
             ratio: 4,
             attack: 0.005,
             release: 0.1
         });
 
-        this.dryGain = new Gain(1);
-        this.wetGain = new Gain(1);
+        this.dryGain = new Tone.Gain(1);
+        this.wetGain = new Tone.Gain(1);
 
         // Routing Graph
-        // Input -> Compressor -> [Dry/Wet Split]
-        
-        // Dry Path: Input -> DryGain -> Output/Rec
-        
-        // Wet Path: Input -> FormantShifter -> HarmonyGenerator -> Delay -> Reverb -> WetGain -> Output/Rec
-        
-        // Connect Input to Compressor
         this.input.connect(this.compressor);
-
-        // Connect Compressor to Dry/Wet split
         this.compressor.connect(this.dryGain);
         this.compressor.connect(this.formantShifter.input);
         
-        // Effects Chain
         this.formantShifter.connect(this.harmonyGenerator.getInput());
         this.harmonyGenerator.connect(this.delay);
         this.delay.connect(this.reverb);
         this.reverb.connect(this.wetGain);
 
-        // Connect both paths to Output (Monitoring) and Recording Dest
         this.dryGain.connect(this.output);
         this.wetGain.connect(this.output);
         
-        // We need to connect Tone nodes to the explicit MediaStreamDestination
-        // Tone.connect(node, destination)
         this.dryGain.connect(this.recordingDest);
         this.wetGain.connect(this.recordingDest);
         
-        // Output to Master (Monitoring) - muted by default to prevent feedback if not desired
         this.output.toDestination();
-        this.output.gain.value = 0; // Default mute monitoring
-    }
+        this.output.gain.value = 0; 
 
-    async openMicrophone(): Promise<void> {
-        if (this.input.state === 'started') return;
-        await this.input.open();
         this.isInitialized = true;
     }
 
+    async openMicrophone(): Promise<void> {
+        if (!this.isInitialized) {
+            await this.init();
+        }
+        
+        if (this.input && this.input.state !== 'started') {
+            await this.input.open();
+        }
+    }
+
     closeMicrophone() {
-        if (this.input.state === 'started') {
+        if (this.input && this.input.state === 'started') {
             this.input.close();
         }
     }
 
-    getProcessedStream(): MediaStream {
-        return this.recordingDest.stream;
+    getProcessedStream(): MediaStream | null {
+        return this.recordingDest ? this.recordingDest.stream : null;
     }
 
     applySettings(settings: VoiceTransformSettings) {
-        // Preset loading handled by caller or we can do it here.
-        // Assuming settings are fully populated with derived values.
-        
-        // 1. Pitch & Formant
+        if (!this.isInitialized) return;
+
         this.formantShifter.setShift(settings.pitchShift);
         this.formantShifter.setFormantFactor(settings.formantShift);
-        
-        // 2. Harmonies
         this.harmonyGenerator.updateHarmonies(settings.harmonies);
         
-        // 3. Spatial Effects
-        this.reverb.wet.value = settings.reverbMix;
-        this.reverb.decay = 1.5 + (settings.reverbMix * 2); // Dynamic decay based on mix
-        
-        // 4. Robot Effect (using short delay/feedback or RingMod if available, currently just pitch fix)
-        // If robot mode, we might want to set pitch shift to 0 feedback? 
-        // For MVP, "Robot" is just a hard-tuned formant shift usually.
-        
-        // 5. Dry/Wet Mix
-        // If we want fully wet (voice transform), dry should be low.
-        // Usually transforms retain some dry, but for "Robot", maybe 0 dry.
+        if (this.reverb) {
+            this.reverb.wet.value = settings.reverbMix;
+            this.reverb.decay = 1.5 + (settings.reverbMix * 2);
+        }
         
         if (settings.preset === 'original') {
             this.dryGain.gain.rampTo(1, 0.1);
             this.wetGain.gain.rampTo(0, 0.1);
         } else {
-            // For effects, mix logic
-            this.dryGain.gain.rampTo(0.2, 0.1); // Keep a bit of dry for definition? Or 0 for total transform
+            this.dryGain.gain.rampTo(0.2, 0.1); 
             this.wetGain.gain.rampTo(1, 0.1);
         }
         
-        // Handle specific presets if needed logic beyond params
         if (settings.preset === 'robot') {
             this.dryGain.gain.rampTo(0, 0.1);
         }
     }
 
     setMonitoring(enabled: boolean) {
-        this.output.gain.rampTo(enabled ? 1 : 0, 0.1);
+        if (this.output) {
+            this.output.gain.rampTo(enabled ? 1 : 0, 0.1);
+        }
     }
     
     setPreampGain(_value: number) {
-        // Input gain not directly on UserMedia, but we can add a pre-gain node if needed.
-        // For now, assume hardware gain / normalization.
     }
 
     dispose() {
-        this.input.dispose();
-        this.output.dispose();
+        if (this.input) this.input.dispose();
+        if (this.output) this.output.dispose();
         this.formantShifter.dispose();
         this.harmonyGenerator.dispose();
-        this.reverb.dispose();
-        this.delay.dispose();
-        this.compressor.dispose();
-        this.dryGain.dispose();
-        this.wetGain.dispose();
+        if (this.reverb) this.reverb.dispose();
+        if (this.delay) this.delay.dispose();
+        if (this.compressor) this.compressor.dispose();
+        if (this.dryGain) this.dryGain.dispose();
+        if (this.wetGain) this.wetGain.dispose();
     }
 }
