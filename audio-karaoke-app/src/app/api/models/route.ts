@@ -5,7 +5,7 @@ import { ModelType, ModelInfo } from '@/types/model';
 /**
  * Enhanced model list with SHA256 hashes for verification and better descriptions.
  */
-export const AVAILABLE_MODELS: ModelInfo[] = [
+const AVAILABLE_MODELS: ModelInfo[] = [
     {
         id: 'mdx-net-inst-v1',
         type: ModelType.DEMUCS, // Using DEMUCS type to trigger SpectralInferenceStrategy

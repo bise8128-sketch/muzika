@@ -22,6 +22,7 @@ const config: Config = {
         '!src/**/*.stories.{js,jsx,ts,tsx}',
         '!src/**/__tests__/**',
     ],
+    testMatch: [
         '<rootDir>/src/**/__tests__/**/*.[jt]s?(x)',
         '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)',
     ],
