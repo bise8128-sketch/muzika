@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-
     "dev": "concurrently -n \"NEXT,PYTHON\" -c \"cyan,green\" \"npm:dev:next\" \"npm:dev:python\"",
     "dev:next": "next dev --webpack --experimental-next-config-strip-types -p 3030",
     "dev:python": "bash ../python-audio-cli/start-backend.sh",
@@ -18,7 +17,9 @@
     "analyze": "cross-env ANALYZE=true next build",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
@@ -57,6 +58,12 @@
     "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "storybook": "^10.2.8",
+    "@storybook/nextjs": "^10.2.8",
+    "@storybook/addon-a11y": "^10.2.8",
+    "@storybook/addon-docs": "^10.2.8",
+    "@storybook/addon-onboarding": "^10.2.8",
+    "eslint-plugin-storybook": "^10.2.8"
   }
 }
