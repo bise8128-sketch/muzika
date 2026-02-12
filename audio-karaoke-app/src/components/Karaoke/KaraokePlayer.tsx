@@ -23,6 +23,8 @@ import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { exportAudio, renderProcessedAudio, MP3ExportError, getErrorMessage } from '@/utils/audio/audioExporter';
 import { useTranslations } from 'next-intl';
 import { SettingsPanel } from '../UI/SettingsPanel';
+import { usePractice } from '@/hooks/usePractice';
+import { PracticePanel } from './PracticePanel';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -322,6 +324,55 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         reader.readAsText(file);
     };
 
+    const [showSettings, setShowSettings] = useState(false);
+    const [showPractice, setShowPractice] = useState(false);
+
+    // Hooks
+    const t = useTranslations('Karaoke');
+    const {
+        isListening,
+        currentPitch,
+        currentScore,
+        overallScore,
+        pitchHistory,
+        startAnalysis,
+        stopAnalysis,
+        resetAnalysis
+    } = usePitchAnalysis(controller);
+
+    const {
+        isPracticing,
+        isComplete: isPracticeComplete,
+        sections: practiceSections,
+        currentIndex: practiceIndex,
+        attemptNumber,
+        currentTempo,
+        currentSection,
+        overallImprovement,
+        startPractice,
+        recordAttempt,
+        skipSection,
+        stopPractice
+    } = usePractice(controller);
+
+    // Auto-record practice attempts when section ends
+    useEffect(() => {
+        if (isPracticing && currentSection) {
+            // Check if we just finished playing the section
+            const currentTime = controller.getCurrentTime();
+            // If we're near the end of the section (within 0.5s)
+            if (Math.abs(currentTime - currentSection.endTime) < 0.5) {
+               // Calculate score for this run (using last few seconds of pitch history)
+               // Simple approximation: take last N frames
+               const recentFrames = pitchHistory.slice(-currentSection.frameCount);
+               if (recentFrames.length > 0) {
+                   const avgAccuracy = recentFrames.reduce((s, f) => s + f.accuracy, 0) / recentFrames.length;
+                   recordAttempt(avgAccuracy);
+               }
+            }
+        }
+    }, [isPracticing, currentSection, controller, pitchHistory, recordAttempt]);
+
     const handleVideoExport = async () => {
         if (!lyrics) return;
         setIsExporting(true);
@@ -499,6 +550,21 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                                 </button>
                             ))}
                         </div>
+                        {/* Practice Mode Toggle */}
+                    <button
+                        className={`karaoke-player__btn ${showPractice ? 'active' : ''}`}
+                        onClick={() => setShowPractice(!showPractice)}
+                        title="Smart Practice Mode"
+                    >
+                        🎯 Practice
+                    </button>
+
+                    <button
+                        className={`karaoke-player__btn ${showSettings ? 'active' : ''}`}
+                        onClick={() => setShowSettings(!showSettings)}
+                    >
+                        ⚙️ Settings
+                    </button>
                         <button
                             onClick={() => {
                                 setIsStageMode(true);
