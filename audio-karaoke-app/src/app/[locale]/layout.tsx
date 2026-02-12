@@ -17,6 +17,7 @@ const inter = { variable: "font-inter" }; // Mock variable for compatibility
 export const metadata: Metadata = {
   title: "DaorsKaraoke | Premium AI Karaoke Experience",
   description: "Experience the future of karaoke with our AI-powered separation and real-time effects. Perfect your performance with precision and style.",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -48,6 +49,11 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js')})}`
+          }}
+        />
       </body>
     </html>
   );
