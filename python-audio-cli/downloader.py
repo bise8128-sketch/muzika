@@ -10,6 +10,17 @@ class AudioDownloader:
         self.output_dir = output_dir
         ensure_dir(self.output_dir)
 
+    def _get_random_user_agent(self):
+        import random
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
+        ]
+        return random.choice(user_agents)
+
     def download(self, url, format='mp3'):
         """
         Downloads audio from a YouTube URL.
@@ -29,11 +40,11 @@ class AudioDownloader:
             'overwrites': True,
             'noplaylist': True,
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': self._get_random_user_agent(),
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
             },
-            'nocheckcertificate': True,
+            # 'nocheckcertificate': True, # REMOVED: Enable SSL verification for security
         }
 
         try:

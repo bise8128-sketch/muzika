@@ -95,6 +95,10 @@ class AudioSeparator:
         """
         Separates audio into stems using the specified model.
         Returns a dictionary of stem paths.
+        
+        WARNING: This method is CPU/GPU intensive and BLOCKING. 
+        It should not be called directly from an async event loop without running in a threadpool.
+        It is also not thread-safe regarding GPU memory; typically only one separation should run at a time.
         """
         logger.info(f"Separating: {audio_path} using {model_name}")
         

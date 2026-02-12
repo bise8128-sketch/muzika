@@ -9,6 +9,11 @@ import torch
 from downloader import AudioDownloader
 from separator import AudioSeparator
 from utils import setup_logging
+import asyncio
+import uuid
+from typing import Dict, Optional
+from fastapi.concurrency import run_in_threadpool
+from werkzeug.utils import secure_filename
 
 # Setup logging
 logger = setup_logging(level=logging.INFO)
@@ -17,9 +22,12 @@ logger.name = "API"
 app = FastAPI(title="Audio Processing API")
 
 # CORS
+# CORS
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,6 +55,16 @@ class SeparateRequest(BaseModel):
     filename: str
     model: str = "htdemucs"
 
+class JobStatus(BaseModel):
+    job_id: str
+    status: str
+    result: Optional[Dict[str, str]] = None
+    error: Optional[str] = None
+
+# Global state
+jobs: Dict[str, Dict[str, Any]] = {}
+separation_lock = asyncio.Lock()
+
 @app.get("/api/models")
 async def list_models():
     if separator is None:
@@ -68,7 +86,8 @@ import shutil
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
-        file_path = os.path.join(DOWNLOADS_DIR, file.filename)
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(DOWNLOADS_DIR, filename)
         # Ensure dir exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
@@ -92,26 +111,56 @@ async def download_audio(request: DownloadRequest):
         logger.error(f"Download failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/separate")
-async def separate_audio(request: SeparateRequest):
+async def run_separation_job(job_id: str, filename: str, model: str):
+    async with separation_lock:
+        try:
+            jobs[job_id]["status"] = "processing"
+            file_path = os.path.join(DOWNLOADS_DIR, filename)
+            
+            if not os.path.exists(file_path):
+                raise FileNotFoundError("File not found")
+
+            # Blocking call offloaded to threadpool
+            logger.info(f"Starting separation for: {file_path} with model {model}")
+            stems = await run_in_threadpool(separator.separate, file_path, model_name=model)
+            
+            # Make paths relative
+            relative_stems = {k: os.path.relpath(v, OUTPUT_DIR) for k, v in stems.items()}
+            
+            jobs[job_id]["result"] = relative_stems
+            jobs[job_id]["status"] = "completed"
+            logger.info(f"Job {job_id} completed")
+        except Exception as e:
+            logger.error(f"Job {job_id} failed: {e}")
+            jobs[job_id]["status"] = "failed"
+            jobs[job_id]["error"] = str(e)
+
+@app.post("/api/separate", response_model=JobStatus)
+async def separate_audio(request: SeparateRequest, background_tasks: BackgroundTasks):
     if separator is None:
         raise HTTPException(status_code=503, detail="Separator model not initialized")
     
-    file_path = os.path.join(DOWNLOADS_DIR, request.filename)
+    # Verify file exists synchronously to fail fast
+    file_path = os.path.join(DOWNLOADS_DIR, secure_filename(request.filename))
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
 
-    try:
-        logger.info(f"Starting separation for: {file_path} with model {request.model}")
-        stems = separator.separate(file_path, model_name=request.model)
-        
-        # Make paths relative for the response
-        relative_stems = {k: os.path.relpath(v, OUTPUT_DIR) for k, v in stems.items()}
-        
-        return {"status": "success", "stems": relative_stems}
-    except Exception as e:
-        logger.error(f"Separation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {
+        "job_id": job_id,
+        "status": "pending",
+        "result": None,
+        "error": None
+    }
+    
+    background_tasks.add_task(run_separation_job, job_id, secure_filename(request.filename), request.model)
+    return jobs[job_id]
+
+@app.get("/api/jobs/{job_id}", response_model=JobStatus)
+async def get_job_status(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return jobs[job_id]
 
 @app.get("/api/library")
 async def get_library():
