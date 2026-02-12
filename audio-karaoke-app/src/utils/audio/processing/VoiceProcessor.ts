@@ -1,16 +1,25 @@
-// import * as Tone from 'tone';
-import { VoiceTransformSettings, HarmonyVoice } from '@/types/audio';
-const Tone: any = {}; // Mock to prevent immediate TS parse error if possible, or just let it fail later
+import { 
+    UserMedia, 
+    Gain, 
+    Reverb, 
+    FeedbackDelay, 
+    Compressor, 
+    PitchShift, 
+    Filter, 
+    Panner, 
+    getContext, 
+    InputNode 
+} from 'tone';
 import { VoiceTransformSettings, HarmonyVoice } from '@/types/audio';
 
 export class FormantShifter {
-    private shifter: Tone.PitchShift;
-    private filter: Tone.Filter;
-    private gain: Tone.Gain;
+    private shifter: PitchShift;
+    private filter: Filter;
+    private gain: Gain;
     public bypass: boolean = false;
 
     constructor() {
-        this.shifter = new Tone.PitchShift({
+        this.shifter = new PitchShift({
             pitch: 0,
             windowSize: 0.1,
             delayTime: 0,
@@ -19,14 +28,14 @@ export class FormantShifter {
 
         // Formant filter attempt - using a peaking filter to emphasize/de-emphasize certain frequencies
         // True formant shifting requires more complex DSP (e.g. LPC), but for MVP we use EQ + Pitch Shift
-        this.filter = new Tone.Filter({
+        this.filter = new Filter({
             type: "peaking",
             frequency: 1000,
             Q: 1,
             gain: 0
         });
 
-        this.gain = new Tone.Gain(1);
+        this.gain = new Gain(1);
 
         // Chain: Input -> Shifter -> Filter -> Gain -> Output
         this.shifter.connect(this.filter);
@@ -34,12 +43,12 @@ export class FormantShifter {
     }
 
     // Connect to an audio node
-    connect(destination: Tone.InputNode) {
+    connect(destination: InputNode) {
         this.gain.connect(destination);
     }
 
     // Input node to connect sources to
-    get input(): Tone.InputNode {
+    get input(): InputNode {
         return this.shifter;
     }
 
@@ -92,13 +101,13 @@ export class FormantShifter {
 }
 
 export class HarmonyGenerator {
-    private voices: Map<string, { shifter: Tone.PitchShift, gain: Tone.Gain, panner: Tone.Panner }> = new Map();
-    private output: Tone.Gain;
-    private input: Tone.Gain;
+    private voices: Map<string, { shifter: PitchShift, gain: Gain, panner: Panner }> = new Map();
+    private output: Gain;
+    private input: Gain;
 
     constructor() {
-        this.input = new Tone.Gain(1);
-        this.output = new Tone.Gain(1);
+        this.input = new Gain(1);
+        this.output = new Gain(1);
     }
 
     updateHarmonies(harmonySettings: HarmonyVoice[]) {
@@ -119,14 +128,14 @@ export class HarmonyGenerator {
             let nodes = this.voices.get(id);
 
             if (!nodes) {
-                const shifter = new Tone.PitchShift({
+                const shifter = new PitchShift({
                     pitch: setting.interval,
                     windowSize: 0.1,
                     delayTime: 0,
                     feedback: 0
                 });
-                const gain = new Tone.Gain(setting.volume);
-                const panner = new Tone.Panner(setting.pan); // Use setting.pan
+                const gain = new Gain(setting.volume);
+                const panner = new Panner(setting.pan); // Use setting.pan
 
                 // Chain: Input -> Shifter -> Gain -> Panner -> Output
                 this.input.connect(shifter);
@@ -149,11 +158,11 @@ export class HarmonyGenerator {
         return `${setting.interval}_${setting.volume}`; // ID based on interval and volume
     }
     
-    connect(destination: Tone.InputNode) {
+    connect(destination: InputNode) {
         this.output.connect(destination);
     }
     
-    getInput(): Tone.InputNode {
+    getInput(): InputNode {
         return this.input;
     }
 
@@ -170,56 +179,56 @@ export class HarmonyGenerator {
 }
 
 export class VoiceProcessor {
-    private input: Tone.UserMedia;
-    private output: Tone.Gain; // To speakers (monitoring)
+    private input: UserMedia;
+    private output: Gain; // To speakers (monitoring)
     private recordingDest: MediaStreamAudioDestinationNode; // To recorder
     
     // Effects
     private formantShifter: FormantShifter;
     private harmonyGenerator: HarmonyGenerator;
-    private reverb: Tone.Reverb;
-    private delay: Tone.FeedbackDelay;
-    private compressor: Tone.Compressor;
+    private reverb: Reverb;
+    private delay: FeedbackDelay;
+    private compressor: Compressor;
     
     // Internal routing
-    private dryGain: Tone.Gain;
-    private wetGain: Tone.Gain;
+    private dryGain: Gain;
+    private wetGain: Gain;
     
     private isInitialized: boolean = false;
 
     constructor() {
-        this.input = new Tone.UserMedia();
-        this.output = new Tone.Gain(1);
+        this.input = new UserMedia();
+        this.output = new Gain(1);
         
         // Create recording destination from raw context
-        const context = Tone.getContext().rawContext as AudioContext;
+        const context = getContext().rawContext as AudioContext;
         this.recordingDest = context.createMediaStreamDestination();
 
         // Initialize effects
         this.formantShifter = new FormantShifter();
         this.harmonyGenerator = new HarmonyGenerator();
         
-        this.reverb = new Tone.Reverb({
+        this.reverb = new Reverb({
             decay: 1.5,
             preDelay: 0.01,
             wet: 0 // Controlled by settings
         });
         
-        this.delay = new Tone.FeedbackDelay({
+        this.delay = new FeedbackDelay({
             delayTime: 0.25,
             feedback: 0.3,
             wet: 0 // Controlled by settings
         });
 
-        this.compressor = new Tone.Compressor({
+        this.compressor = new Compressor({
             threshold: -20,
             ratio: 4,
             attack: 0.005,
             release: 0.1
         });
 
-        this.dryGain = new Tone.Gain(1);
-        this.wetGain = new Tone.Gain(1);
+        this.dryGain = new Gain(1);
+        this.wetGain = new Gain(1);
 
         // Routing Graph
         // Input -> Compressor -> [Dry/Wet Split]
