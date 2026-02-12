@@ -77,7 +77,7 @@ describe('/api/models', () => {
                 expect.any(Object),
                 expect.objectContaining({
                     headers: expect.objectContaining({
-                        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+                        'Cache-Control': 'no-store',
                     }),
                 })
             );

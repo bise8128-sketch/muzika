@@ -278,6 +278,13 @@ export class PitchCorrector {
 
         // Calculate autocorrelation
         const autocorr = new Float32Array(maxPeriod + 1);
+    // Calculate energy (autocorrelation at lag 0)
+        let energy = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            energy += buffer[i] * buffer[i];
+        }
+        autocorr[0] = energy;
+
         for (let lag = minPeriod; lag <= maxPeriod; lag++) {
             let sum = 0;
             for (let i = 0; i < bufferSize - lag; i++) {
