@@ -64,6 +64,7 @@ export class WebGPUInferenceStrategy extends BaseInferenceStrategy implements In
 
                 // 1. Bind Input
                 const inputTensor = new ort.Tensor('float32', planarData, inputShape);
+                this.track(inputTensor);
                 this.ioBinding.bindInput(inputName, inputTensor);
 
                 // 2. Bind Outputs
@@ -101,9 +102,13 @@ export class WebGPUInferenceStrategy extends BaseInferenceStrategy implements In
             } else {
                 // --- Standard Path ---
                 const inputTensor = new ort.Tensor('float32', planarData, inputShape);
+                this.track(inputTensor);
                 const feeds = { [inputName]: inputTensor };
                 results = await session.run(feeds, this.runOptions);
             }
+
+            // Track output tensors for disposal
+            Object.values(results).forEach(t => this.track(t));
 
             // Extract Vocals and Instrumentals
             // Map output names to expected keys
@@ -156,6 +161,8 @@ export class WebGPUInferenceStrategy extends BaseInferenceStrategy implements In
         } catch (e) {
             console.error('[WebGPUInferenceStrategy] Processing failed:', e);
             throw e;
+        } finally {
+            this.dispose(); // Clean up GPU tensors immediately after copy
         }
     }
 
