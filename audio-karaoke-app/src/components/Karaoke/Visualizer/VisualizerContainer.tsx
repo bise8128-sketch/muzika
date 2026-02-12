@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
-import { LyricTheme, LyricDisplay } from '../../LyricDisplay';
-import { LyricEditor } from '../../LyricEditor';
-import { CDGRenderer } from '../../CDGRenderer';
-import { VoiceTransformPanel } from '../../VoiceTransformPanel';
-import { PracticePanel } from '../../PracticePanel';
-import { RoomLobby } from '../../Room/RoomLobby';
-import { RoomView } from '../../Room/RoomView';
+import { LyricTheme, LyricDisplay } from '../LyricDisplay';
+import { LyricEditor } from '../LyricEditor';
+import { CDGRenderer } from '../CDGRenderer';
+import { VoiceTransformPanel } from '../VoiceTransformPanel';
+import { PracticePanel } from '../PracticePanel';
+import { RoomLobby } from '../Room/RoomLobby';
+import { RoomView } from '../Room/RoomView';
 import { SettingsPanel } from '../../UI/SettingsPanel';
 import { useTranslations } from 'next-intl';
 

@@ -4,7 +4,7 @@ import type { PlaybackController } from '@/utils/audio/playbackController';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
 
-export type AppState = 'idle' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
+export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
 
 interface UseAppStateOptions {
   separationStatus: 'idle' | 'processing' | 'completed' | 'error';
