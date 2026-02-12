@@ -101,8 +101,7 @@ export class SyncClient {
         this.heartbeatInterval = setInterval(() => {
             this.send({
                 type: 'heartbeat',
-                senderId: this.config.participantId,
-                timestamp: Date.now()
+                senderId: this.config.participantId
             });
         }, 5000); // 5s heartbeat
     }
@@ -128,7 +127,6 @@ export class SyncClient {
         this.send({
             type: 'playback-update',
             senderId: this.config.participantId,
-            timestamp: Date.now(), // Typescript helper
             payload
         } as any);
     }
@@ -137,7 +135,6 @@ export class SyncClient {
         this.send({
             type: 'chat',
             senderId: this.config.participantId,
-            timestamp: Date.now(),
             payload: { text }
         } as any);
     }

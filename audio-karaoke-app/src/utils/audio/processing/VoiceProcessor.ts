@@ -118,7 +118,7 @@ export class VoiceProcessor {
         
         // 3. Spatial Effects
         this.reverb.wet.value = settings.reverbMix;
-        this.reverb.decay.value = 1.5 + (settings.reverbMix * 2); // Dynamic decay based on mix
+        this.reverb.decay = 1.5 + (settings.reverbMix * 2); // Dynamic decay based on mix
         
         // 4. Robot Effect (using short delay/feedback or RingMod if available, currently just pitch fix)
         // If robot mode, we might want to set pitch shift to 0 feedback? 
@@ -128,7 +128,7 @@ export class VoiceProcessor {
         // If we want fully wet (voice transform), dry should be low.
         // Usually transforms retain some dry, but for "Robot", maybe 0 dry.
         
-        if (settings.preset === 'basic') {
+        if (settings.preset === 'original') {
             this.dryGain.gain.rampTo(1, 0.1);
             this.wetGain.gain.rampTo(0, 0.1);
         } else {
