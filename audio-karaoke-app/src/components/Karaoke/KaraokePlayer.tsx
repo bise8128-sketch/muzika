@@ -284,7 +284,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const {
         isPracticing,
         currentSection,
-        pitchHistory: practicePitchHistory,
         recordAttempt
     } = usePracticeHook;
 

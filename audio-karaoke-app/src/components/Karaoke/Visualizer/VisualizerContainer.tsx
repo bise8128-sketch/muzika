@@ -5,9 +5,9 @@ import { LyricEditor } from '../LyricEditor';
 import { CDGRenderer } from '../CDGRenderer';
 import { VoiceTransformPanel } from '../VoiceTransformPanel';
 import { PracticePanel } from '../PracticePanel';
-import { RoomLobby } from '../Room/RoomLobby';
-import { RoomView } from '../Room/RoomView';
-import { SettingsPanel } from '../../UI/SettingsPanel';
+import { RoomLobby } from '../../Room/RoomLobby';
+import { RoomView } from '../../Room/RoomView';
+import { SettingsPanel } from '../../../UI/SettingsPanel';
 import { useTranslations } from 'next-intl';
 
 interface VisualizerContainerProps {
@@ -92,7 +92,7 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
 
     return (
         <div className={`relative bg-zinc-950/60 rounded-3xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-6 md:p-8 group transition-all duration-700 ${
-            isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-transparent' : 'aspect-[4/3] md:aspect-[21/9]'
+            isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-transparent' : 'aspect-4/3 md:aspect-21/9'
         }`}>
             {/* Background Visualizer */}
             <canvas
