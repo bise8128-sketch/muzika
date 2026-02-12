@@ -24,6 +24,11 @@ def test_non_blocking_separation(MockSeparator):
     mock_instance = MockSeparator.return_value
     mock_instance.separate.side_effect = slow_separation
     
+    # Ensure dummy file exists for the test
+    os.makedirs("output/downloads", exist_ok=True)
+    with open("output/downloads/test.mp3", "w") as f:
+        f.write("dummy content")
+
     # We need to patch the global 'separator' in api module
     with patch("api.separator", mock_instance):
         # Start separation
