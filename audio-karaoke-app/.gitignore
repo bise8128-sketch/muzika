@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+*-player-script.js
 
 # debug
 npm-debug.log*
