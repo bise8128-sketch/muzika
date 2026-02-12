@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { MonitoringInit } from "@/components/UI/MonitoringInit";
 
 // const inter = Inter({
 //   subsets: ["latin"],
@@ -47,6 +48,7 @@ export default async function RootLayout({
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
       >
         <NextIntlClientProvider messages={messages}>
+          <MonitoringInit />
           {children}
         </NextIntlClientProvider>
         <script
