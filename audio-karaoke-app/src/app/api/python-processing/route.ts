@@ -122,8 +122,8 @@ function validateRequest(body: unknown): {
     return { 
         valid: true, 
         data: { 
-            url, 
-            filename, 
+            url: typeof url === 'string' ? url : undefined, 
+            filename: typeof filename === 'string' ? filename : undefined, 
             model: model as SeparationModel, 
             format: format as OutputFormat 
         } 

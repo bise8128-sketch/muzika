@@ -333,7 +333,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [showPractice, setShowPractice] = useState(false);
 
     // Hooks
-    const t = useTranslations('Karaoke');
+    const tCommon = useTranslations('Karaoke');
     const {
         isListening,
         currentPitch,
