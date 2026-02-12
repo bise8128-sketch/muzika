@@ -12,7 +12,9 @@ from separator import AudioSeparator
 from utils import setup_logging
 import asyncio
 import uuid
-from typing import Dict, Optional, Any
+import time
+from typing import Dict, Optional, Any, List
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from werkzeug.utils import secure_filename
 
@@ -237,6 +239,126 @@ async def get_library():
             logger.error(f"Error scanning library: {e}")
             
     return {"songs": songs}
+
+# ─── WebSocket Connection Manager ───────────────────────────────────
+
+class ConnectionManager:
+    def __init__(self):
+        # room_id -> list of WebSockets
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+        # room_id -> room state (dict)
+        self.room_states: Dict[str, Dict[str, Any]] = {}
+
+    async def connect(self, websocket: WebSocket, room_id: str, participant: Dict[str, Any]):
+        await websocket.accept()
+        if room_id not in self.active_connections:
+            self.active_connections[room_id] = []
+            # Initialize room state if new
+            self.room_states[room_id] = {
+                "id": room_id,
+                "participants": [],
+                "playbackState": {
+                    "isPlaying": False, 
+                    "currentTime": 0, 
+                    "songId": None,
+                    "updatedAt": time.time() * 1000
+                }
+            }
+        
+        self.active_connections[room_id].append(websocket)
+        
+        # Add participant to state
+        # Check if already exists to avoid dupes
+        exists = next((p for p in self.room_states[room_id]["participants"] if p["id"] == participant["id"]), None)
+        if not exists:
+            self.room_states[room_id]["participants"].append(participant)
+            
+        # Broadcast join message
+        await self.broadcast(room_id, {
+            "type": "join",
+            "senderId": "system",
+            "timestamp": time.time() * 1000,
+            "payload": { "participant": participant }
+        })
+        
+        # Send current room state to the new user
+        await websocket.send_json({
+            "type": "room-state",
+            "senderId": "system",
+            "timestamp": time.time() * 1000,
+            "payload": { "room": self.room_states[room_id] }
+        })
+
+    def disconnect(self, websocket: WebSocket, room_id: str, participant_id: str):
+        if room_id in self.active_connections:
+            if websocket in self.active_connections[room_id]:
+                self.active_connections[room_id].remove(websocket)
+            
+            # Remove participant from state
+            room = self.room_states.get(room_id)
+            if room:
+                room["participants"] = [p for p in room["participants"] if p["id"] != participant_id]
+                
+                # Cleanup empty rooms
+                if len(self.active_connections[room_id]) == 0:
+                    del self.active_connections[room_id]
+                    del self.room_states[room_id]
+
+    async def broadcast(self, room_id: str, message: dict):
+        if room_id in self.active_connections:
+            # Update state if it's a playback update
+            if message.get("type") == "playback-update":
+                room = self.room_states.get(room_id)
+                if room:
+                    room["playbackState"].update(message["payload"])
+                    room["playbackState"]["updatedAt"] = message["timestamp"]
+
+            disconnected = []
+            for connection in self.active_connections[room_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    disconnected.append(connection)
+            
+            for conn in disconnected:
+                if conn in self.active_connections[room_id]:
+                    self.active_connections[room_id].remove(conn)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/rooms/{room_id}/{participant_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id: str, name: str = "Guest"):
+    participant = {
+        "id": participant_id,
+        "displayName": name,
+        "isHost": False, # Logic to determine host can be improved
+        "joinedAt": time.time() * 1000,
+        "score": 0
+    }
+    
+    # First user in room becomes host
+    if room_id not in manager.room_states or len(manager.room_states[room_id]["participants"]) == 0:
+        participant["isHost"] = True
+
+    await manager.connect(websocket, room_id, participant)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # Relay message to everyone in the room
+            # Ensure senderId matches
+            data["senderId"] = participant_id
+            data["timestamp"] = time.time() * 1000
+            await manager.broadcast(room_id, data)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, room_id, participant_id)
+        # file_path = os.path.join(OUTPUT_DIR, path)
+        await manager.broadcast(room_id, {
+            "type": "leave",
+            "senderId": "system",
+            "timestamp": time.time() * 1000,
+            "payload": { "participantId": participant_id }
+        })
 
 @app.get("/files/{path:path}")
 async def get_file(path: str):
