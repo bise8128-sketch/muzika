@@ -7,7 +7,8 @@ export enum ModelType {
     DEMUCS = 'demucs', // WASM Demucs
     BS_ROFORMER = 'bs_roformer',
     HTDEMUCS = 'htdemucs', // Python Backend
-    HTDEMUCS_FT = 'htdemucs_ft' // Python Backend
+    HTDEMUCS_FT = 'htdemucs_ft', // Python Backend
+    WHISPER = 'whisper' // Whisper ONNX for lyric sync
 }
 
 export interface ModelConfig {
