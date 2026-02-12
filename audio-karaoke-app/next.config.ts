@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
 
   // External packages that should not be bundled by Webpack
   serverExternalPackages: ['@distube/ytdl-core'],
+  
+  transpilePackages: ['tone'],
 
   // Webpack configuration (backward compatibility)
   webpack: (config, { isServer }) => {
