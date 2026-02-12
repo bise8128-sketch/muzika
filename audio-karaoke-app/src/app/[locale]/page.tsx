@@ -659,7 +659,8 @@ export default function Home() {
             <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest animate-float">
               {t('activeModel', { modelName: AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown' })}
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight" dangerouslySetInnerHTML={{ __html: t.raw('title') }}>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight">
+              {t('title')}
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
               {t('subtitle')}
