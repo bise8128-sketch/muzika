@@ -110,7 +110,7 @@ export default function Home() {
   const history = useHistoryManagement();
   const { handleDownload, handleBatchDownload } = useAudioExport();
 
-  const { state, setState, activeResult, handleRestart, handleTryKaraoke } = useAppState({
+  const { state, machineState, send, activeResult, handleRestart, handleTryKaraoke } = useAppState({
     separationStatus: separation.status,
     separationResult: separation.result,
     separationError: separation.error,
@@ -146,7 +146,7 @@ export default function Home() {
 
     if (files.length > 1) {
       batch.addToQueue(files);
-      setState('batch');
+      send({ type: 'START_BATCH' });
       return;
     }
 
@@ -158,97 +158,105 @@ export default function Home() {
     }
 
     try {
-      setState('processing');
+      send({ type: 'UPLOAD_START' });
       await separation.separate(file, modelInfo);
+      // 'UPLOAD_COMPLETE' sent by useAppState on successful separation/processing
     } catch (e) {
       console.error("Upload/Separation failed immediately:", e);
+      send({ type: 'UPLOAD_ERROR', error: String(e) });
     }
   };
 
-  // Restore handler (bridges history hook result → state transition)
+  // Restore handler
   const handleRestore = async (fileHash: string) => {
     try {
       await history.handleRestore(fileHash);
-      setState('results');
+      send({ type: 'RESTORE_SESSION' });
     } catch {
       alert('Failed to restore session from database.');
     }
   };
 
-  // Server processing handler (bridges to state transition)
+  // Server processing handler
   const handleServerProcessing = async (url: string, config: { model: string; format: string }) => {
-    setState('processing');
+    send({ type: 'PROCESS_START' });
     await serverProcessing.handleServerProcessing(url, config);
   };
 
   const renderContent = () => {
-    switch (state) {
-      case 'upload':
-        return (
-          <UploadView
-            onUpload={handleUpload}
-            isLoading={separation.status === 'processing'}
-            autoStartKaraoke={autoStartKaraoke}
-            onAutoStartToggle={(val) => {
-              setAutoStartKaraoke(val);
-              saveSettings({ autoStartKaraoke: val });
-            }}
-            selectedModelId={selectedModelId}
-            onModelChange={setSelectedModelId}
-            onServerProcessing={handleServerProcessing}
-            historyItems={history.historyItems}
-            onRestore={handleRestore}
-            onClearHistory={history.clearHistory}
-          />
-        );
-
-      case 'processing':
-        return (
-          <ProcessingView
-            progress={separation.progress}
-            message={separation.message}
-            status={separation.status}
-          />
-        );
-
-      case 'results':
-        return (
-          <ResultsView
-            activeResult={activeResult}
-            onDownload={handleDownload}
-            onRestart={handleRestart}
-            onTryKaraoke={handleTryKaraoke}
-          />
-        );
-
-      case 'karaoke':
-        return controller ? (
-          <KaraokeView
-            controller={controller}
-            onBack={() => setState('results')}
-          />
-        ) : null;
-
-      case 'models':
-        return (
-          <ModelsView onBack={() => setState('upload')} />
-        );
-
-      case 'batch':
-        return (
-          <BatchView
-            queue={batch.queue}
-            isProcessing={batch.isProcessing}
-            onRemove={batch.removeFromQueue}
-            onClear={batch.clearQueue}
-            onStartBatch={batch.startBatch}
-            onBatchDownload={handleBatchDownload}
-            onBack={() => setState('upload')}
-            selectedModelId={selectedModelId}
-            models={AVAILABLE_MODELS}
-          />
-        );
+    if (machineState.matches('uploading') || machineState.matches('idle')) {
+      return (
+        <UploadView
+          onUpload={handleUpload}
+          isLoading={machineState.matches('uploading') || separation.status === 'processing'}
+          autoStartKaraoke={autoStartKaraoke}
+          onAutoStartToggle={(val) => {
+            setAutoStartKaraoke(val);
+            saveSettings({ autoStartKaraoke: val });
+          }}
+          selectedModelId={selectedModelId}
+          onModelChange={setSelectedModelId}
+          onServerProcessing={handleServerProcessing}
+          historyItems={history.historyItems}
+          onRestore={handleRestore}
+          onClearHistory={history.clearHistory}
+        />
+      );
     }
+
+    if (machineState.matches('processing')) {
+      return (
+        <ProcessingView
+          progress={separation.progress}
+          message={separation.message}
+          status={separation.status}
+        />
+      );
+    }
+
+    if (machineState.matches('results')) {
+      return (
+        <ResultsView
+          activeResult={activeResult}
+          onDownload={handleDownload}
+          onRestart={handleRestart}
+          onTryKaraoke={handleTryKaraoke}
+        />
+      );
+    }
+
+    if (machineState.matches('karaoke')) {
+      return controller ? (
+        <KaraokeView
+          controller={controller}
+          onBack={() => send({ type: 'EXIT_KARAOKE' })}
+        />
+      ) : null;
+    }
+
+    if (machineState.matches('models')) {
+      return (
+        <ModelsView onBack={() => send({ type: 'BACK' })} />
+      );
+    }
+
+    if (machineState.matches('batchProcessing')) {
+      return (
+        <BatchView
+          queue={batch.queue}
+          isProcessing={batch.isProcessing}
+          onRemove={batch.removeFromQueue}
+          onClear={batch.clearQueue}
+          onStartBatch={batch.startBatch}
+          onBatchDownload={handleBatchDownload}
+          onBack={() => send({ type: 'BACK' })}
+          selectedModelId={selectedModelId}
+          models={AVAILABLE_MODELS}
+        />
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -284,7 +292,7 @@ export default function Home() {
               {t('howItWorks')}
             </button>
             <button
-              onClick={() => setState('models')}
+              onClick={() => send({ type: 'VIEW_MODELS' })}
               className="text-sm font-medium text-muted-foreground hover:text-white transition-colors focus-ring rounded-lg px-2 py-1"
             >
               {t('models')}
