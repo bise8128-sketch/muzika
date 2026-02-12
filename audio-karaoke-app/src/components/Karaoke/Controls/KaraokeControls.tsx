@@ -55,7 +55,7 @@ export const KaraokeControls: React.FC<KaraokeControlsProps> = ({
     const handleRecordClick = async () => {
         if (!voiceFx.isInitialized) await voiceFx.init();
         const stream = voiceFx.getProcessedStream();
-        recorder.startRecording(stream);
+        recorder.startRecording(stream || undefined);
     };
 
     return (

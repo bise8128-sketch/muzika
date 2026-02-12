@@ -11,7 +11,7 @@ import { SettingsPanel } from '../../UI/SettingsPanel';
 import { useTranslations } from 'next-intl';
 
 interface VisualizerContainerProps {
-    canvasRef: React.RefObject<HTMLCanvasElement>;
+    canvasRef: React.RefObject<HTMLCanvasElement | null>;
     lyrics: LRCData | null;
     cdgData: Uint8Array | null;
     currentLineIndex: number;
