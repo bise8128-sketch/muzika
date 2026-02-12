@@ -11,6 +11,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { EffectsPanel } from './EffectsPanel';
+import { StemIsolationPanel } from './StemIsolationPanel';
 import { LyricDisplay, LyricTheme } from './LyricDisplay';
 import { LyricEditor } from './LyricEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
@@ -665,6 +666,9 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onTrebleChange={(v) => playback.setEQ(playback.bass, playback.mid, v)}
                 onReset={handleResetEffects}
             />
+
+            {/* Stem Isolation Controls */}
+            <StemIsolationPanel controller={controller} />
 
             {/* Visual Settings Panel */}
             <SettingsPanel
