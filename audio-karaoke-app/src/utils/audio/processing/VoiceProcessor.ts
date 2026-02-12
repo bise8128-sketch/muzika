@@ -1,7 +1,171 @@
 import * as Tone from 'tone';
-import { VoiceTransformSettings } from '@/types/audio';
-import { FormantShifter } from './FormantShifter';
-import { HarmonyGenerator } from './HarmonyGenerator';
+import { VoiceTransformSettings, HarmonyVoice } from '@/types/audio';
+
+export class FormantShifter {
+    private shifter: Tone.PitchShift;
+    private filter: Tone.Filter;
+    private gain: Tone.Gain;
+    public bypass: boolean = false;
+
+    constructor() {
+        this.shifter = new Tone.PitchShift({
+            pitch: 0,
+            windowSize: 0.1,
+            delayTime: 0,
+            feedback: 0
+        });
+
+        // Formant filter attempt - using a peaking filter to emphasize/de-emphasize certain frequencies
+        // True formant shifting requires more complex DSP (e.g. LPC), but for MVP we use EQ + Pitch Shift
+        this.filter = new Tone.Filter({
+            type: "peaking",
+            frequency: 1000,
+            Q: 1,
+            gain: 0
+        });
+
+        this.gain = new Tone.Gain(1);
+
+        // Chain: Input -> Shifter -> Filter -> Gain -> Output
+        this.shifter.connect(this.filter);
+        this.filter.connect(this.gain);
+    }
+
+    // Connect to an audio node
+    connect(destination: Tone.InputNode) {
+        this.gain.connect(destination);
+    }
+
+    // Input node to connect sources to
+    get input(): Tone.InputNode {
+        return this.shifter;
+    }
+
+    setShift(semitones: number) {
+        this.shifter.pitch = semitones;
+    }
+
+    setFormantFactor(factor: number) {
+        // factor 1.0 = normal
+        // factor > 1.0 = brighter/child-like (shift formants up)
+        // factor < 1.0 = darker/deeper (shift formants down)
+        
+        // Simple simulation:
+        // Use pitch shifting to change fundamental frequency
+        // Then try to "correct" formants or apply EQ to simulate
+        
+        // For distinct "Robot" or "Alien" effects, we might use RingModulator or other effects
+        // But here we focus on simple "formant-like" timbral changes via EQ
+        
+        if (factor > 1.0) {
+            // Emphasize highs, cut lows
+            this.filter.frequency.value = 2500;
+            this.filter.gain.value = (factor - 1) * 10; 
+        } else {
+             // Emphasize lows, cut highs
+            this.filter.frequency.value = 400;
+            this.filter.gain.value = (1 - factor) * 10;
+        }
+    }
+    
+    setBypass(bypass: boolean) {
+        this.bypass = bypass;
+        if (bypass) {
+            this.shifter.disconnect();
+            this.gain.disconnect(); 
+            // This logic is tricky with Tone.js connections. 
+            // Better to use a CrossFade or gain automation.
+            // For MVP, we'll just set gain to 0 or 1.
+            this.gain.gain.value = 0;
+        } else {
+             this.gain.gain.value = 1;
+        }
+    }
+
+    dispose() {
+        this.shifter.dispose();
+        this.filter.dispose();
+        this.gain.dispose();
+    }
+}
+
+export class HarmonyGenerator {
+    private voices: Map<string, { shifter: Tone.PitchShift, gain: Tone.Gain, panner: Tone.Panner }> = new Map();
+    private output: Tone.Gain;
+    private input: Tone.Gain;
+
+    constructor() {
+        this.input = new Tone.Gain(1);
+        this.output = new Tone.Gain(1);
+    }
+
+    updateHarmonies(harmonySettings: HarmonyVoice[]) {
+        // Remove unused voices
+        const activeIds = new Set(harmonySettings.map(h => this.getVoiceId(h)));
+        for (const [id, nodes] of this.voices) {
+            if (!activeIds.has(id)) {
+                nodes.shifter.dispose();
+                nodes.gain.dispose();
+                nodes.panner.dispose();
+                this.voices.delete(id);
+            }
+        }
+
+        // Add or update voices
+        harmonySettings.forEach(setting => {
+            const id = this.getVoiceId(setting);
+            let nodes = this.voices.get(id);
+
+            if (!nodes) {
+                const shifter = new Tone.PitchShift({
+                    pitch: setting.interval,
+                    windowSize: 0.1,
+                    delayTime: 0,
+                    feedback: 0
+                });
+                const gain = new Tone.Gain(setting.volume);
+                const panner = new Tone.Panner(setting.pan); // Use setting.pan
+
+                // Chain: Input -> Shifter -> Gain -> Panner -> Output
+                this.input.connect(shifter);
+                shifter.connect(gain);
+                gain.connect(panner);
+                panner.connect(this.output);
+
+                nodes = { shifter, gain, panner };
+                this.voices.set(id, nodes);
+            } else {
+                // Update implementation
+                nodes.shifter.pitch = setting.interval;
+                nodes.gain.gain.value = setting.volume;
+                nodes.panner.pan.value = setting.pan;
+            }
+        });
+    }
+
+    private getVoiceId(setting: HarmonyVoice): string {
+        return `${setting.interval}_${setting.volume}`; // ID based on interval and volume
+    }
+    
+    connect(destination: Tone.InputNode) {
+        this.output.connect(destination);
+    }
+    
+    getInput(): Tone.InputNode {
+        return this.input;
+    }
+
+    dispose() {
+        this.voices.forEach(nodes => {
+            nodes.shifter.dispose();
+            nodes.gain.dispose();
+            nodes.panner.dispose();
+        });
+        this.voices.clear();
+        this.input.dispose();
+        this.output.dispose();
+    }
+}
 
 export class VoiceProcessor {
     private input: Tone.UserMedia;
