@@ -12,9 +12,11 @@ import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { EffectsPanel } from './EffectsPanel';
 import { StemIsolationPanel } from './StemIsolationPanel';
+import { PitchVisualizer } from './PitchVisualizer';
 import { LyricDisplay, LyricTheme } from './LyricDisplay';
 import { LyricEditor } from './LyricEditor';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { VideoExporter } from '@/utils/audio/videoExport';
 import { CDGRenderer } from './CDGRenderer';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
@@ -60,6 +62,8 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
 
     const recorder = useVoiceRecorder();
+    const pitchAnalysis = usePitchAnalysis(controller);
+    const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
@@ -669,6 +673,52 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
             {/* Stem Isolation Controls */}
             <StemIsolationPanel controller={controller} />
+
+            {/* Pitch Analysis */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            if (pitchAnalysis.isListening) {
+                                pitchAnalysis.stopAnalysis();
+                            } else {
+                                setShowPitchAnalysis(true);
+                                pitchAnalysis.startAnalysis();
+                            }
+                        }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            pitchAnalysis.isListening
+                                ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500/40'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                        }`}
+                    >
+                        🎯 {pitchAnalysis.isListening ? t('stopAnalysis') || 'Stop Analysis' : t('pitchAnalysis') || 'Pitch Analysis'}
+                    </button>
+                    {pitchAnalysis.overallScore && (
+                        <button
+                            onClick={() => {
+                                pitchAnalysis.resetAnalysis();
+                                setShowPitchAnalysis(false);
+                            }}
+                            className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                        >
+                            {t('resetScore') || 'Reset'}
+                        </button>
+                    )}
+                    {pitchAnalysis.error && (
+                        <span className="text-xs text-red-400">{pitchAnalysis.error}</span>
+                    )}
+                </div>
+                {showPitchAnalysis && (
+                    <PitchVisualizer
+                        pitchHistory={pitchAnalysis.pitchHistory}
+                        currentScore={pitchAnalysis.currentScore}
+                        currentPitch={pitchAnalysis.currentPitch}
+                        overallScore={pitchAnalysis.overallScore}
+                        isListening={pitchAnalysis.isListening}
+                    />
+                )}
+            </div>
 
             {/* Visual Settings Panel */}
             <SettingsPanel
