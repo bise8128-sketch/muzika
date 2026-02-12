@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { SeparationResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playbackController';
+import { useMachine } from '@xstate/react';
+import { appMachine } from '@/state/appMachine';
 
-export type AppState = 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch';
+export type AppState = 'idle' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
 
 interface UseAppStateOptions {
   separationStatus: 'idle' | 'processing' | 'completed' | 'error';
@@ -35,63 +37,89 @@ export function useAppState(options: UseAppStateOptions) {
     restoredResult,
   } = options;
 
-  const [state, setState] = useState<AppState>('upload');
+  const [state, send] = useMachine(appMachine);
 
   // React to separation completion
   useEffect(() => {
-    if (separationStatus === 'completed' && separationResult) {
+    if (separationStatus === 'processing') {
+      // Typically handled by manual event, but sync here too
+      // send({ type: 'UPLOAD_COMPLETE' }); 
+      // Actually, separationStatus 'processing' means client-side is working
+    } else if (separationStatus === 'completed' && separationResult) {
       onHistoryRefresh();
+      send({ type: 'PROCESS_COMPLETE' });
 
       if (autoStartKaraoke && controller) {
         controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
-        setState('karaoke');
-      } else {
-        const timer = setTimeout(() => setState('results'), 500);
-        return () => clearTimeout(timer);
+        send({ type: 'START_KARAOKE' });
       }
     } else if (separationStatus === 'error') {
       console.error("Separation Error:", separationError);
-      setState('upload');
+      send({ type: 'PROCESS_ERROR', error: separationError || 'Unknown separation error' });
       alert(`Error: ${separationError || 'Unknown error'}`);
     }
-  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh]);
+  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh, send]);
 
   // React to server processing completion
   useEffect(() => {
     if (serverProcessingResult) {
-      setState('results');
+      send({ type: 'PROCESS_COMPLETE' });
     }
-  }, [serverProcessingResult]);
+  }, [serverProcessingResult, send]);
 
   // React to server processing error
   useEffect(() => {
     if (serverProcessingError) {
       alert(serverProcessingError);
-      setState('upload');
+      send({ type: 'PROCESS_ERROR', error: serverProcessingError });
     }
-  }, [serverProcessingError]);
+  }, [serverProcessingError, send]);
 
   const handleRestart = useCallback(() => {
-    setState('upload');
+    send({ type: 'RESET' });
     onResetSeparation();
     onClearRestoredResult();
     onResetServerProcessing();
-  }, [onResetSeparation, onClearRestoredResult, onResetServerProcessing]);
+  }, [onResetSeparation, onClearRestoredResult, onResetServerProcessing, send]);
 
   const handleTryKaraoke = useCallback(() => {
     const activeResult = separationResult || restoredResult || serverProcessingResult;
     if (activeResult && controller) {
       controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
     }
-    setState('karaoke');
-  }, [separationResult, restoredResult, serverProcessingResult, controller]);
+    send({ type: 'START_KARAOKE' });
+  }, [separationResult, restoredResult, serverProcessingResult, controller, send]);
+
+  // Actions exposed to UI
+  const setViewState = useCallback((view: 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch') => {
+    if (view === 'upload') send({ type: 'RESET' }); // rough mapping
+    if (view === 'processing') send({ type: 'PROCESS_START' });
+    if (view === 'results') send({ type: 'RESTORE_SESSION' }); // hacky mapping for now
+    if (view === 'karaoke') send({ type: 'START_KARAOKE' });
+    if (view === 'models') send({ type: 'VIEW_MODELS' });
+    if (view === 'batch') send({ type: 'START_BATCH' });
+  }, [send]);
 
   // The active result is whichever was most recently produced
   const activeResult = separationResult || restoredResult || serverProcessingResult;
 
+  // Helper to map machine state to string for UI
+  const getMappedState = (): AppState => {
+    if (state.matches('idle')) return 'upload';
+    if (state.matches('uploading')) return 'upload'; // UI might show uploading state in upload view
+    if (state.matches('processing')) return 'processing';
+    if (state.matches('batchProcessing')) return 'batch';
+    if (state.matches('results')) return 'results';
+    if (state.matches('karaoke')) return 'karaoke';
+    if (state.matches('models')) return 'models';
+    return 'error';
+  };
+
   return {
-    state,
-    setState,
+    state: getMappedState(),
+    machineState: state, // expose raw machine state if needed
+    send, // expose send for custom events
+    setState: setViewState, // backward compatibility adapter
     activeResult,
     handleRestart,
     handleTryKaraoke,
