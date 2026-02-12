@@ -190,3 +190,95 @@ export interface PerformanceScore {
     longestStreak: number;
     history: PitchAnalysisResult[];
 }
+
+// ─── Practice Mode Types ────────────────────────────────────────────
+
+/** A section of a song identified as difficult based on pitch analysis */
+export interface DifficultSection {
+    id: string;
+    startTime: number;         // seconds
+    endTime: number;           // seconds
+    averageAccuracy: number;   // 0–100
+    frameCount: number;        // number of analysis frames in this section
+    label: string;             // e.g. "0:32 – 0:45"
+}
+
+/** Settings controlling how practice mode behaves */
+export interface PracticeSettings {
+    accuracyThreshold: number;      // sections below this % are "difficult" (default 60)
+    minSectionDuration: number;     // min section length in seconds (default 2)
+    maxSectionDuration: number;     // max section length in seconds (default 15)
+    initialTempoFactor: number;     // start tempo multiplier (default 0.7 = 70%)
+    tempoStepUp: number;            // increase tempo by this per successful attempt (default 0.1)
+    advanceThreshold: number;       // accuracy % to consider section mastered (default 80)
+    maxAttempts: number;            // max attempts before auto-advancing (default 10)
+    leadInSeconds: number;          // seconds of audio before section start (default 1)
+}
+
+/** A single attempt at practicing a section */
+export interface PracticeAttempt {
+    sectionId: string;
+    attemptNumber: number;
+    accuracy: number;              // 0–100
+    tempo: number;                 // tempo multiplier used
+    timestamp: number;             // Date.now()
+}
+
+/** Full practice session data */
+export interface PracticeSession {
+    id: string;
+    songId: string;
+    startedAt: number;
+    endedAt?: number;
+    sections: DifficultSection[];
+    attempts: PracticeAttempt[];
+    overallImprovement: number;    // accuracy delta from first to last attempt
+}
+
+/** Long-term progress for a song */
+export interface PracticeProgress {
+    songId: string;
+    sessionsCompleted: number;
+    bestAccuracy: number;
+    lastPracticedAt: number;
+    sectionProgress: Record<string, { bestAccuracy: number; attemptCount: number }>;
+}
+
+// ─── Voice Transformation Types ─────────────────────────────────────
+
+export type VoicePreset = 'original' | 'deep' | 'high' | 'robot' | 'chipmunk' | 'harmony';
+
+/** Configuration for a single harmony voice */
+export interface HarmonyVoice {
+    interval: number;      // semitones offset from original (-12 to +12)
+    volume: number;        // 0 to 1
+    pan: number;           // -1 (left) to +1 (right)
+    enabled: boolean;
+}
+
+/** Settings controlling voice transformation */
+export interface VoiceTransformSettings {
+    preset: VoicePreset;
+    formantShift: number;          // semitones (-12 to +12)
+    pitchShift: number;            // semitones (additive, on top of existing)
+    harmonies: HarmonyVoice[];     // up to 3 harmony voices
+    dryWet: number;                // 0 (dry) to 1 (fully transformed)
+}
+
+/** Preset definitions for voice presets */
+export const VOICE_PRESETS: Record<VoicePreset, Omit<VoiceTransformSettings, 'preset'>> = {
+    original: { formantShift: 0, pitchShift: 0, harmonies: [], dryWet: 0 },
+    deep: { formantShift: -4, pitchShift: -2, harmonies: [], dryWet: 0.8 },
+    high: { formantShift: 4, pitchShift: 2, harmonies: [], dryWet: 0.8 },
+    robot: { formantShift: 0, pitchShift: 0, harmonies: [], dryWet: 1.0 },
+    chipmunk: { formantShift: 8, pitchShift: 5, harmonies: [], dryWet: 1.0 },
+    harmony: {
+        formantShift: 0,
+        pitchShift: 0,
+        harmonies: [
+            { interval: 4, volume: 0.5, pan: -0.5, enabled: true },
+            { interval: 7, volume: 0.4, pan: 0.5, enabled: true },
+        ],
+        dryWet: 0.6,
+    },
+};
