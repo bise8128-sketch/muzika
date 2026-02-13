@@ -172,7 +172,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [playback]);
 
     return (
-        <ErrorBoundary onReset={() => recorder.resetRecorder()}>
+        <ErrorBoundary onReset={() => recorder.clearRecording()}>
             <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-100 bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
                 
                 <PlayerHeader 
