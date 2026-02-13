@@ -195,6 +195,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                             <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${visualSettings.showDualText ? 'translate-x-6' : 'translate-x-0'}`} />
                                         </button>
                                     </div>
+
+                                    {/* Ghost Mode Toggle */}
+                                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                                        <div className="flex flex-col">
+                                            <label className="text-sm font-semibold text-white flex items-center gap-2">
+                                                {t('ghostMode') || 'Ghost Mode'}
+                                                <span className="px-1.5 py-0.5 text-[10px] bg-purple-500/20 text-purple-300 rounded font-bold uppercase tracking-wide">Beta</span>
+                                            </label>
+                                            <span className="text-xs text-gray-400 mt-0.5">{t('ghostModeDesc') || 'Kinetic typography driven by audio transients'}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleVisualChange('ghostMode', !visualSettings.ghostMode)}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.ghostMode ? 'bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${visualSettings.ghostMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Offset Adjustment */}

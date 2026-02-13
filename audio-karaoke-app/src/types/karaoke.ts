@@ -25,6 +25,7 @@ export interface VisualSettings {
     showDualText: boolean;
     visualizationMode: 'bars' | 'waveform' | '3d-landscape' | 'spectrogram';
     autoQuality: boolean;
+    ghostMode?: boolean;
 }
 
 export interface LRCData {
