@@ -34,7 +34,11 @@ class WorkerWrapper {
         };
 
         worker.onerror = (error: ErrorEvent | Event) => {
-            const message = (error as ErrorEvent).message || 'Worker error occurred';
+            let message = 'Worker error occurred';
+            if ('message' in error) {
+                message = `Worker error: ${error.message} at ${error.filename}:${error.lineno}:${error.colno}`;
+            }
+            console.error(`[WorkerWrapper ${this.id}] Detailed Error:`, error);
             this.handleError(new Error(message));
         };
 
