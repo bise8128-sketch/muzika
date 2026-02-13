@@ -4,6 +4,7 @@
  */
 
 import { applyPitchAndTempo } from './pitchTempo';
+import { getExportWorkerPool, warmUpExportPool, cleanupExportPool, type ExportPriority } from './audioExportPool';
 
 // Error types for better error handling
 export enum MP3ExportErrorType {
@@ -392,10 +393,7 @@ function getWorkerPool(): WorkerPool {
  * Call this function in component cleanup effects
  */
 export function cleanupWorkerPool(): void {
-    if (workerPool) {
-        workerPool.terminateAll();
-        workerPool = null;
-    }
+    cleanupExportPool();
 }
 
 // File size limits (in bytes)
@@ -542,13 +540,18 @@ function writeString(view: DataView, offset: number, string: string): void {
 
 /**
  * Export AudioBuffer to MP3 format using FFmpeg.wasm
+ * Now uses optimized worker pool with task queuing and progress support
  * @param audioBuffer - AudioBuffer to export
  * @param bitrate - MP3 bitrate in kbps (default: 320)
+ * @param priority - Task priority (HIGH, NORMAL, LOW)
+ * @param onProgress - Optional progress callback
  * @returns Blob containing MP3 file data
  */
 export async function exportToMP3(
     audioBuffer: AudioBuffer,
-    bitrate: number = 320
+    bitrate: number = 320,
+    priority: ExportPriority = 'NORMAL',
+    onProgress?: (progress: number) => void
 ): Promise<Blob> {
     // Check browser support first
     const supportCheck = checkBrowserSupport();
@@ -579,95 +582,17 @@ export async function exportToMP3(
     const wavBlob = await exportToWAV(audioBuffer);
     const wavArrayBuffer = await wavBlob.arrayBuffer();
 
-    const pool = getWorkerPool();
-    const worker = await pool.acquire();
-
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            pool.release(worker);
-            reject(new MP3ExportError(
-                MP3ExportErrorType.ENCODING_FAILED,
-                'Export timeout',
-                'MP3 export took too long to complete'
-            ));
-        }, 300000); // 5 minute timeout
-
-        worker.onmessage = (e) => {
-            const { type, payload } = e.data;
-
-            if (type === 'INIT_SUCCESS') {
-                // Worker ready, send data
-                worker.postMessage({
-                    type: 'EXPORT',
-                    payload: {
-                        wavData: wavArrayBuffer,
-                        bitrate
-                    }
-                }, [wavArrayBuffer] as Transferable[]);
-            } else if (type === 'EXPORT_SUCCESS') {
-                clearTimeout(timeout);
-                pool.release(worker);
-                resolve(new Blob([payload], { type: 'audio/mpeg' }));
-            } else if (type === 'ERROR') {
-                clearTimeout(timeout);
-                pool.release(worker);
-                console.error('[WorkerPool] Worker reported error:', payload);
-
-                // Parse error payload if it's a JSON string
-                let errorMessage = payload;
-                try {
-                    const errorData = JSON.parse(payload);
-                    errorMessage = errorData.message || errorData.details || payload;
-                } catch {
-                    // If parsing fails, use the raw payload
-                    errorMessage = payload;
-                }
-
-                reject(new MP3ExportError(
-                    MP3ExportErrorType.ENCODING_FAILED,
-                    'Encoding failed',
-                    errorMessage
-                ));
-            }
-        };
-
-        worker.onerror = (err) => {
-            clearTimeout(timeout);
-            pool.release(worker);
-
-            // ErrorEvent has specific properties: message, filename, lineno, colno, error
-            const errorMessage = err.message || 'Unknown worker error';
-            const errorFilename = err.filename || 'Unknown file';
-            const errorLine = err.lineno || 'Unknown line';
-            const errorCol = err.colno || 'Unknown column';
-            const errorObj = err.error || null;
-
-            console.error('[WorkerPool] Worker error:', {
-                message: errorMessage,
-                filename: errorFilename,
-                line: errorLine,
-                column: errorCol,
-                error: errorObj
-            });
-
-            reject(new MP3ExportError(
-                MP3ExportErrorType.WORKER_INIT_FAILED,
-                'Worker initialization failed',
-                `Failed to initialize worker: ${errorMessage} at ${errorFilename}:${errorLine}:${errorCol}. This may be due to browser compatibility or missing files. Please check browser console for more details.`
-            ));
-        };
-
-        // Initialize worker with base URL for scripts (computed in main thread, not worker)
-        // FIX: Determine baseUrl in main thread context where window is available
-        const baseUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/ffmpeg/umd`
-            : '/ffmpeg/umd'; // Fallback for SSR
-
-        worker.postMessage({
-            type: 'INIT',
-            payload: { baseUrl }
-        });
-    });
+    // Use the optimized worker pool with task queue
+    const pool = getExportWorkerPool();
+    
+    // Queue the export with priority - this ensures background processing
+    // doesn't block the UI thread
+    return pool.queueExport(
+        wavArrayBuffer,
+        bitrate,
+        priority,
+        onProgress
+    );
 }
 
 /**
