@@ -2,6 +2,16 @@ import React from 'react';
 import { PlayerControls } from '../../PlayerControls/PlayerControls';
 import { LRCData } from '@/types/karaoke';
 import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Mic, 
+    Square, 
+    Trash2, 
+    Download, 
+    Video, 
+    Music,
+    Loader2
+} from 'lucide-react';
 
 interface KaraokeControlsProps {
     playback: {
@@ -59,7 +69,7 @@ export const KaraokeControls: React.FC<KaraokeControlsProps> = ({
     };
 
     return (
-        <div className={`flex flex-col gap-4 ${isStageMode ? 'max-w-4xl mx-auto w-full' : ''}`}>
+        <div className={`flex flex-col gap-6 ${isStageMode ? 'max-w-4xl mx-auto w-full pb-10' : ''}`}>
             <PlayerControls
                 isPlaying={playback.isPlaying}
                 currentTime={playback.currentTime}
@@ -73,99 +83,121 @@ export const KaraokeControls: React.FC<KaraokeControlsProps> = ({
                 onBalanceChange={onBalanceChange}
             />
 
-            {/* Recording Controls */}
-            <div className="flex justify-center items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
-                {!recorder.isRecording ? (
-                    <button
-                        onClick={handleRecordClick}
-                        className="flex items-center gap-2 px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full font-bold transition-all shadow-lg shadow-red-500/20"
-                    >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                        </svg>
-                        {t('recordVocals')}
-                    </button>
-                ) : (
-                    <button
-                        onClick={recorder.stopRecording}
-                        className="flex items-center gap-2 px-6 py-2 bg-white text-black rounded-full font-bold transition-all animate-pulse"
-                    >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                        </svg>
-                        {t('stopRecording')}
-                    </button>
-                )}
+            {/* Sub Controls: Recording & Export */}
+            <motion.div 
+                layout
+                className="flex flex-wrap md:flex-nowrap justify-center items-center gap-4 glass-premium p-4 md:p-2 rounded-[2.5rem] w-full max-w-4xl mx-auto border border-white/10"
+            >
+                {/* Recording Group */}
+                <div className="flex items-center gap-3 p-1">
+                    <AnimatePresence mode="wait">
+                        {!recorder.isRecording ? (
+                            <motion.button
+                                key="start"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleRecordClick}
+                                className="flex items-center gap-2 px-8 py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-red-500/30"
+                            >
+                                <Mic className="w-4 h-4 fill-current" />
+                                {t('recordVocals')}
+                            </motion.button>
+                        ) : (
+                            <motion.button
+                                key="stop"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={recorder.stopRecording}
+                                className="flex items-center gap-2 px-8 py-3 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-white/20"
+                            >
+                                <Square className="w-4 h-4 fill-current" />
+                                {t('stopRecording')}
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
 
-                {recorder.recordedBuffer && (
-                    <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/10">
-                        <span className="text-white/60 text-sm">{t('voiceRecorded')}</span>
-                        <button
-                            onClick={recorder.clearRecording}
-                            className="text-white/40 hover:text-red-400 transition-colors"
+                    {recorder.recordedBuffer && (
+                        <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </div>
-                )}
+                            <span className="text-white/40 text-[10px] font-black uppercase tracking-tighter">{t('voiceRecorded')}</span>
+                            <button
+                                onClick={recorder.clearRecording}
+                                className="p-2 hover:bg-red-500/20 text-white/40 hover:text-red-500 transition-all rounded-full"
+                                title="Clear Recording"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </motion.div>
+                    )}
+                </div>
 
+                {/* Export Group */}
                 {lyrics && (
-                    <div className="ml-auto flex items-center gap-2">
-                        <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
-                            <button
-                                disabled={isExportingAudio}
-                                onClick={() => onAudioDownload('wav')}
-                                className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/10 text-white flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isExportingAudio ? (
-                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                )}
-                                WAV
-                            </button>
-                            <button
-                                disabled={isExportingAudio}
-                                onClick={() => onAudioDownload('mp3')}
-                                className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/10 text-white flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isExportingAudio ? (
-                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                )}
-                                MP3
-                            </button>
+                    <div className="ml-auto flex items-center gap-4 p-1">
+                        <div className="flex bg-white/5 rounded-2xl p-1 gap-1 border border-white/5">
+                            <ExportButton 
+                                format="WAV" 
+                                loading={isExportingAudio} 
+                                onClick={() => onAudioDownload('wav')} 
+                            />
+                            <ExportButton 
+                                format="MP3" 
+                                loading={isExportingAudio} 
+                                onClick={() => onAudioDownload('mp3')} 
+                            />
                         </div>
 
-                        <button
+                        <motion.button
                             disabled={isExporting}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={onVideoExport}
-                            className="flex items-center gap-2 px-6 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-full font-bold transition-all disabled:opacity-50"
+                            className="flex items-center gap-3 px-8 py-3 bg-primary/20 hover:bg-primary/30 text-primary rounded-full font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-primary/20 disabled:opacity-50 relative overflow-hidden group min-w-[140px]"
                         >
                             {isExporting ? (
                                 <>
-                                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                    {t('exporting', { progress: Math.round(exportProgress * 100) })}
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>{Math.round(exportProgress * 100)}%</span>
+                                    <motion.div 
+                                        className="absolute bottom-0 left-0 h-1 bg-primary"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${exportProgress * 100}%` }}
+                                    />
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                    {t('video')}
+                                    <Video className="w-4 h-4" />
+                                    <span>{t('video')}</span>
                                 </>
                             )}
-                        </button>
+                        </motion.button>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 };
+
+const ExportButton: React.FC<{ format: string; loading: boolean; onClick: () => void }> = ({ format, loading, onClick }) => (
+    <button
+        disabled={loading}
+        onClick={onClick}
+        className="px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-white/10 text-white/60 hover:text-white flex items-center gap-2 disabled:opacity-50"
+    >
+        {loading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+            <Download className="w-3 h-3" />
+        )}
+        {format}
+    </button>
+);
