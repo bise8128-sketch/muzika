@@ -37,8 +37,11 @@ class WorkerWrapper {
             let message = 'Worker error occurred';
             if ('message' in error) {
                 message = `Worker error: ${error.message} at ${error.filename}:${error.lineno}:${error.colno}`;
+                console.error(`[WorkerWrapper ${this.id}] Error Message:`, error.message);
+                console.error(`[WorkerWrapper ${this.id}] Error Location:`, `${error.filename}:${error.lineno}:${error.colno}`);
+            } else {
+                console.error(`[WorkerWrapper ${this.id}] Generic Error Event:`, error);
             }
-            console.error(`[WorkerWrapper ${this.id}] Detailed Error:`, error);
             this.handleError(new Error(message));
         };
 
