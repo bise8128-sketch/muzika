@@ -97,7 +97,10 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     
     const ghostWeight = useTransform(smoothBass, [0, 1], [400, 900]);
     
-    const ghostXOffset = useTransform(smoothTreble, [0, 1], [0, 5]);
+    // Aberration offsets for Ghost Mode
+    const aberrationOffsetPos = useTransform(smoothTreble, [0.5, 1], [0, 4]);
+    const aberrationOffsetNeg = useTransform(smoothTreble, [0.5, 1], [0, -4]);
+
     const ghostScaleRed = useTransform(ghostScale, s => s * 1.05);
     const ghostScaleCyan = useTransform(ghostScale, s => s * 1.02);
 
@@ -183,11 +186,6 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                         const isWordActive = wIndex === currentWordIndex;
                                         const isWordPast = wIndex < currentWordIndex;
 
-                                        // Highlight past words and current word
-                                        const wordColor = (isWordPast || isWordActive)
-                                            ? (visualSettings?.highlightColor || 'text-yellow-400')
-                                            : 'text-white/60';
-
                                         return (
                                             <motion.span
                                                 key={wIndex}
@@ -231,7 +229,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                             bottom: 0,
                                             color: '#ff0000',
                                             mixBlendMode: 'screen',
-                                            x: useTransform(smoothTreble, [0.5, 1], [0, -4]),
+                                            x: aberrationOffsetNeg,
                                             scale: ghostScaleRed,
                                             opacity: 0.5,
                                             pointerEvents: 'none',
@@ -250,7 +248,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                             bottom: 0,
                                             color: '#00ffff',
                                             mixBlendMode: 'screen',
-                                            x: useTransform(smoothTreble, [0.5, 1], [0, 4]),
+                                            x: aberrationOffsetPos,
                                             scale: ghostScaleCyan,
                                             opacity: 0.5,
                                             pointerEvents: 'none',
