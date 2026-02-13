@@ -23,11 +23,30 @@ jest.mock('@/utils/storage/audioCache', () => ({
     }
 }));
 
+
 jest.mock('../onnxSetup', () => ({
     checkONNXSupport: jest.fn(),
     isServerAvailable: jest.fn(),
     checkWebGPUSupport: jest.fn().mockResolvedValue(true)
 }));
+
+jest.mock('@/utils/audio/BrowserAudioSegmenter', () => {
+    return {
+        BrowserAudioSegmenter: jest.fn().mockImplementation(() => ({
+            segmentFile: jest.fn().mockReturnValue((async function* () {
+                yield {
+                    data: new Float32Array(1024),
+                    startTime: 0,
+                    sampleRate: 44100,
+                    channelCount: 2,
+                    duration: 1
+                };
+            })()),
+            dispose: jest.fn(),
+            totalDuration: 10
+        }))
+    };
+});
 
 // Mock global fetch
 const mockFetch = jest.fn();
@@ -37,6 +56,7 @@ global.fetch = mockFetch;
 class MockAudioContext {
     sampleRate = 44100;
     state = 'running';
+
     createBuffer = jest.fn();
     decodeAudioData = jest.fn().mockResolvedValue({
         numberOfChannels: 2,
@@ -45,9 +65,25 @@ class MockAudioContext {
         getChannelData: jest.fn().mockReturnValue(new Float32Array(1000))
     });
     resume = jest.fn().mockResolvedValue(undefined);
+    createGain = jest.fn().mockReturnValue({
+        connect: jest.fn(),
+        gain: { value: 1 }
+    });
 }
+
 global.AudioContext = MockAudioContext as any;
 global.window = { AudioContext: MockAudioContext } as any;
+
+// Mock Worker
+class MockWorker {
+    postMessage = jest.fn();
+    terminate = jest.fn();
+    addEventListener = jest.fn();
+    removeEventListener = jest.fn();
+    onmessage = null;
+    onerror = null;
+}
+global.Worker = MockWorker as any;
 
 describe('separateAudio Smart Routing', () => {
     const mockFile = new File([''], 'test.mp3', { type: 'audio/mpeg' });
@@ -116,7 +152,7 @@ describe('separateAudio Smart Routing', () => {
 
         await separateAudio(mockFile, serverOptions);
 
-        expect(workerPool.addTask).not.toHaveBeenCalled();
+        expect(mockAddTask).not.toHaveBeenCalled();
         expect(mockFetch).toHaveBeenCalledWith('/api/backend-upload', expect.anything());
     });
     

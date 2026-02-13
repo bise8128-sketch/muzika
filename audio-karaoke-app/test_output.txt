@@ -1,0 +1,127 @@
+  console.log
+    [separateAudioInternal] Executing fresh version
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:37:13)
+
+  console.log
+    [separateAudio] Initializing worker session...
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:144:17)
+
+  console.log
+    [separateAudio] Worker using backend: wasm
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:151:17)
+
+  console.log
+    [separateAudio] Starting streaming segmentation...
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:161:17)
+
+  console.log
+    [separateAudio] Dispatching chunk 0 to pool
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:180:21)
+
+  console.error
+    Separation failed: TypeError: Cannot read properties of undefined (reading 'copyToChannel')
+        at StreamableBufferManager.createAudioBuffer (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/audio/StreamableBufferManager.ts:51:16)
+        at StreamableBufferManager.play (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/audio/StreamableBufferManager.ts:102:31)
+        at /home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:242:39
+
+      274 |             processingPromises.push(taskPromise);
+      275 |             chunkIndex++;
+    > 276 |         }
+          |          ^
+      277 |
+      278 |         await Promise.all(processingPromises);
+      279 |         await workerPool.addTask('END_STREAM_SESSION', { sessionId }, 'NORMAL');
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:276:17)
+      at async separateAudio (src/utils/ml/separateAudio.ts:30:24)
+      at async Object.<anonymous> (src/utils/ml/__tests__/separateAudio.test.ts:171:9)
+
+  console.log
+    [separateAudioInternal] Executing fresh version
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:37:13)
+
+  console.log
+    [separateAudioInternal] Executing fresh version
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:37:13)
+
+  console.error
+    [serverSeparateAudio] Error: TypeError: uploadRes.json is not a function
+        at serverSeparateAudio (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:395:41)
+        at async separateAudioInternal (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:89:24)
+        at async separateAudio (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:41:24)
+        at async Object.<anonymous> (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/__tests__/separateAudio.test.ts:170:9)
+
+      388 |         const uploadRes = await fetch('/api/backend-upload', {
+      389 |             method: 'POST',
+    > 390 |             body: formData,
+          |                 ^
+      391 |             signal
+      392 |         });
+      393 |
+
+      at serverSeparateAudio (src/utils/ml/separateAudio.ts:390:17)
+      at async separateAudioInternal (src/utils/ml/separateAudio.ts:69:24)
+      at async separateAudio (src/utils/ml/separateAudio.ts:30:24)
+      at async Object.<anonymous> (src/utils/ml/__tests__/separateAudio.test.ts:226:9)
+
+  console.error
+    Separation failed: TypeError: uploadRes.json is not a function
+        at serverSeparateAudio (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:395:41)
+        at async separateAudioInternal (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:89:24)
+        at async separateAudio (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/separateAudio.ts:41:24)
+        at async Object.<anonymous> (/home/k/Downloads/muzika/audio-karaoke-app/src/utils/ml/__tests__/separateAudio.test.ts:170:9)
+
+      274 |             processingPromises.push(taskPromise);
+      275 |             chunkIndex++;
+    > 276 |         }
+          |          ^
+      277 |
+      278 |         await Promise.all(processingPromises);
+      279 |         await workerPool.addTask('END_STREAM_SESSION', { sessionId }, 'NORMAL');
+
+      at separateAudioInternal (src/utils/ml/separateAudio.ts:276:17)
+      at async separateAudio (src/utils/ml/separateAudio.ts:30:24)
+      at async Object.<anonymous> (src/utils/ml/__tests__/separateAudio.test.ts:226:9)
+
+FAIL src/utils/ml/__tests__/separateAudio.test.ts
+  separateAudio Smart Routing
+    ✕ should use client-side by default for MDX models on high-end devices (119 ms)
+    ✓ should route to server for server-only models (HTDEMUCS) (21 ms)
+    ✓ should fallback to client if server model request fails (25 ms)
+
+  ● separateAudio Smart Routing › should use client-side by default for MDX models on high-end devices
+
+    TypeError: Cannot read properties of undefined (reading 'copyToChannel')
+
+      49 |         const buffer = bufferPool.acquireAudioBuffer(this.audioContext, 2, channel1.length, this.sampleRate);
+      50 |         // Cast to any to avoid strict shared buffer checks for this demo
+    > 51 |         buffer.copyToChannel(channel1 as any, 0);
+         |                ^
+      52 |         buffer.copyToChannel(channel2 as any, 1);
+      53 |         return buffer;
+      54 |     }
+
+      at StreamableBufferManager.createAudioBuffer (src/utils/audio/StreamableBufferManager.ts:51:16)
+      at StreamableBufferManager.play (src/utils/audio/StreamableBufferManager.ts:102:31)
+      at src/utils/ml/separateAudio.ts:242:39
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        2.978 s, estimated 3 s
+Ran all test suites matching /src\/utils\/ml\/__tests__\/separateAudio.test.ts/i.
+RangeError: Maximum call stack size exceeded
+    at initAsyncResource (node:internal/timers:164:27)
+    at new Immediate (node:internal/timers:660:5)
+    at setImmediate (node:timers:209:10)
+    at patchedSetImmediate (/home/k/Downloads/muzika/audio-karaoke-app/node_modules/next/dist/server/node-environment-extensions/fast-set-immediate.external.js:412:37)
+    at filteringUnhandledRejectionHandler (/home/k/Downloads/muzika/audio-karaoke-app/node_modules/next/dist/server/node-environment-extensions/unhandled-rejection.js:478:13)
+    at filteringUnhandledRejectionHandler (/home/k/Downloads/muzika/audio-karaoke-app/node_modules/next/dist/server/node-environment-extensions/unhandled-rejection.js:474:17)
+    ... collapsed 94 duplicate lines matching above 1 lines 94 times...
