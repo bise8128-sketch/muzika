@@ -1,17 +1,12 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { modelStorage } from '@/utils/storage/modelStorage';
 import { downloadModel } from './modelDownloader';
-import { setupONNX } from './onnxSetup';
+import { setupONNX, validateSessionProvider } from './onnxSetup';
+import { InferenceEngine } from './inference';
 import * as ort from 'onnxruntime-web';
 
 // Memory cache for loaded sessions
 const sessionCache = new Map<string, ort.InferenceSession>();
-
-/**
- * Loads an ONNX model, either from IndexedDB cache or by downloading it.
- * Creates an InferenceSession and caches it in memory.
- */
-import { InferenceEngine } from './inference';
 
 /**
  * Loads an ONNX model, either from IndexedDB cache or by downloading it.
@@ -95,7 +90,6 @@ export async function loadModel(
 
         // Runtime Validation: Check illegal fallback
         // If we successfully created a session with WebGPU options, check if it actually uses it
-        import { validateSessionProvider } from './onnxSetup';
         const validation = validateSessionProvider(session, usedWebGPU);
         
         if (validation.didFallback) {
