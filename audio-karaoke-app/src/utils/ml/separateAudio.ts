@@ -101,10 +101,20 @@ async function separateAudioInternal(
                     message: 'Server unavailable. Falling back to local processing...', 
                     currentSegment: 0, 
                     totalSegments: 0,
-                    executionBackend: 'wasm' // We assume fallback is wasm for now, or let separateAudioInternal determine it later
+                    executionBackend: 'wasm' 
                 });
                 // Fall through to client-side logic
             }
+        } else if (!support.webgpu) {
+            // Explicitly report WASM if we know WebGPU isn't available before worker starts
+            onProgress?.({ 
+                phase: 'decoding', 
+                percentage: 0, 
+                message: 'Initializing local processing...', 
+                currentSegment: 0, 
+                totalSegments: 0,
+                executionBackend: 'wasm' 
+            });
         }
 
         const ctx = getAudioContext();
@@ -161,14 +171,14 @@ async function separateAudioInternal(
             'HIGH'
         );
         
-        const executionBackend = initResult.backend || 'wasm'; // Default to wasm if not specified
+        const executionBackend = initResult.backend || 'wasm';
         console.log(`[separateAudio] Worker using backend: ${executionBackend}`);
         
-        // Report backend immediately
+        // Report backend immediately and ensure it persists
         onProgress?.({ 
             phase: 'decoding', 
-            percentage: 0, 
-            message: `Analyzing file... (Using ${executionBackend})`, 
+            percentage: 5, 
+            message: `Initializing AI model... (${executionBackend === 'webgpu' ? 'WebGPU' : 'WASM'})`, 
             currentSegment: 0, 
             totalSegments: 0,
             executionBackend 
