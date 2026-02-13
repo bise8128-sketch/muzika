@@ -21,7 +21,7 @@
   --input: #27272a;
   --ring: #d8b4fe;
   --radius: 1rem;
-  
+
   /* Layout Constants */
   --header-height: 5rem;
 }
@@ -50,19 +50,28 @@
 
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-float: float 3s ease-in-out infinite;
-  
+
   --spacing-header: var(--header-height);
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }
@@ -77,16 +86,65 @@ body {
     @apply bg-zinc-900/60 backdrop-blur-2xl border border-white/5 shadow-2xl;
   }
 
+  /* Premium Glassmorphism */
+  .glass-premium {
+    @apply bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-hidden;
+    /* Inner highlight */
+    background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+
+  .glass-premium::after {
+    content: "";
+    @apply absolute inset-0 pointer-events-none opacity-20;
+    background: radial-gradient(
+      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 255, 255, 0.1),
+      transparent 40%
+    );
+  }
+
   .text-gradient {
     @apply bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent;
   }
-  
+
+  .mesh-gradient {
+    background-color: #050505;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(147, 51, 234, 0.15) 0, transparent 50%),
+      radial-gradient(at 50% 0%, rgba(236, 72, 153, 0.1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(147, 51, 234, 0.15) 0, transparent 50%);
+  }
+
   .interactive-scale {
-    @apply transition-transform duration-200 active:scale-95;
+    @apply transition-transform duration-200 active:scale-95 hover:scale-[1.02];
   }
 
   .focus-ring {
     @apply outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 }
 
@@ -117,7 +175,7 @@ body {
   border-radius: 5px;
   outline: none;
   opacity: 0.8;
-  transition: opacity .2s;
+  transition: opacity 0.2s;
 }
 
 .range-premium:hover {
@@ -162,7 +220,11 @@ body {
 
 /* Karaoke Display Styles */
 .font-karaoke-display {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-weight: 800;
 }
 
@@ -186,7 +248,13 @@ body {
 }
 
 @keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
