@@ -88,6 +88,7 @@ async function separateAudioInternal(
     options: SeparationOptions,
     workerPool: WorkerPool
 ): Promise<SeparationResult> {
+    console.log('[separateAudioInternal] Executing fresh version');
     if (typeof window === "undefined") {
         // This function should not be called on the server
         // Return a dummy promise that never resolves or rejects
@@ -303,7 +304,9 @@ async function separateAudioInternal(
         throw err;
     } finally {
         // workerPool is managed by caller (separateAudio function wrapper)
-        // worker?.terminate(); // removed as 'worker' is not defined here
+        // workerPool is managed by caller (separateAudio function wrapper)
+        // worker?.terminate(); // REMOVED: ensures no reference to undefined worker
+
         await segmenter?.dispose();
     }
 }
