@@ -1,3 +1,4 @@
+
 import * as ort from 'onnxruntime-web';
 import type { InferenceOutput, ModelInfo } from '@/types/model';
 import { ModelType } from '@/types/model';
@@ -5,6 +6,7 @@ import type { InferenceStrategy } from './inference/types';
 import { WaveformInferenceStrategy } from './inference/waveformStrategy';
 import { SpectralInferenceStrategy } from './inference/spectralStrategy';
 import { WebGPUInferenceStrategy } from './inference/webgpuStrategy';
+import type { ExecutionBackend } from './onnxSetup';
 
 /**
  * Factory to create the appropriate inference strategy.
@@ -38,6 +40,7 @@ function createStrategy(modelInfo: ModelInfo, session: ort.InferenceSession): In
 export class InferenceEngine {
     private session: ort.InferenceSession;
     private strategy: InferenceStrategy;
+    public backendInfo: { backend: ExecutionBackend; didFallback: boolean } | null = null;
 
     constructor(session: ort.InferenceSession, modelInfo: ModelInfo) {
         this.session = session;

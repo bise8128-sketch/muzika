@@ -43,6 +43,7 @@ export async function loadModel(
         modelData = await downloadModel(modelInfo, onProgress);
     }
 
+
     // Setup ONNX options (WebGPU vs WASM)
     console.log(`[modelManager] Setting up ONNX for model ${modelInfo.id}...`);
     const options = await setupONNX();
@@ -51,13 +52,20 @@ export async function loadModel(
     try {
         console.log(`[modelManager] Creating InferenceSession for model ${modelInfo.id}...`);
         let session: ort.InferenceSession;
+        let usedWebGPU = false;
 
         try {
             session = await ort.InferenceSession.create(modelData, options);
             console.log(`[modelManager] InferenceSession created successfully with providers: ${session.executionProviders?.join(', ') || 'unknown'}`);
+            
+            usedWebGPU = options.executionProviders &&
+                (Array.isArray(options.executionProviders) ?
+                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')) :
+                    false);
+
         } catch (webGpuError) {
             // Check if we were trying to use WebGPU
-            const usedWebGPU = options.executionProviders &&
+             usedWebGPU = options.executionProviders &&
                 (Array.isArray(options.executionProviders) ?
                     options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')) :
                     false);
@@ -73,6 +81,7 @@ export async function loadModel(
                 try {
                     session = await ort.InferenceSession.create(modelData, fallbackOptions);
                     console.log(`[modelManager] Fallback InferenceSession created successfully (CPU/WASM) for model ${modelInfo.id}`);
+                    usedWebGPU = false; // We explicitly fell back, so we are not "attempting" WebGPU anymore in terms of silent failure check
                 } catch (wasmError) {
                     console.error(`[modelManager] WASM fallback also failed for model ${modelInfo.id}:`, wasmError);
                     throw wasmError;
@@ -84,12 +93,24 @@ export async function loadModel(
 
         console.log(`[modelManager] InferenceSession created successfully for model ${modelInfo.id}`);
 
+        // Runtime Validation: Check illegal fallback
+        // If we successfully created a session with WebGPU options, check if it actually uses it
+        import { validateSessionProvider } from './onnxSetup';
+        const validation = validateSessionProvider(session, usedWebGPU);
+        
+        if (validation.didFallback) {
+             console.warn(`[modelManager] WebGPU was requested but session fell back to ${validation.backend}`);
+        } else {
+             console.log(`[modelManager] Session verified using backend: ${validation.backend}`);
+        }
+
         // We do NOT cache the engine directly because engines are stateful (strategies might be stateful)
         // But sessions are stateless and expensive. We cache sessions.
         sessionCache.set(modelInfo.id, session);
 
         // Return new engine instance with the cached session
         const engine = new InferenceEngine(session, modelInfo);
+        engine.backendInfo = validation;
         await engine.init();
         return engine;
     } catch (err) {

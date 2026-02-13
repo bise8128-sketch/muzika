@@ -130,10 +130,52 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
     return options;
 }
 
+
+export type ExecutionBackend = 'webgpu' | 'wasm' | 'server';
+
+/**
+ * Validates which Execution Provider is actually being used by a session.
+ * Useful to detect if WebGPU silently fell back to WASM/CPU.
+ */
+export function validateSessionProvider(
+    session: ort.InferenceSession,
+    requestedWebGPU: boolean
+): { backend: ExecutionBackend; didFallback: boolean } {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionAny = session as any;
+    
+    // Check internal session state for execution providers
+    // Usually defined in session.executionProviders array
+    const providers = sessionAny.executionProviders || [];
+    
+    const isUsingWebGPU = providers.some((ep: string | { name: string }) => 
+        ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')
+    );
+
+    if (requestedWebGPU && !isUsingWebGPU) {
+        return { backend: 'wasm', didFallback: true };
+    }
+
+    if (isUsingWebGPU) {
+        return { backend: 'webgpu', didFallback: false };
+    }
+
+    return { backend: 'wasm', didFallback: false };
+}
+
+export interface ONNXSupport {
+    webgpu: boolean;
+    wasm: boolean;
+    threads: number;
+    simd: boolean;
+    platform: string;
+    isLowEnd: boolean;
+}
+
 /**
  * Comprehensive support check for ONNX Runtime capabilities.
  */
-export async function checkONNXSupport() {
+export async function checkONNXSupport(): Promise<ONNXSupport> {
     const webgpu = await checkWebGPUSupport();
     const threads = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 1 : 1;
 
