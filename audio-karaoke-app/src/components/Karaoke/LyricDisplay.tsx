@@ -208,6 +208,13 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                 </p>
                             )}
 
+                            {/* Dual Text (Translation/Romanization) */}
+                            {visualSettings?.showDualText && line.translation && (
+                                <motion.p 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: isActive ? 0.6 : 0.2 }}
+                                    className="text-lg font-bold opacity-60 mt-4 tracking-tight"
+                                >
                                     {line.translation}
                                 </motion.p>
                             )}
