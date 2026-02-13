@@ -82,6 +82,8 @@ export function RoomView({
                     <form onSubmit={handleSend} className="chat-input">
                         <input 
                             type="text" 
+                            id="chat-message-input"
+                            name="message"
                             value={newMessage} 
                             onChange={e => setNewMessage(e.target.value)}
                             placeholder="Type a message..."
