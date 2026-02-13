@@ -69,15 +69,17 @@ export function useSeparation() {
 
             return result;
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Unknown error occurred during separation';
             setState(s => ({
                 ...s,
                 isProcessing: false,
                 status: 'error',
-                error: error.message || 'Unknown error occurred during separation',
+                error: message,
                 message: null,
             }));
-            throw error;
+            // Don't re-throw: callers read error state via the hook's return value
+            return undefined;
         }
     }, []);
 

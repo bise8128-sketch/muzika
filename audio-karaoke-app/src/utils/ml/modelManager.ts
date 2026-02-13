@@ -1,4 +1,4 @@
-import type { ModelInfo, ModelDownloadProgress, ModelType } from '@/types/model';
+import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { modelStorage } from '@/utils/storage/modelStorage';
 import { downloadModel } from './modelDownloader';
 import { setupONNX } from './onnxSetup';

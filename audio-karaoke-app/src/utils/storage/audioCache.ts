@@ -30,7 +30,11 @@ export class AudioCache {
         if (!isBrowser()) {
             // Create a simple deterministic hash from metadata
             const metadata = `${file.name}-${file.size}-${file.lastModified}-${file.type}`;
-            return 'ssr-' + btoa(metadata).replace(/[^a-zA-Z0-9]/g, '').substring(0, 64);
+            // btoa may not exist in all Node environments; use Buffer fallback
+            const encoded = typeof btoa === 'function'
+                ? btoa(metadata)
+                : (typeof Buffer !== 'undefined' ? Buffer.from(metadata).toString('base64') : metadata);
+            return 'ssr-' + encoded.replace(/[^a-zA-Z0-9]/g, '').substring(0, 64);
         }
 
         // Include metadata in hash input
