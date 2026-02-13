@@ -8,7 +8,6 @@ import {
     Users, 
     Settings, 
     Mic2, 
-    X,
     X
 } from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
