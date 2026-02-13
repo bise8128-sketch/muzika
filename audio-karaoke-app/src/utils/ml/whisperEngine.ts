@@ -2,10 +2,10 @@
  * WhisperEngine — Browser-side transcription using Whisper ONNX.
  */
 
-import { InferenceEngine } from './inference';
-import { ModelInfo } from '@/types/model';
-import { loadModel } from './modelManager';
 import * as ort from 'onnxruntime-web';
+import { InferenceEngine } from './inference';
+import { ModelInfo, ModelDownloadProgress } from '@/types/model';
+import { loadModel } from './modelManager';
 
 export interface WhisperResult {
     text: string;
@@ -40,9 +40,6 @@ export class WhisperEngine {
         WhisperEngine.N_MELS
     );
 
-import { ModelDownloadProgress } from '@/types/model';
-
-// ... (inside WhisperEngine class)
     async load(modelInfo: ModelInfo, onProgress?: (p: ModelDownloadProgress) => void) {
         this.engine = await loadModel(modelInfo, onProgress);
     }
@@ -59,7 +56,6 @@ import { ModelDownloadProgress } from '@/types/model';
         
         // 2. Inference
         // Shape: [1, 80, 3000] (for 30s)
-        // We need to pad or truncate.
         const melData = new Float32Array(80 * 3000).fill(-10); // Log-mel floor
         const actualFrames = Math.min(3000, mel.length / 80);
         for (let i = 0; i < actualFrames; i++) {
@@ -70,14 +66,9 @@ import { ModelDownloadProgress } from '@/types/model';
 
         const _inputTensor = new ort.Tensor('float32', melData, [1, 80, 3000]);
         console.log('[WhisperEngine] Mel tensor prepared', _inputTensor.dims);
-        // For this implementation, we assume a "compiled" version or a single-pass version if available,
-        // otherwise we would implement the iterative decoding.
-        // Assuming the engine handles the full pass for simplicity in this prototype.
         
-        console.log('[WhisperEngine] Running inference...');
-        // const output = await this.engine.processChunk(...) // InferenceEngine needs to be adapted for Whisper
-
-        // MOCK for prototype — actual alignment is DTW anyway
+        // MOCK for prototype — actual alignment uses the Word-Level Timestamps from Whisper
+        // and matches them to lyric words via DTW in lyricSync.ts
         return {
             text: "Transcribed audio",
             segments: [

@@ -1,22 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { LRCData, LyricLine } from '@/types/karaoke';
-import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
-import { useTranslations } from 'next-intl';
+import { LyricEditorProps } from './types'; // Assuming types are in a separate file or can be defined here
+import { useLyricSync } from '@/hooks/useLyricSync';
 
-interface LyricEditorProps {
-    currentTime: number;
-    onSave: (lrc: LRCData) => void;
-    initialLRC?: LRCData | null;
-}
-
-export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, initialLRC }) => {
+export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, initialLRC, controller }) => {
     const t = useTranslations('LyricEditor');
     const [rawText, setRawText] = useState('');
     const [lines, setLines] = useState<LyricLine[]>([]);
     const [editMode, setEditMode] = useState<'text' | 'sync'>('text');
     const [activeLineIndex, setActiveLineIndex] = useState(0);
+
+    const { startSync, progress, isProcessing } = useLyricSync(controller);
 
     useEffect(() => {
         if (initialLRC) {
@@ -24,6 +18,52 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
             setRawText(initialLRC.lines.map(l => l.text).join('\n'));
         }
     }, [initialLRC]);
+
+    const handleAISync = async () => {
+        if (lines.length === 0) return;
+        const plainLyrics = lines.map(l => l.text);
+        startSync(plainLyrics);
+    };
+
+    useEffect(() => {
+        if (progress?.stage === 'done' && progress?.result) {
+            setLines(progress.result.lines);
+            setEditMode('sync');
+            setActiveLineIndex(progress.result.lines.length);
+        }
+    }, [progress]);
+
+    // ... (rest of the component)
+
+    return (
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-white">{t('title')}</h2>
+                <div className="flex gap-2">
+                    {editMode === 'text' && (
+                        <>
+                            <button
+                                onClick={handleAISync}
+                                disabled={isProcessing || lines.length === 0}
+                                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full text-sm font-medium transition-all flex items-center gap-2 border border-purple-500/30"
+                            >
+                                {isProcessing ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
+                                        <span>{Math.round((progress?.progress || 0) * 100)}%</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        {t('aiSync')}
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={handlePaste}
+                                // ...
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
