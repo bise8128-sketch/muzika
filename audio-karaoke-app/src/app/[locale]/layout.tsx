@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-// import { Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import "../globals.css";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
@@ -7,12 +7,13 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { MonitoringInit } from "@/components/UI/MonitoringInit";
 
-// const inter = Inter({
-//   subsets: ["latin"],
-//   variable: "--font-inter",
-// });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: 'swap',
+});
 
-const inter = { variable: "font-inter" }; // Mock variable for compatibility
+// const inter = { variable: "font-inter" }; // Mock variable for compatibility
 
 
 export const metadata: Metadata = {

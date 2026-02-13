@@ -105,10 +105,12 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerRef = useRef<AudioVisualizer | null>(null);
+    const [visualizerInstance, setVisualizerInstance] = useState<AudioVisualizer | null>(null);
 
     useEffect(() => {
         if (!visualizerRef.current) {
             visualizerRef.current = new AudioVisualizer();
+            setVisualizerInstance(visualizerRef.current);
         }
         visualizerRef.current.setAutoQuality(visualSettings.autoQuality);
 

@@ -22,7 +22,10 @@ import { RoomView } from '../../Room/RoomView';
 import { SettingsPanel } from '../../UI/SettingsPanel';
 import { useTranslations } from 'next-intl';
 
+import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
+
 interface VisualizerContainerProps {
+    visualizer: AudioVisualizer | null;
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
     lyrics: LRCData | null;
     cdgData: Uint8Array | null;
@@ -70,6 +73,7 @@ interface VisualizerContainerProps {
 }
 
 export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
+    visualizer,
     canvasRef,
     lyrics,
     cdgData,
@@ -187,9 +191,10 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
                             layout
                             className="w-full flex justify-center"
                         >
-                            <LyricDisplay
-                                lyrics={lyrics}
-                                currentLineIndex={currentLineIndex}
+                                <LyricDisplay
+                                    visualizer={visualizer}
+                                    lyrics={lyrics}
+                                    currentLineIndex={currentLineIndex}
                                 currentWordIndex={currentWordIndex}
                                 theme={theme}
                                 visualSettings={visualSettings}
