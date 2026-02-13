@@ -82,30 +82,20 @@ class WorkerWrapper {
             return;
         }
 
-        switch (type) {
-            case 'SUCCESS':
-            case 'COMPLETED':
-            case 'DONE': // Allow flexibility in success signals
-                this.currentTask.resolve(payload);
-                this.completeTask();
-                break;
-
-            case 'ERROR':
-            case 'FAILED':
-                this.currentTask.reject(new Error(payload?.message || 'Unknown worker error'));
-                this.completeTask();
-                break;
-
-            case 'PROGRESS':
-                if (this.currentTask.onProgress && typeof progress === 'number') {
-                    this.currentTask.onProgress(progress);
-                }
-                break;
-
-            default:
-                // Handle other message types if necessary, or treat as success if implicit
-                // For now, we strictly require explicit success/error/progress
-                break;
+        // Handle error/progress first, then treat any other message as a success response.
+        // This accommodates workers that use domain-specific response types
+        // (e.g. STREAM_READY, CHUNK_PROCESSED, COMPLETE) without needing an exhaustive list.
+        if (type === 'ERROR' || type === 'FAILED') {
+            this.currentTask.reject(new Error(payload?.message || 'Unknown worker error'));
+            this.completeTask();
+        } else if (type === 'PROGRESS') {
+            if (this.currentTask.onProgress && typeof progress === 'number') {
+                this.currentTask.onProgress(progress);
+            }
+        } else {
+            // SUCCESS, COMPLETED, DONE, STREAM_READY, CHUNK_PROCESSED, etc.
+            this.currentTask.resolve(payload);
+            this.completeTask();
         }
     }
 
