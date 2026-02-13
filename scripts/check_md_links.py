@@ -32,9 +32,10 @@ def check_links(directory):
                         # Handle convention like path/to/file.ts:123
                         clean_link = link.split('#')[0].split('?')[0]
                         if ':' in clean_link and not clean_link.startswith(('http', 'file', 'mailto', 'tel')):
-                            # Check if the part after colon is a number
                             parts = clean_link.split(':')
-                            if parts[-1].isdigit():
+                            # Check if the part after colon is a number or range (e.g., 90 or 90-96)
+                            last_part = parts[-1]
+                            if last_part.isdigit() or (all(p.isdigit() for p in last_part.split('-')) and '-' in last_part):
                                 clean_link = ':'.join(parts[:-1])
                         
                         if not clean_link:

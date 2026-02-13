@@ -216,8 +216,8 @@ docker-compose up -d
 ## 📞 Support Resources
 
 ### Documentation
-- [DEPLOYMENT.md](./DEPLOYMENT.md) - Detailed deployment guide
-- [QUICK_DEPLOY.md](./QUICK_DEPLOY.md) - Quick reference commands
+- [deployment.md](./deployment.md) - Detailed deployment guide
+- [quick_deploy.md](./quick_deploy.md) - Quick reference commands
 - [README.md](./README.md) - Project overview
 
 ### External Resources
@@ -243,4 +243,4 @@ Choose your deployment platform and follow the quick start guides to get live wi
 
 ---
 
-**Questions or issues?** Refer to the troubleshooting sections in [DEPLOYMENT.md](./DEPLOYMENT.md) or [QUICK_DEPLOY.md](./QUICK_DEPLOY.md).
+**Questions or issues?** Refer to the troubleshooting sections in [deployment.md](./deployment.md) or [quick_deploy.md](./quick_deploy.md).
