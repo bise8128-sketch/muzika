@@ -18,7 +18,7 @@ test.describe('Karaoke Flow', () => {
         const fileInput = page.locator('input[type="file"]');
         await expect(fileInput).toBeAttached();
         
-        await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'dummy.mp3'));
+        await fileInput.setInputFiles('e2e/fixtures/dummy.mp3');
 
         // 2. Wait for processing progress
         // Should catch the toast or progress bar
