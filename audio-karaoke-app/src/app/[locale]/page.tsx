@@ -206,10 +206,12 @@ export default function Home() {
 
     if (machineState.matches('processing')) {
       return (
+
         <ProcessingView
           progress={separation.progress}
           message={separation.message}
           status={separation.status}
+          executionBackend={separation.executionBackend}
         />
       );
     }

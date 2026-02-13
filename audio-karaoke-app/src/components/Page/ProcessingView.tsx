@@ -3,13 +3,16 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 
+
 interface ProcessingViewProps {
   progress: number;
   message: string | null;
   status: string;
+  executionBackend?: 'webgpu' | 'wasm' | 'server' | null;
 }
 
-export function ProcessingView({ progress, message, status }: ProcessingViewProps) {
+
+export function ProcessingView({ progress, message, status, executionBackend }: ProcessingViewProps) {
   const t = useTranslations('HomePage');
 
   return (
@@ -24,6 +27,19 @@ export function ProcessingView({ progress, message, status }: ProcessingViewProp
       <p className="text-muted-foreground animate-pulse">
         {message || t('runningModels')}
       </p>
+
+      {/* Backend Indicator */}
+      {executionBackend && (
+        <div className="mt-4 flex justify-center">
+            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                executionBackend === 'webgpu' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                executionBackend === 'server' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
+                'bg-amber-500/10 border-amber-500/20 text-amber-400'
+            }`}>
+               Running on {executionBackend === 'webgpu' ? 'WebGPU (Fast)' : executionBackend === 'server' ? 'Cloud Server' : 'WASM (CPU)'}
+            </div>
+        </div>
+      )}
 
       <div className="mt-12 space-y-2 max-w-sm mx-auto">
         <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">

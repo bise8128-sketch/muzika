@@ -30,6 +30,7 @@ jest.mock('../onnxSetup', () => ({
     checkWebGPUSupport: jest.fn().mockResolvedValue(true)
 }));
 
+
 jest.mock('@/utils/audio/BrowserAudioSegmenter', () => {
     return {
         BrowserAudioSegmenter: jest.fn().mockImplementation(() => ({
@@ -44,6 +45,29 @@ jest.mock('@/utils/audio/BrowserAudioSegmenter', () => {
             })()),
             dispose: jest.fn(),
             totalDuration: 10
+        }))
+    };
+});
+
+jest.mock('@/utils/audio/StreamableBufferManager', () => {
+    return {
+        StreamableBufferManager: jest.fn().mockImplementation(() => ({
+            addChunk: jest.fn(),
+            play: jest.fn(),
+            getAllAudioBuffers: jest.fn().mockReturnValue({
+                vocals: {
+                    numberOfChannels: 2,
+                    length: 1000,
+                    sampleRate: 44100,
+                    getChannelData: jest.fn().mockReturnValue(new Float32Array(1000))
+                },
+                instrumentals: {
+                    numberOfChannels: 2,
+                    length: 1000,
+                    sampleRate: 44100,
+                    getChannelData: jest.fn().mockReturnValue(new Float32Array(1000))
+                }
+            })
         }))
     };
 });
