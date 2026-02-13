@@ -66,8 +66,8 @@ async function separateAudioInternal(
         const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
 
 
+
         const support = await checkONNXSupport();
-        const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
         
         // Smart Routing:
         // 1. If model requires server (HTDEMUCS/BS_ROFORMER), always use server.
@@ -95,7 +95,14 @@ async function separateAudioInternal(
                 
                 // If it was an optimization (low-end device), we can fall back to client
                 console.warn('[separateAudio] Server unavailable or failed, falling back to client-side processing:', err);
-                onProgress?.({ phase: 'decoding', percentage: 0, message: 'Server unavailable. Falling back to local processing...', currentSegment: 0, totalSegments: 0 });
+                onProgress?.({ 
+                    phase: 'decoding', 
+                    percentage: 0, 
+                    message: 'Server unavailable. Falling back to local processing...', 
+                    currentSegment: 0, 
+                    totalSegments: 0,
+                    executionBackend: 'wasm' // We assume fallback is wasm for now, or let separateAudioInternal determine it later
+                });
                 // Fall through to client-side logic
             }
         }
@@ -246,10 +253,12 @@ async function separateAudioInternal(
                     nextChunkToPlay++;
                 }
 
+
                 totalProcessedDuration += duration;
                 progressTracker.update(totalProcessedDuration);
                 const state = progressTracker.state;
-                const totalDuration = segmenter.totalDuration || (file.size / (128 * 1024 / 8));
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                const totalDuration = segmenter!.totalDuration || (file.size / (128 * 1024 / 8));
                 const percent = (totalProcessedDuration / totalDuration) * 100;
 
                 onProgress?.({
@@ -361,8 +370,16 @@ async function serverSeparateAudio(
 ): Promise<SeparationResult> {
     const { modelInfo, onProgress, signal } = options;
 
+
     try {
-        onProgress?.({ phase: 'decoding', percentage: 0, message: 'Uploading to server...', currentSegment: 0, totalSegments: 0 });
+        onProgress?.({ 
+            phase: 'decoding', 
+            percentage: 0, 
+            message: 'Uploading to server...', 
+            currentSegment: 0, 
+            totalSegments: 0,
+            executionBackend: 'server'
+        });
 
         // 1. Upload file
         const formData = new FormData();
@@ -382,7 +399,14 @@ async function serverSeparateAudio(
         const uploadData = await uploadRes.json();
         const filename = uploadData.filename;
 
-        onProgress?.({ phase: 'separating', percentage: 10, message: 'Starting server-side separation...', currentSegment: 0, totalSegments: 0 });
+        onProgress?.({ 
+            phase: 'separating', 
+            percentage: 10, 
+            message: 'Starting server-side separation...', 
+            currentSegment: 0, 
+            totalSegments: 0,
+            executionBackend: 'server' 
+        });
 
         // 2. Start separation
         const processRes = await fetch('/api/python-processing', {
@@ -408,7 +432,14 @@ async function serverSeparateAudio(
              stems = await pollJobStatus(processData.jobId, onProgress, signal);
         }
 
-        onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
+        onProgress?.({ 
+            phase: 'separating', 
+            percentage: 100, 
+            message: 'Separation complete!', 
+            currentSegment: 0, 
+            totalSegments: 0,
+            executionBackend: 'server' 
+        });
 
         // Fetch and decode stems using shared AudioContext
         const ctx = getAudioContext();
@@ -429,7 +460,8 @@ async function serverSeparateAudio(
             instrumentals,
             originalAudio: null,
             fileHash,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            executionBackend: 'server'
         };
 
     } catch (err) {
@@ -470,7 +502,8 @@ async function pollJobStatus(
              percentage: 10 + Math.min(80, (attempts / 20) * 80), // Fake progress 
              message: 'Server processing...', 
              currentSegment: 0, 
-             totalSegments: 0 
+             totalSegments: 0,
+             executionBackend: 'server'
          });
          
          attempts++;

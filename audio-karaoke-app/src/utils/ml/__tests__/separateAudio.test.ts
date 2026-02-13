@@ -2,15 +2,18 @@
 import { separateAudio } from '../separateAudio';
 import { ModelType, ModelInfo } from '@/types/model';
 import * as onnxSetup from '../onnxSetup';
-import { workerPool } from '../workerPool';
+import { WorkerPool } from '@/utils/worker/WorkerPool';
 import { audioCache } from '@/utils/storage/audioCache';
 
 // Mocks
-jest.mock('../workerPool', () => ({
-    workerPool: {
-        addTask: jest.fn()
-    }
-}));
+jest.mock('@/utils/worker/WorkerPool', () => {
+    return {
+        WorkerPool: jest.fn().mockImplementation(() => ({
+            addTask: jest.fn(),
+            terminate: jest.fn()
+        }))
+    };
+});
 
 jest.mock('@/utils/storage/audioCache', () => ({
     audioCache: {
@@ -22,7 +25,7 @@ jest.mock('@/utils/storage/audioCache', () => ({
 
 jest.mock('../onnxSetup', () => ({
     checkONNXSupport: jest.fn(),
-    isServerAvailable: jest.fn(), // We are not exporting this, but we can mock the fetch inside separateAudio via global.fetch
+    isServerAvailable: jest.fn(),
     checkWebGPUSupport: jest.fn().mockResolvedValue(true)
 }));
 
@@ -30,7 +33,7 @@ jest.mock('../onnxSetup', () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-// Mock AudioContext and other browser APIs
+// Mock AudioContext
 class MockAudioContext {
     sampleRate = 44100;
     state = 'running';
@@ -53,9 +56,13 @@ describe('separateAudio Smart Routing', () => {
         onProgress: jest.fn()
     };
 
+    let mockAddTask: jest.Mock;
+
     beforeEach(() => {
         jest.clearAllMocks();
-        (workerPool.addTask as jest.Mock).mockImplementation((type) => {
+        
+        // Setup WorkerPool mock instance logic
+        mockAddTask = jest.fn().mockImplementation((type) => {
              if (type === 'INIT_STREAM_SESSION') {
                  return Promise.resolve({ sessionId: 'test-session', backend: 'wasm' });
              }
@@ -68,6 +75,11 @@ describe('separateAudio Smart Routing', () => {
              }
              return Promise.resolve({});
         });
+
+        (WorkerPool as unknown as jest.Mock).mockImplementation(() => ({
+            addTask: mockAddTask,
+            terminate: jest.fn()
+        }));
     });
 
     it('should use client-side by default for MDX models on high-end devices', async () => {
@@ -76,8 +88,8 @@ describe('separateAudio Smart Routing', () => {
 
         await separateAudio(mockFile, mockOptions);
 
-        // Should call workerPool
-        expect(workerPool.addTask).toHaveBeenCalledWith('INIT_STREAM_SESSION', expect.anything(), 'HIGH');
+        // Should call workerPool.addTask
+        expect(mockAddTask).toHaveBeenCalledWith('INIT_STREAM_SESSION', expect.anything(), 'HIGH');
         expect(mockFetch).not.toHaveBeenCalled();
     });
 
