@@ -17,8 +17,27 @@ export interface WorkerRequest {
     payload?: any;
 }
 
+/**
+ * Standard response types recognized by the WorkerPool.
+ * - ERROR / FAILED: Task rejection
+ * - PROGRESS: Intermediate progress updates (not a terminal state)
+ * - Everything else: Treated as a successful task completion
+ */
+export type WorkerResponseType =
+    | 'SUCCESS'
+    | 'COMPLETED'
+    | 'DONE'
+    | 'ERROR'
+    | 'FAILED'
+    | 'PROGRESS'
+    // Domain-specific success types (audio worker)
+    | 'STREAM_READY'
+    | 'CHUNK_PROCESSED'
+    | 'COMPLETE'
+    | 'CHUNK_PLAYBACK';
+
 export interface WorkerResponse {
-    type: WorkerMessageType | 'PROGRESS' | 'ERROR' | 'SUCCESS';
+    type: WorkerResponseType | WorkerMessageType;
     payload?: any;
 }
 
