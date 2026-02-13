@@ -134,7 +134,7 @@ describe('WorkerPool', () => {
 
         // Run a task to spawn a worker
         const p1 = pool.addTask('TASK_1', {});
-        jest.runAllTimers();
+        jest.advanceTimersByTime(100);
         await p1;
 
         // Worker should be idle now
