@@ -233,6 +233,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             </button>
 
             <VisualizerContainer
+                visualizer={visualizerInstance}
                 canvasRef={canvasRef}
                 lyrics={lyrics}
                 cdgData={cdgData}
