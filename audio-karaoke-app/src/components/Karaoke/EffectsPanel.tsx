@@ -1,6 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { effectsManager } from '../../utils/audio/effectsManager';
+import React from 'react';
 import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Music2, 
+    Activity, 
+    RotateCcw, 
+    Volume2, 
+    Layers, 
+    Settings,
+    Zap,
+    Wind,
+    Waves
+} from 'lucide-react';
 
 interface EffectsPanelProps {
     pitch: number;
@@ -32,20 +43,23 @@ const ControlSlider: React.FC<{
     displayValue?: string;
     t: any;
 }> = ({ label, value, min, max, step, unit, onChange, icon, displayValue, t }) => (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors group">
-        <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2 text-gray-300">
-                <div className="p-1.5 rounded-lg bg-black/20 text-primary">
+    <motion.div 
+        whileHover={{ scale: 1.02 }}
+        className="glass-premium p-5 rounded-3xl border border-white/5 hover:border-white/10 transition-all group"
+    >
+        <div className="flex justify-between items-center mb-5">
+            <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
                     {icon}
                 </div>
-                <span className="text-sm font-medium">{label}</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-white/50">{label}</span>
             </div>
-            <div className="font-mono text-xs text-primary bg-primary/10 px-2 py-1 rounded">
+            <div className="font-black text-[10px] text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
                 {displayValue || `${value}${unit || ''}`}
             </div>
         </div>
 
-        <div className="relative h-6">
+        <div className="relative h-6 flex items-center">
             <input
                 type="range"
                 min={min}
@@ -53,15 +67,15 @@ const ControlSlider: React.FC<{
                 step={step}
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                className="range-premium absolute top-1/2 -translate-y-1/2 w-full"
+                className="range-premium w-full"
             />
         </div>
 
-        <div className="flex justify-between text-[10px] text-gray-600 mt-1 uppercase tracking-wider font-semibold">
-            <span>{t('min')}</span>
-            <span>{t('max')}</span>
+        <div className="flex justify-between text-[9px] text-white/20 mt-2 font-black uppercase tracking-widest">
+            <span>{min}{unit}</span>
+            <span>{max}{unit}</span>
         </div>
-    </div>
+    </motion.div>
 );
 
 export const EffectsPanel: React.FC<EffectsPanelProps> = ({
@@ -72,149 +86,162 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
     const t = useTranslations('EffectsPanel');
 
     return (
-        <div className="glass-card rounded-3xl p-8 backdrop-blur-3xl space-y-8">
-            {/* DSP Effects Section */}
-            <div>
-                <div className="flex items-center justify-between mb-8">
-                    <div className="space-y-1">
-                        <h3 className="text-xl font-bold text-gradient">
-                            {t('studioEffects')}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">{t('realTimeProcessing')}</p>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-premium rounded-[3rem] p-10 space-y-12"
+        >
+            {/* Header Section */}
+            <div className="flex items-end justify-between">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-primary">
+                        <Zap className="w-5 h-5 fill-current" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em]">{t('realTimeProcessing')}</span>
                     </div>
-                    <button
-                        onClick={onReset}
-                        className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-white/5 hover:bg-white/10 rounded-full transition-all border border-white/10 hover:border-white/20"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {t('reset')}
-                    </button>
+                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                        {t('studioEffects')}
+                    </h3>
                 </div>
+                <motion.button
+                    whileHover={{ rotate: -180, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={onReset}
+                    className="p-4 rounded-3xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all border border-white/10 shadow-xl"
+                >
+                    <RotateCcw className="w-6 h-6" />
+                </motion.button>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <ControlSlider
-                        label={t('pitchShift')}
-                        value={pitch}
-                        min={-12}
-                        max={12}
-                        step={1}
-                        onChange={onPitchChange}
-                        displayValue={`${pitch > 0 ? '+' : ''}${pitch} ${t('semitones')}`}
-                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>}
-                        t={t}
+            {/* DSP Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <ControlSlider
+                    label={t('pitchShift')}
+                    value={pitch}
+                    min={-12}
+                    max={12}
+                    step={1}
+                    onChange={onPitchChange}
+                    displayValue={`${pitch > 0 ? '+' : ''}${pitch} sem`}
+                    icon={<Music2 className="w-4 h-4" />}
+                    t={t}
+                />
+                <ControlSlider
+                    label={t('tempo')}
+                    value={tempo}
+                    min={0.5}
+                    max={2.0}
+                    step={0.05}
+                    onChange={onTempoChange}
+                    displayValue={`${Math.round(tempo * 100)}%`}
+                    icon={<Activity className="w-4 h-4" />}
+                    t={t}
+                />
+                <ControlSlider
+                    label={t('reverb')}
+                    value={reverb}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    onChange={onReverbChange}
+                    displayValue={`${Math.round(reverb * 100)}%`}
+                    icon={<Waves className="w-4 h-4" />}
+                    t={t}
+                />
+                <ControlSlider
+                    label={t('echo')}
+                    value={echo}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    onChange={onEchoChange}
+                    displayValue={`${Math.round(echo * 100)}%`}
+                    icon={<Layers className="w-4 h-4" />}
+                    t={t}
+                />
+            </div>
+
+            {/* Mixer/EQ Section */}
+            <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">{t('equalizer')}</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                </div>
+                
+                <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+                    <EQSlider 
+                        label={t('bass')} 
+                        value={bass} 
+                        onChange={onBassChange} 
+                        color="from-primary to-accent" 
+                        icon={<Volume2 className="w-3 h-3" />}
                     />
-                    <ControlSlider
-                        label={t('tempo')}
-                        value={tempo}
-                        min={0.5}
-                        max={2.0}
-                        step={0.05}
-                        onChange={onTempoChange}
-                        displayValue={`${Math.round(tempo * 100)}%`}
-                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                        t={t}
+                    <EQSlider 
+                        label={t('mid')} 
+                        value={mid} 
+                        onChange={onMidChange} 
+                        color="from-accent to-pink-500" 
+                        icon={<Activity className="w-3 h-3" />}
                     />
-                    <ControlSlider
-                        label={t('reverb')}
-                        value={reverb}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        onChange={onReverbChange}
-                        displayValue={`${Math.round(reverb * 100)}%`}
-                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>}
-                        t={t}
-                    />
-                    <ControlSlider
-                        label={t('echo')}
-                        value={echo}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        onChange={onEchoChange}
-                        displayValue={`${Math.round(echo * 100)}%`}
-                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 000 7.072m-2.828-9.9a9 9 0 000 12.728" /></svg>}
-                        t={t}
+                    <EQSlider 
+                        label={t('treble')} 
+                        value={treble} 
+                        onChange={onTrebleChange} 
+                        color="from-pink-500 to-orange-500" 
+                        icon={<Wind className="w-3 h-3" />}
                     />
                 </div>
             </div>
-
-            {/* EQ Section */}
-            <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-6">{t('equalizer')}</h3>
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white/5 rounded-2xl p-4 flex flex-col items-center gap-4">
-                        <div className="h-32 w-2 bg-white/10 rounded-full relative">
-                            <input
-                                type="range"
-                                min="-10"
-                                max="10"
-                                value={bass}
-                                onChange={(e) => onBassChange(Number(e.target.value))}
-                                className="range-vertical absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            />
-                            <div
-                                className="absolute bottom-0 left-0 w-full bg-primary rounded-full transition-all"
-                                style={{ height: `${((bass + 10) / 20) * 100}%` }}
-                            />
-                            <div
-                                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg pointer-events-none transition-all"
-                                style={{ bottom: `calc(${((bass + 10) / 20) * 100}% - 8px)` }}
-                            />
-                        </div>
-                        <span className="text-xs font-bold uppercase tracking-wider">{t('bass')}</span>
-                        <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded">{bass > 0 ? '+' : ''}{bass}dB</span>
-                    </div>
-
-                    <div className="bg-white/5 rounded-2xl p-4 flex flex-col items-center gap-4">
-                        <div className="h-32 w-2 bg-white/10 rounded-full relative">
-                            <input
-                                type="range"
-                                min="-10"
-                                max="10"
-                                value={mid}
-                                onChange={(e) => onMidChange(Number(e.target.value))}
-                                className="range-vertical absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            />
-                            <div
-                                className="absolute bottom-0 left-0 w-full bg-accent rounded-full transition-all"
-                                style={{ height: `${((mid + 10) / 20) * 100}%` }}
-                            />
-                            <div
-                                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg pointer-events-none transition-all"
-                                style={{ bottom: `calc(${((mid + 10) / 20) * 100}% - 8px)` }}
-                            />
-                        </div>
-                        <span className="text-xs font-bold uppercase tracking-wider">{t('mid')}</span>
-                        <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded">{mid > 0 ? '+' : ''}{mid}dB</span>
-                    </div>
-
-                    <div className="bg-white/5 rounded-2xl p-4 flex flex-col items-center gap-4">
-                        <div className="h-32 w-2 bg-white/10 rounded-full relative">
-                            <input
-                                type="range"
-                                min="-10"
-                                max="10"
-                                value={treble}
-                                onChange={(e) => onTrebleChange(Number(e.target.value))}
-                                className="range-vertical absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            />
-                            <div
-                                className="absolute bottom-0 left-0 w-full bg-purple-500 rounded-full transition-all"
-                                style={{ height: `${((treble + 10) / 20) * 100}%` }}
-                            />
-                            <div
-                                className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg pointer-events-none transition-all"
-                                style={{ bottom: `calc(${((treble + 10) / 20) * 100}% - 8px)` }}
-                            />
-                        </div>
-                        <span className="text-xs font-bold uppercase tracking-wider">{t('treble')}</span>
-                        <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded">{treble > 0 ? '+' : ''}{treble}dB</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </motion.div>
     );
 };
+
+const EQSlider: React.FC<{ 
+    label: string; 
+    value: number; 
+    onChange: (v: number) => void;
+    color: string;
+    icon: React.ReactNode;
+}> = ({ label, value, onChange, color, icon }) => (
+    <div className="flex flex-col items-center gap-6 group">
+        <div className="relative h-64 w-12 glass-premium rounded-full p-1.5 border border-white/5 overflow-hidden">
+            {/* Background Lines */}
+            <div className="absolute inset-0 flex flex-col justify-around py-8 px-2 opacity-5 pointer-events-none">
+                {[...Array(9)].map((_, i) => <div key={i} className="h-px w-full bg-white" />)}
+            </div>
+
+            {/* Active Track */}
+            <motion.div
+                className={`absolute bottom-0 left-0 w-full bg-linear-to-t ${color} rounded-full`}
+                initial={false}
+                animate={{ height: `${((value + 10) / 20) * 100}%` }}
+                transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+            />
+            <input
+                type="range"
+                min="-10"
+                max="10"
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 vertical-slider"
+                style={{ appearance: 'slider-vertical' } as any}
+            />
+            {/* Knob */}
+            <motion.div
+                className="absolute left-1/2 -translate-x-1/2 w-8 h-8 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-black/10 z-20 pointer-events-none"
+                initial={false}
+                animate={{ bottom: `calc(${((value + 10) / 20) * 100}% - 16px)` }}
+                transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+            >
+                <div className="w-1 h-3 bg-black/10 rounded-full" />
+            </motion.div>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1.5 text-white/40 group-hover:text-primary transition-colors">
+                {icon}
+                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="text-[11px] font-black text-white/90">{value > 0 ? '+' : ''}{value}dB</span>
+        </div>
+    </div>
+);
