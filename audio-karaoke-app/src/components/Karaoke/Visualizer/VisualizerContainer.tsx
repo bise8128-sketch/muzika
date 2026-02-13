@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Upload, 
@@ -9,8 +9,7 @@ import {
     Settings, 
     Mic2, 
     X,
-    Palette,
-    Monitor
+    X
 } from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { LyricTheme, LyricDisplay } from '../LyricDisplay';
@@ -42,7 +41,14 @@ interface VisualizerContainerProps {
         isRecording: boolean;
     };
     
-    voiceFxProps: any;
+    voiceFxProps: {
+        currentPreset: string;
+        settings: any;
+        isMonitoring: boolean;
+        onPresetChange: (presetId: string) => void;
+        onSettingsChange: (settings: any) => void;
+        onToggleMonitoring: () => void;
+    };
     practiceProps: any;
     roomProps: any;
 
@@ -126,7 +132,9 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
             {/* Background Visualizer */}
             <canvas
                 ref={canvasRef}
-                className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${isStageMode ? 'opacity-50' : 'opacity-30'}`}
+                className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${
+                    isStageMode ? 'opacity-80' : 'opacity-40'
+                } ${visualSettings.visualizationMode === '3d-landscape' ? 'mix-blend-screen' : ''}`}
                 width={1200}
                 height={400}
             />

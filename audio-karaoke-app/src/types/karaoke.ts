@@ -23,6 +23,8 @@ export interface VisualSettings {
     textShadow: boolean;
     offset: number; // In milliseconds
     showDualText: boolean;
+    visualizationMode: 'bars' | 'waveform' | '3d-landscape' | 'spectrogram';
+    autoQuality: boolean;
 }
 
 export interface LRCData {

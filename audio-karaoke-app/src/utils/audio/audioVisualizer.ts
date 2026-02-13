@@ -12,6 +12,12 @@ export class AudioVisualizer {
     private animationId: number | null = null;
     private isRunning: boolean = false;
 
+    private history: Uint8Array[] = [];
+    private maxHistoryLength: number = 200;
+    private autoQuality: boolean = true;
+    private isQualityAdjusted: boolean = false;
+    private performanceMetrics: { cpuUsage: number; latency: number; bufferUnderruns: number } | null = null;
+
     constructor(fftSize: number = 2048) {
         this.audioContext = getAudioContext();
         this.analyser = this.audioContext.createAnalyser();
@@ -20,6 +26,32 @@ export class AudioVisualizer {
 
         const bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(bufferLength);
+    }
+
+    /**
+     * Set auto quality mode
+     */
+    setAutoQuality(enabled: boolean): void {
+        this.autoQuality = enabled;
+        if (!enabled) this.isQualityAdjusted = false;
+    }
+
+    /**
+     * Set performance metrics from AudioWorklet
+     */
+    setPerformanceMetrics(metrics: { cpuUsage: number; latency: number; bufferUnderruns: number }): void {
+        this.performanceMetrics = metrics;
+        
+        // Reactive quality adjustment
+        if (this.autoQuality) {
+            if (metrics.cpuUsage > 80 && !this.isQualityAdjusted) {
+                this.isQualityAdjusted = true;
+                this.maxHistoryLength = 100; // Reduce history memory
+            } else if (metrics.cpuUsage < 50 && this.isQualityAdjusted) {
+                this.isQualityAdjusted = false;
+                this.maxHistoryLength = 200;
+            }
+        }
     }
 
     /**
@@ -59,18 +91,19 @@ export class AudioVisualizer {
         if (!ctx) return;
 
         const draw = () => {
+            if (!this.isRunning) return;
             this.animationId = requestAnimationFrame(draw);
 
             // Get time domain data
             this.analyser.getByteTimeDomainData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
             // Clear canvas
-            ctx.fillStyle = 'rgb(20, 20, 20)';
+            ctx.fillStyle = 'rgba(20, 20, 20, 1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw waveform
             ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgb(0, 255, 150)';
+            ctx.strokeStyle = '#00ff96';
             ctx.beginPath();
 
             const sliceWidth = canvas.width / this.dataArray.length;
@@ -107,13 +140,14 @@ export class AudioVisualizer {
         if (!ctx) return;
 
         const draw = () => {
+            if (!this.isRunning) return;
             this.animationId = requestAnimationFrame(draw);
 
             // Get frequency data
             this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
             // Clear canvas
-            ctx.fillStyle = 'rgb(20, 20, 20)';
+            ctx.fillStyle = 'rgba(20, 20, 20, 1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const barWidth = (canvas.width / this.dataArray.length) * 2.5;
@@ -123,13 +157,11 @@ export class AudioVisualizer {
             for (let i = 0; i < this.dataArray.length; i++) {
                 barHeight = (this.dataArray[i] / 255) * canvas.height;
 
-                // Create gradient based on frequency
+                // Mixed gradients for premium look
                 const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-
-                // Low frequencies (blue/green) to high frequencies (yellow/red)
-                const hue = (i / this.dataArray.length) * 120 + 200; // 200-320 range (blue to green to yellow)
-                gradient.addColorStop(0, `hsl(${hue}, 100%, 60%)`);
-                gradient.addColorStop(1, `hsl(${hue}, 100%, 40%)`);
+                const hue = (i / this.dataArray.length) * 60 + 260; // Purple to Blue range
+                gradient.addColorStop(0, `hsla(${hue}, 100%, 60%, 1)`);
+                gradient.addColorStop(1, `hsla(${hue}, 100%, 40%, 0.5)`);
 
                 ctx.fillStyle = gradient;
                 ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
@@ -139,6 +171,122 @@ export class AudioVisualizer {
         };
 
         draw();
+    }
+
+    /**
+     * Draw scrolling 3D terrain landscape
+     */
+    draw3DLandscape(canvas: HTMLCanvasElement): void {
+        if (!this.isRunning) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+            if (!this.isRunning) return;
+            this.animationId = requestAnimationFrame(draw);
+
+            this.updateHistory();
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const rows = this.history.length;
+            // Downsample further if quality is adjusted
+            const cols = this.dataArray.length / (this.isQualityAdjusted ? 8 : 4);
+            const rowStep = canvas.height / (this.isQualityAdjusted ? 40 : 60);
+            const colStep = canvas.width / cols;
+
+            ctx.lineWidth = 1;
+
+            for (let i = rows - 1; i >= 0; i--) {
+                const data = this.history[i];
+                const z = i * rowStep;
+                const opacity = 1 - (i / rows);
+                
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${280 + i}, 100%, 50%, ${opacity * 0.5})`;
+                
+                for (let j = 0; j < cols; j++) {
+                    const idx = this.isQualityAdjusted ? j << 3 : j << 2;
+                    const val = data[idx];
+                    const h = (val / 255) * 100 * (1 - i / rows);
+                    const x = j * colStep;
+                    const y = canvas.height - z - h - 50;
+
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            this.drawMetricsOverlay(ctx, canvas);
+        };
+
+        draw();
+    }
+
+    /**
+     * Draw scrolling frequency spectrogram
+     */
+    drawSpectrogram(canvas: HTMLCanvasElement): void {
+        if (!this.isRunning) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+            if (!this.isRunning) return;
+            this.animationId = requestAnimationFrame(draw);
+
+            this.updateHistory();
+
+            const rows = this.history.length;
+            const stepX = canvas.width / rows;
+            const yIncr = this.isQualityAdjusted ? 8 : 4;
+
+            for (let i = 0; i < rows; i++) {
+                const data = this.history[i];
+                const x = canvas.width - (i * stepX);
+                
+                for (let j = 0; j < canvas.height; j += yIncr) {
+                    const freqIdx = Math.floor((j / canvas.height) * (data.length / 2));
+                    const val = data[freqIdx];
+                    ctx.fillStyle = `hsla(${240 - (val / 255) * 240}, 100%, 50%, 1)`;
+                    ctx.fillRect(x, canvas.height - j, stepX, yIncr);
+                }
+            }
+
+            this.drawMetricsOverlay(ctx, canvas);
+        };
+
+        draw();
+    }
+
+    private updateHistory(): void {
+        this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+        this.history.unshift(new Uint8Array(this.dataArray));
+        if (this.history.length > this.maxHistoryLength) {
+            this.history.pop();
+        }
+    }
+
+    private drawMetricsOverlay(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+        if (!this.performanceMetrics) return;
+
+        ctx.save();
+        ctx.font = '10px Inter, sans-serif';
+        
+        const { cpuUsage, latency, bufferUnderruns } = this.performanceMetrics;
+        let metricsText = `CPU: ${cpuUsage.toFixed(1)}% | LATENCY: ${latency.toFixed(1)}ms | ERR: ${bufferUnderruns}`;
+        
+        if (this.isQualityAdjusted) {
+            metricsText += ' | QUALITY ADJUSTED';
+        }
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(10, 10, this.isQualityAdjusted ? 300 : 200, 20);
+        ctx.fillStyle = this.isQualityAdjusted ? '#ffaa00' : (cpuUsage > 80 ? '#ff4444' : '#00ff96');
+        ctx.fillText(metricsText, 20, 24);
+        ctx.restore();
     }
 
     /**

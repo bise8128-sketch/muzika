@@ -122,6 +122,26 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     </div>
                                 </div>
 
+                                {/* Visualization Mode */}
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <label className="block text-sm text-gray-400 mb-2">{t('visualizationMode') || 'Visualization Mode'}</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {(['bars', 'waveform', '3d-landscape', 'spectrogram'] as const).map((mode) => (
+                                            <button
+                                                key={mode}
+                                                onClick={() => handleVisualChange('visualizationMode', mode)}
+                                                className={`py-2 px-3 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all border ${
+                                                    visualSettings.visualizationMode === mode 
+                                                    ? 'bg-primary border-primary text-white' 
+                                                    : 'bg-black/20 border-white/5 text-gray-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                            >
+                                                {mode.replace('-', ' ')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Typography */}
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
                                     <div>
@@ -197,6 +217,27 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                         <span>0s</span>
                                         <span>+5s</span>
                                     </div>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Performance Section */}
+                    {visualSettings && (
+                        <section>
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('performance') || 'Performance'}</h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <div>
+                                        <div className="font-semibold text-white">{t('autoQuality') || 'Auto-Quality'}</div>
+                                        <div className="text-xs text-muted-foreground">{t('autoQualityDesc') || 'Downsample visuals if CPU load is high'}</div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleVisualChange('autoQuality', !visualSettings.autoQuality)}
+                                        className={`w-12 h-6 rounded-full transition-colors relative ${visualSettings.autoQuality ? 'bg-primary' : 'bg-white/10'}`}
+                                    >
+                                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${visualSettings.autoQuality ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    </button>
                                 </div>
                             </div>
                         </section>

@@ -59,7 +59,9 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         fontWeight: 'bold',
         textShadow: true,
         offset: 0,
-        showDualText: false
+        showDualText: false,
+        visualizationMode: 'bars',
+        autoQuality: true
     });
 
     // Domain Logic Hooks
@@ -107,20 +109,43 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         if (!visualizerRef.current) {
             visualizerRef.current = new AudioVisualizer();
         }
-
-        const gainNodes = controller.getGainNodes();
-        if (gainNodes.length > 0) {
-            gainNodes.forEach(node => visualizerRef.current?.setSource(node));
-        }
+        visualizerRef.current.setAutoQuality(visualSettings.autoQuality);
 
         if (canvasRef.current) {
             visualizerRef.current.start();
-            visualizerRef.current.drawSpectrum(canvasRef.current);
+            
+            // Start the appropriate visualization based on mode
+            const { visualizationMode } = visualSettings;
+            switch (visualizationMode) {
+                case 'waveform':
+                    visualizerRef.current.drawWaveform(canvasRef.current);
+                    break;
+                case '3d-landscape':
+                    visualizerRef.current.draw3DLandscape(canvasRef.current);
+                    break;
+                case 'spectrogram':
+                    visualizerRef.current.drawSpectrogram(canvasRef.current);
+                    break;
+                case 'bars':
+                default:
+                    visualizerRef.current.drawSpectrum(canvasRef.current);
+                    break;
+            }
         }
 
         return () => {
             visualizerRef.current?.stop();
         };
+    }, [controller, visualSettings.visualizationMode, visualSettings.autoQuality]);
+
+    // Handle metrics updates
+    useEffect(() => {
+        if (!controller.getWorkletManager() || !visualizerRef.current) return;
+        
+        const workletManager = controller.getWorkletManager();
+        workletManager?.onMetricsUpdate((metrics) => {
+            visualizerRef.current?.setPerformanceMetrics(metrics);
+        });
     }, [controller]);
 
     useEffect(() => {
