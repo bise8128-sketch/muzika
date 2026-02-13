@@ -6,16 +6,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
-import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
-import { getWorkletManager } from '@/utils/audio/audioContext';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
+import { parseLRC } from '@/utils/karaoke/lrcParser';
 
 // Custom Hooks
 import { useKaraokeExport } from '@/hooks/useKaraokeExport';
@@ -122,6 +119,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         }
     }, [recorder.recordedBuffer, controller]);
 
+    // Initialize settings from store
     useEffect(() => {
         const settings = getSettings();
         setTheme(settings.theme);
@@ -132,7 +130,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
-    }, [playback]);
+    }, []); // Only once on mount
 
     // Shortcuts
     useKaraokeShortcuts({
@@ -158,7 +156,6 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target?.result as string;
-            const { parseLRC } = require('@/utils/karaoke/lrcParser');
             setLyrics(parseLRC(content));
         };
         reader.readAsText(file);
@@ -174,7 +171,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     return (
         <ErrorBoundary onReset={() => recorder.resetRecorder()}>
-            <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
+            <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-100 bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
                 
                 <PlayerHeader 
                     isStageMode={isStageMode} 
