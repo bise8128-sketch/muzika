@@ -322,7 +322,10 @@ export default function Home() {
               {t('activeModel', { modelName: AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown' })}
             </div>
             <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight">
-              {t('title')}
+              {t.rich('title', {
+                br: () => <br />,
+                gradient: (chunks) => <span className="text-gradient">{chunks}</span>
+              })}
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto">
               {t('subtitle')}

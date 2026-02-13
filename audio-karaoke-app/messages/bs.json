@@ -1,6 +1,6 @@
 {
     "HomePage": {
-        "title": "Razdvojite svoju muziku <br /> <span class=\"text-gradient\">uz AI preciznost.</span>",
+        "title": "Razdvojite svoju muziku <br/> <gradient>uz AI preciznost.</gradient>",
         "subtitle": "Profesionalno razdvajanje vokala i instrumentala direktno u pregledniku. Bez računa, bez servera, samo kvalitet.",
         "activeModel": "Aktivni model: {modelName}",
         "loadingKaraoke": "Učitavanje Karaoke playera...",
@@ -63,7 +63,7 @@
         "processAnother": "Obradi drugu",
         "originalQuality": "Originalna kvaliteta vraćena",
         "didYouKnow": "Znali ste da?",
-        "karaokeMode": "Također možete koristiti naš <span class=\"text-primary font-medium\">Modus karaokea</span> za pjevanje uz stvarne stihove i podešavanje visine tona!",
+        "karaokeMode": "Također možete koristiti naš <primary>Modus karaokea</primary> za pjevanje uz stvarne stihove i podešavanje visine tona!",
         "tryKaraoke": "ISPROBAJ KARAOKE"
     },
     "BatchQueue": {
@@ -168,8 +168,5 @@
     },
     "BackendStatus": {
         "backend": "Backend: {status}"
-    },
-    "LyricDisplay": {
-        "waitingForLyrics": "Čekanje na stihove..."
     }
 }

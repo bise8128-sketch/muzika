@@ -110,7 +110,10 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ tracks, onDownlo
                     <div className="text-4xl animate-bounce">🎁</div>
                     <div>
                         <h4 className="font-bold text-lg mb-1">{t('didYouKnow')}</h4>
-                        <p className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: t.raw('karaokeMode') }}>
+                        <p className="text-sm text-muted-foreground">
+                            {t.rich('karaokeMode', {
+                                primary: (chunks) => <span className="text-primary font-medium">{chunks}</span>
+                            })}
                         </p>
                     </div>
                     <button

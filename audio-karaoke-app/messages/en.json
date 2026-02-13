@@ -1,6 +1,6 @@
 {
     "HomePage": {
-        "title": "Separate your music <br /> <span class=\"text-gradient\">with AI precision.</span>",
+        "title": "Separate your music <br/> <gradient>with AI precision.</gradient>",
         "subtitle": "Professional vocal and instrumental separation directly in your browser. No accounts, no servers, just quality.",
         "activeModel": "Active Model: {modelName}",
         "loadingKaraoke": "Loading Karaoke Player...",
@@ -63,7 +63,7 @@
         "processAnother": "Process Another",
         "originalQuality": "Original quality restored",
         "didYouKnow": "Did you know?",
-        "karaokeMode": "You can also use our <span class=\"text-primary font-medium\">Karaoke Mode</span> to sing along with real lyrics and pitch adjustment!",
+        "karaokeMode": "You can also use our <primary>Karaoke Mode</primary> to sing along with real lyrics and pitch adjustment!",
         "tryKaraoke": "TRY KARAOKE"
     },
     "BatchQueue": {
