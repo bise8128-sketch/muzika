@@ -188,6 +188,13 @@ export class AudioVisualizer {
     }
 
     /**
+     * Set callback for frame audio metrics
+     */
+    setFrameCallback(callback: ((metrics: { bass: number; mid: number; treble: number; energy: number }) => void) | undefined): void {
+        this.onFrame = callback;
+    }
+
+    /**
      * Process audio features and emit events
      */
     private processAudioFeatures(frequencyData: Uint8Array): void {
