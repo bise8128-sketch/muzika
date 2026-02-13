@@ -63,11 +63,35 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     currentLineIndex,
     currentWordIndex,
     theme = 'modern',
-    visualSettings
+    visualSettings,
+    visualizer
 }) => {
     const t = useTranslations('LyricDisplay');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    // Ghost Mode Logic
+    const { bass, energy, treble } = useAudioReactivity(visualizer || null);
+    
+    // Physics smoothing
+    const smoothBass = useSpring(bass, { stiffness: 200, damping: 15 });
+    const smoothEnergy = useSpring(energy, { stiffness: 100, damping: 20 });
+    const smoothTreble = useSpring(treble, { stiffness: 150, damping: 15 });
+
+    // Ghost transforms
+    const ghostScale = useTransform(smoothBass, [0, 0.8], [1, 1.4]);
+    const ghostOpacity = useTransform(smoothEnergy, [0, 1], [0.7, 1]);
+    // We construct the filter string dynamically via useTransform if possible, 
+    // or just bind the value if framer-motion supports value template.
+    // Framer Motion handles `filter` style as "blur(Xpx)" if we map it.
+    const ghostBlurVal = useTransform(smoothTreble, [0, 1], [0, 4]);
+    const ghostBlur = useTransform(ghostBlurVal, v => `blur(${v}px)`);
+    
+    const ghostWeight = useTransform(smoothBass, [0, 1], [400, 900]);
+    
+    const ghostXOffset = useTransform(smoothTreble, [0, 1], [0, 5]);
+    const ghostScaleRed = useTransform(ghostScale, s => s * 1.05);
+    const ghostScaleCyan = useTransform(ghostScale, s => s * 1.02);
 
     const style = THEME_STYLES[theme];
 
