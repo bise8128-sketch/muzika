@@ -26,21 +26,21 @@ describe('audioProcessor', () => {
         it('should include overlap in segments', () => {
             const segments = segmentAudio(mockAudioBuffer, 5);
             const sampleRate = 44100;
-            const overlapSamples = 0.5 * sampleRate; // CROSSFADE_DURATION is 0.5
+            const overlapSamples = 1.0 * sampleRate; // CROSSFADE_DURATION is 1.0
 
-            // Segment 0: 0 to 5s + overlap = 5.5s
+            // Segment 0: 0 to 5s + overlap = 6.0s
             expect(segments[0].data.length).toBe(5 * sampleRate + overlapSamples);
         });
     });
 
     describe('mergeSegments', () => {
-        it('should merge segments correctly without returnAudioBuffer', () => {
+        it('should merge segments correctly', () => {
             const sampleRate = 44100;
-            const crossfadeSamples = 0.5 * sampleRate;
+            const crossfadeSamples = 1.0 * sampleRate; // CROSSFADE_DURATION is 1.0
             const segment1 = new Float32Array(2 * sampleRate).fill(0.5);
             const segment2 = new Float32Array(2 * sampleRate).fill(1.0);
 
-            const merged = mergeSegments([segment1, segment2], sampleRate, false);
+            const merged = mergeSegments([segment1, segment2], sampleRate);
 
             const expectedLength = segment1.length + segment2.length - crossfadeSamples;
             expect(merged.length).toBe(expectedLength);
