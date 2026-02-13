@@ -1,13 +1,12 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
     Music2, 
     Activity, 
     RotateCcw, 
     Volume2, 
     Layers, 
-    Settings,
     Zap,
     Wind,
     Waves
@@ -41,8 +40,7 @@ const ControlSlider: React.FC<{
     onChange: (val: number) => void;
     icon: React.ReactNode;
     displayValue?: string;
-    t: any;
-}> = ({ label, value, min, max, step, unit, onChange, icon, displayValue, t }) => (
+}> = ({ label, value, min, max, step, unit, onChange, icon, displayValue }) => (
     <motion.div 
         whileHover={{ scale: 1.02 }}
         className="glass-premium p-5 rounded-3xl border border-white/5 hover:border-white/10 transition-all group"
@@ -123,7 +121,6 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
                     onChange={onPitchChange}
                     displayValue={`${pitch > 0 ? '+' : ''}${pitch} sem`}
                     icon={<Music2 className="w-4 h-4" />}
-                    t={t}
                 />
                 <ControlSlider
                     label={t('tempo')}
@@ -134,7 +131,6 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
                     onChange={onTempoChange}
                     displayValue={`${Math.round(tempo * 100)}%`}
                     icon={<Activity className="w-4 h-4" />}
-                    t={t}
                 />
                 <ControlSlider
                     label={t('reverb')}
@@ -145,7 +141,6 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
                     onChange={onReverbChange}
                     displayValue={`${Math.round(reverb * 100)}%`}
                     icon={<Waves className="w-4 h-4" />}
-                    t={t}
                 />
                 <ControlSlider
                     label={t('echo')}
@@ -156,7 +151,6 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
                     onChange={onEchoChange}
                     displayValue={`${Math.round(echo * 100)}%`}
                     icon={<Layers className="w-4 h-4" />}
-                    t={t}
                 />
             </div>
 
@@ -224,7 +218,7 @@ const EQSlider: React.FC<{
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 vertical-slider"
-                style={{ appearance: 'slider-vertical' } as any}
+                style={{ WebkitAppearance: 'slider-vertical' } as React.CSSProperties}
             />
             {/* Knob */}
             <motion.div
