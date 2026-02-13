@@ -183,6 +183,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
             <VisualizerContainer
                 visualizer={visualizerInstance}
                 canvasRef={canvasRef}
+                controller={playback}
                 lyrics={lyrics}
                 cdgData={cdgData}
                 currentLineIndex={lyricState.lineIndex}

@@ -21,7 +21,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     const [editMode, setEditMode] = useState<'text' | 'sync'>('text');
     const [activeLineIndex, setActiveLineIndex] = useState(0);
 
-    const { startSync, progress, isProcessing } = useLyricSync(controller);
+    const { startSync, progress, result, isProcessing } = useLyricSync(controller);
 
     useEffect(() => {
         if (initialLRC) {
@@ -37,12 +37,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     };
 
     useEffect(() => {
-        if (progress?.stage === 'done' && progress?.result) {
-            setLines(progress.result.lines);
+        if (progress?.stage === 'done' && result) {
+            setLines(result.lines);
             setEditMode('sync');
-            setActiveLineIndex(progress.result.lines.length);
+            setActiveLineIndex(result.lines.length);
         }
-    }, [progress]);
+    }, [progress, result]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { VoicePreset, VoiceTransformSettings } from '@/types/audio';
+import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 import { LyricTheme, LyricDisplay } from '../LyricDisplay';
 import { LyricEditor } from '../LyricEditor';
 import { CDGRenderer } from '../CDGRenderer';
@@ -27,6 +28,7 @@ import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 interface VisualizerContainerProps {
     visualizer: AudioVisualizer | null;
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
+    controller: PlaybackController;
     lyrics: LRCData | null;
     cdgData: Uint8Array | null;
     currentLineIndex: number;
@@ -75,6 +77,7 @@ interface VisualizerContainerProps {
 export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
     visualizer,
     canvasRef,
+    controller,
     lyrics,
     cdgData,
     currentLineIndex,
@@ -183,6 +186,7 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
                                 currentTime={0}
                                 onSave={onSaveLRC}
                                 initialLRC={lyrics}
+                                controller={controller}
                             />
                         </motion.div>
                     ) : (
