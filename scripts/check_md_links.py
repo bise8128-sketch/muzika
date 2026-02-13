@@ -28,8 +28,15 @@ def check_links(directory):
                                 broken_links.append((file_path, link))
                             continue
 
-                        # Clean up link (remove fragments/query params)
+                        # Clean up link (remove fragments/query params/line numbers)
+                        # Handle convention like path/to/file.ts:123
                         clean_link = link.split('#')[0].split('?')[0]
+                        if ':' in clean_link and not clean_link.startswith(('http', 'file', 'mailto', 'tel')):
+                            # Check if the part after colon is a number
+                            parts = clean_link.split(':')
+                            if parts[-1].isdigit():
+                                clean_link = ':'.join(parts[:-1])
+                        
                         if not clean_link:
                             continue
 

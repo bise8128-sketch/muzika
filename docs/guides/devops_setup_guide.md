@@ -846,23 +846,23 @@ The development servers support hot reloading:
 
 ### Project Documentation
 
-- [Project Architecture](./1_PROJECT_ARCHITECTURE.md)
-- [Setup Guide](./2_SETUP_GUIDE.md)
-- [API Specification](./3_API_SPECIFICATION.md)
-- [Web Workers Guide](./4_WEB_WORKERS.md)
-- [ONNX GPU Integration](./5_ONNX_GPU_INTEGRATION.md)
-- [Audio Processing Guide](./6_AUDIO_PROCESSING.md)
-- [IndexedDB Storage Guide](./7_INDEXEDDB_STORAGE.md)
-- [Testing & Deployment](./8_TESTING_OPTIMIZATION_DEPLOYMENT.md)
-- [Roadmap & Timeline](./9_ROADMAP_TIMELINE.md)
-- [Glossary & FAQ](./10_GLOSSARY_FAQ.md)
+- [Project Architecture](../architecture/project_architecture.md)
+- [Setup Guide](./setup_guide.md)
+- [API Specification](../architecture/api_specification.md)
+- [Web Workers Guide](../architecture/web_workers_guide.md)
+- [ONNX GPU Integration](../architecture/onnx_gpu_integration.md)
+- [Audio Processing Guide](./audio_processing_guide.md)
+- [IndexedDB Storage Guide](./indexeddb_storage_guide_tech.md)
+- [Testing & Deployment](../specifications/testing_optimization_deployment.md)
+- [Roadmap & Timeline](../specifications/roadmap_timeline.md)
+- [Glossary & FAQ](./glossary_faq.md)
 
 ### Deployment Guides
 
-- [Vercel CLI Guide](./VERCEL_CLI_GUIDE.md)
-- [MCP Setup Guide](./MCP_SETUP_GUIDE.md)
-- [Frontend Deployment](./audio-karaoke-app/DEPLOYMENT.md)
-- [Vercel Setup](./audio-karaoke-app/VERCEL_SETUP.md)
+- [Vercel CLI Guide](../deployment/vercel_cli_guide.md)
+- [MCP Setup Guide](./mcp_setup_guide.md)
+- [Frontend Deployment](../deployment/deployment.md)
+- [Vercel Setup](../deployment/vercel_setup.md)
 
 ### External Resources
 
