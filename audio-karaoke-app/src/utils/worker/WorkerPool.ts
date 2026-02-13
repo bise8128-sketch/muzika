@@ -33,8 +33,9 @@ class WorkerWrapper {
             this.handleMessage(event);
         };
 
-        worker.onerror = (error: ErrorEvent) => {
-            this.handleError(new Error(error.message));
+        worker.onerror = (error: ErrorEvent | Event) => {
+            const message = (error as ErrorEvent).message || 'Worker error occurred';
+            this.handleError(new Error(message));
         };
 
         return worker;
