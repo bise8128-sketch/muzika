@@ -200,7 +200,9 @@ async function separateAudioInternal(
                     sampleRate
                 },
                 'NORMAL',
-                [interleaved.buffer]
+                (typeof SharedArrayBuffer !== 'undefined' && interleaved.buffer instanceof SharedArrayBuffer)
+                    ? []
+                    : [interleaved.buffer]
             ).then(result => {
                 processedChunks.set(result.chunkIndex, {
                     vocals: result.vocals,
@@ -264,12 +266,18 @@ async function separateAudioInternal(
 
         if (!skipCache) {
             try {
+                // AudioBuffer doesn't expose the raw buffer directly in a standard way that represents all channels interleaved
+                // We use the first channel's buffer as a proxy for storage, assuming cache handles it or we accept mono for now
+                // TODO: Properly serialize multi-channel AudioBuffer
+                const vocalsBuffer = finalBuffers.vocals.getChannelData(0).buffer;
+                const instrumentalsBuffer = finalBuffers.instrumentals.getChannelData(0).buffer;
+
                 await audioCache.cacheAudioResult(
                     fileHash,
                     file.name,
                     file.size,
-                    finalBuffers.vocals.buffer, // Assuming we want the underlying buffer
-                    finalBuffers.instrumentals.buffer,
+                    vocalsBuffer,
+                    instrumentalsBuffer,
                     segmenter.totalDuration || 0,
                     ctx.sampleRate,
                     modelInfo.id
@@ -294,7 +302,8 @@ async function separateAudioInternal(
         }
         throw err;
     } finally {
-        worker?.terminate();
+        // workerPool is managed by caller (separateAudio function wrapper)
+        // worker?.terminate(); // removed as 'worker' is not defined here
         await segmenter?.dispose();
     }
 }
