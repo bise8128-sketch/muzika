@@ -44,10 +44,30 @@ export class AudioEngine {
     /**
      * Load audio from ArrayBuffer
      */
-    async load(buffer: ArrayBuffer) {
+    async load(buffer: ArrayBuffer | Uint8Array) {
         // Clone the buffer to avoid DataCloneError if the original is detached or read-only from IndexedDB
         // This is necessary because decodeAudioData can detach the buffer, causing issues if re-used or if it's a SharedArrayBuffer without proper context
-        const bufferCopy = buffer.slice(0);
+        let bufferCopy: ArrayBuffer;
+
+        if (buffer instanceof Uint8Array) {
+            // If it's a Uint8Array (view), slice it to get a fresh copy, then get the underlying buffer
+            // We use the view's slice to ensure we get exactly the data in the view
+            const viewCopy = new Uint8Array(buffer);
+            bufferCopy = viewCopy.buffer; 
+        } else if (buffer instanceof ArrayBuffer) {
+            bufferCopy = buffer.slice(0);
+        } else {
+             // Fallback for other view types if ever passed
+             // @ts-ignore
+             if (ArrayBuffer.isView(buffer)) {
+                 // @ts-ignore
+                 const viewCopy = new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
+                 bufferCopy = viewCopy.buffer;
+             } else {
+                 console.warn('[AudioEngine] Unknown buffer type, attempting to allow:', buffer);
+                 bufferCopy = buffer as ArrayBuffer;
+             }
+        }
         
         // Decode buffer
         const audioBuffer = await context.decodeAudioData(bufferCopy);
