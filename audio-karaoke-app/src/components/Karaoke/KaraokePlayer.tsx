@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
+import { getWorkletManager } from '@/utils/audio/audioContext';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
@@ -140,10 +141,10 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Handle metrics updates
     useEffect(() => {
-        if (!controller.getWorkletManager() || !visualizerRef.current) return;
+        const workletManager = getWorkletManager();
+        if (!workletManager || !visualizerRef.current) return;
         
-        const workletManager = controller.getWorkletManager();
-        workletManager?.onMetricsUpdate((metrics) => {
+        workletManager.onMetricsUpdate((metrics: { cpuUsage: number; latency: number; bufferUnderruns: number }) => {
             visualizerRef.current?.setPerformanceMetrics(metrics);
         });
     }, [controller]);
