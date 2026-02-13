@@ -136,22 +136,23 @@ export class WorkerPool {
 
     constructor(config: WorkerPoolConfig) {
         this.config = {
-            minWorkers: 1,
+            minWorkers: 0, // Default to lazy creation; workers are spawned on first task
             maxWorkers: navigator.hardwareConcurrency || 4,
             idleTimeout: 30000,
             ...config
         };
 
-        // Initialize minimum workers
-        // We do this lazily or immediately? 
-        // Plan says "Configuration: minWorkers", so let's respect it.
-        this.ensureMinWorkers();
+        // Only pre-create workers if minWorkers is explicitly > 0
+        if (this.config.minWorkers && this.config.minWorkers > 0) {
+            this.ensureMinWorkers();
+        }
     }
 
     private ensureMinWorkers(): void {
         const currentCount = this.workers.size;
-        if (currentCount < (this.config.minWorkers || 1)) {
-            for (let i = currentCount; i < (this.config.minWorkers || 1); i++) {
+        const min = this.config.minWorkers || 0;
+        if (currentCount < min) {
+            for (let i = currentCount; i < min; i++) {
                 this.createWorker();
             }
         }
