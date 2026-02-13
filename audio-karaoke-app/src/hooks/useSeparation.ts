@@ -100,6 +100,7 @@ export function useSeparation() {
             message: 'Processing cancelled',
             error: null,
             result: null,
+            executionBackend: null,
         });
     }, []);
 
@@ -112,6 +113,7 @@ export function useSeparation() {
             message: null,
             error: null,
             result: null,
+            executionBackend: null,
         });
     }, []);
 

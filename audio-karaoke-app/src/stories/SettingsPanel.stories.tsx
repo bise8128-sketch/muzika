@@ -11,7 +11,9 @@ const defaultVisualSettings = {
     fontWeight: 'bold' as const,
     textShadow: true,
     showDualText: false,
-    offset: 0
+    offset: 0,
+    visualizationMode: 'bars' as const,
+    autoQuality: true
 };
 
 const meta: Meta<typeof SettingsPanel> = {

@@ -47,7 +47,7 @@ interface VisualizerContainerProps {
     };
     
     voiceFxProps: {
-        currentPreset: string;
+        currentPreset: VoicePreset;
         settings: VoiceTransformSettings;
         isMonitoring: boolean;
         onPresetChange: (preset: VoicePreset) => void;

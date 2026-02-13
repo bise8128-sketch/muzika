@@ -34,8 +34,8 @@ let BaseProcessor: any = class {
     port = { postMessage: (_msg: any, _transfers?: any) => {}, onmessage: null as any };
 };
 
-if (typeof AudioWorkletProcessor !== 'undefined') {
-    BaseProcessor = AudioWorkletProcessor;
+if (typeof globalThis !== 'undefined' && 'AudioWorkletProcessor' in globalThis) {
+    BaseProcessor = (globalThis as any).AudioWorkletProcessor;
 }
 
 /**
