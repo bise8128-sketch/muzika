@@ -31,6 +31,8 @@ import { StemIsolationPanel } from './StemIsolationPanel';
 import { PitchVisualizer } from './PitchVisualizer';
 import { LyricTheme } from './LyricDisplay';
 import { PlaybackController } from '@/utils/audio/playbackController';
+import { PlayerHeader } from './PlayerHeader';
+import { ErrorBoundary } from '../UI/ErrorBoundary';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -171,21 +173,13 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [playback]);
 
     return (
-        <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
-            
-            <button
-                onClick={() => {
-                    setIsStageMode(false);
-                    saveSettings({ stageModeEnabled: false });
-                }}
-                className={`absolute top-4 md:top-8 left-4 md:left-8 z-[110] p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring ${!isStageMode ? 'hidden' : ''}`}
-                title="Exit Stage Mode (F)"
-                aria-label="Exit Stage Mode"
-            >
-                <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+        <ErrorBoundary onReset={() => recorder.resetRecorder()}>
+            <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-[100] bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
+                
+                <PlayerHeader 
+                    isStageMode={isStageMode} 
+                    onExitStageMode={() => setIsStageMode(false)} 
+                />
 
             <VisualizerContainer
                 visualizer={visualizerInstance}
@@ -341,6 +335,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     />
                 )}
             </div>
-        </div>
+            </div>
+        </ErrorBoundary>
     );
 };
