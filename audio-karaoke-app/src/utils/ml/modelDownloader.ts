@@ -18,13 +18,14 @@ export async function downloadModel(
     let fetchUrl = modelInfo.url;
     if (fetchUrl.startsWith('/')) {
         // Get the origin from the current context (works in both main thread and worker)
+        // Use global scope to Determine origin (works in Window and Worker)
         let origin = '';
-        if (typeof window !== 'undefined') {
+        if (typeof self !== 'undefined' && self.location) {
+            origin = self.location.origin;
+        } else if (typeof window !== 'undefined' && window.location) {
             origin = window.location.origin;
-        } else if (typeof self !== 'undefined') {
-            // Type assertion for Web Worker context
-            const workerSelf = self as { location?: { origin: string } };
-            origin = workerSelf.location?.origin || '';
+        } else if (typeof globalThis !== 'undefined' && (globalThis as any).location) {
+            origin = (globalThis as any).location.origin;
         }
         fetchUrl = `${origin}${fetchUrl}`;
     }
