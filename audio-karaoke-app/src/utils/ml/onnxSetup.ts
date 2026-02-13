@@ -131,7 +131,8 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
 }
 
 
-export type ExecutionBackend = 'webgpu' | 'wasm' | 'server';
+import type { ExecutionBackend } from '@/types/model';
+export type { ExecutionBackend };
 
 /**
  * Validates which Execution Provider is actually being used by a session.

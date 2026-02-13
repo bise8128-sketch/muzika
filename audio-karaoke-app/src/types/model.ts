@@ -51,7 +51,10 @@ export interface ModelDownloadProgress {
     percentage: number;
 }
 
+
 export type ExecutionProvider = 'webgpu' | 'webgl' | 'wasm' | 'cpu';
+export type ExecutionBackend = 'webgpu' | 'wasm' | 'server';
+
 
 export interface ONNXConfig {
     executionProviders: ExecutionProvider[];

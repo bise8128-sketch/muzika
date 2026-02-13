@@ -16,7 +16,9 @@ export interface SeparationResult {
     instrumentals: AudioBuffer;
     originalAudio?: AudioBuffer | null;
     timestamp: number;
+
     fileHash: string;
+    executionBackend?: 'webgpu' | 'wasm' | 'server';
 }
 
 export interface ProcessingProgress {

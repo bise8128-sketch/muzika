@@ -65,8 +65,39 @@ async function separateAudioInternal(
         const fileHash = await audioCache.hashFile(file);
         const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
 
-        if (serverModels.includes(modelInfo.type)) {
-            return serverSeparateAudio(file, options, fileHash);
+
+        const support = await checkONNXSupport();
+        const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
+        
+        // Smart Routing:
+        // 1. If model requires server (HTDEMUCS/BS_ROFORMER), always use server.
+        // 2. If device is low-end (e.g. mobile/weak CPU) AND server is available, use server to avoid crashing browser.
+        // 3. Otherwise, use client-side (WebGPU/WASM).
+        
+        let shouldUseServer = serverModels.includes(modelInfo.type);
+        
+        if (!shouldUseServer && support.isLowEnd) {
+             const available = await isServerAvailable();
+             if (available) {
+                 console.log('[separateAudio] Low-end device detected & server available. Offloading to server.');
+                 shouldUseServer = true;
+             }
+        }
+
+        if (shouldUseServer) {
+            try {
+                return await serverSeparateAudio(file, options, fileHash);
+            } catch (err) {
+                // If it was a mandatory server model, we must fail
+                if (serverModels.includes(modelInfo.type)) {
+                    throw err;
+                }
+                
+                // If it was an optimization (low-end device), we can fall back to client
+                console.warn('[separateAudio] Server unavailable or failed, falling back to client-side processing:', err);
+                onProgress?.({ phase: 'decoding', percentage: 0, message: 'Server unavailable. Falling back to local processing...', currentSegment: 0, totalSegments: 0 });
+                // Fall through to client-side logic
+            }
         }
 
         const ctx = getAudioContext();
@@ -279,12 +310,28 @@ async function separateAudioInternal(
     }
 }
 
+// Helper to check server availability
+async function isServerAvailable(): Promise<boolean> {
+    try {
+        // Use a short timeout to not block UI
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch('/api/status', { signal: controller.signal });
+        clearTimeout(id);
+        return res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+import { checkONNXSupport } from './onnxSetup';
+
 async function serverSeparateAudio(
     file: File,
     options: SeparationOptions,
     fileHash: string
 ): Promise<SeparationResult> {
-    const { modelInfo, onProgress } = options;
+    const { modelInfo, onProgress, signal } = options;
 
     try {
         onProgress?.({ phase: 'decoding', percentage: 0, message: 'Uploading to server...', currentSegment: 0, totalSegments: 0 });
@@ -296,6 +343,7 @@ async function serverSeparateAudio(
         const uploadRes = await fetch('/api/backend-upload', {
             method: 'POST',
             body: formData,
+            signal
         });
 
         if (!uploadRes.ok) {
@@ -312,7 +360,8 @@ async function serverSeparateAudio(
         const processRes = await fetch('/api/python-processing', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename, model: modelInfo.id })
+            body: JSON.stringify({ filename, model: modelInfo.id }),
+            signal
         });
 
         if (!processRes.ok) {
@@ -322,38 +371,83 @@ async function serverSeparateAudio(
 
         const processData = await processRes.json();
 
-        // If the API returns 'completed' directly (sync)
-        if (processData.status === 'completed') {
-            onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
+        let stems = processData.stems;
 
-            // Fetch and decode stems using shared AudioContext
-            const ctx = getAudioContext();
-
-            const fetchAndDecode = async (url: string) => {
-                const res = await fetch(url);
-                const arrayBuffer = await res.arrayBuffer();
-                return await ctx.decodeAudioData(arrayBuffer);
-            };
-
-            const [vocals, instrumentals] = await Promise.all([
-                fetchAndDecode(processData.stems.vocals),
-                fetchAndDecode(processData.stems.other || processData.stems.instrumental || processData.stems.accompaniment)
-            ]);
-
-            return {
-                vocals,
-                instrumentals,
-                originalAudio: null,
-                fileHash,
-                timestamp: Date.now()
-            };
+        // Async Polling logic
+        if (processData.status === 'processing' || !stems) {
+             if (!processData.jobId) throw new Error('Server returned processing status but no jobId');
+             console.log(`[serverSeparateAudio] Job ${processData.jobId} queued. Polling...`);
+             stems = await pollJobStatus(processData.jobId, onProgress, signal);
         }
 
-        throw new Error('Async processing not yet implemented in separateAudio');
+        onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
+
+        // Fetch and decode stems using shared AudioContext
+        const ctx = getAudioContext();
+
+        const fetchAndDecode = async (url: string) => {
+            const res = await fetch(url, { signal });
+            const arrayBuffer = await res.arrayBuffer();
+            return await ctx.decodeAudioData(arrayBuffer);
+        };
+
+        const [vocals, instrumentals] = await Promise.all([
+            fetchAndDecode(stems.vocals),
+            fetchAndDecode(stems.other || stems.instrumental || stems.accompaniment)
+        ]);
+
+        return {
+            vocals,
+            instrumentals,
+            originalAudio: null,
+            fileHash,
+            timestamp: Date.now()
+        };
 
     } catch (err) {
         console.error('[serverSeparateAudio] Error:', err);
         throw err;
     }
+}
+
+async function pollJobStatus(
+    jobId: string, 
+    onProgress?: (p: ProcessingProgress) => void,
+    signal?: AbortSignal
+): Promise<Record<string, string>> {
+     let attempts = 0;
+     const maxAttempts = 120; // 10 minutes (5s interval)
+     
+     while (attempts < maxAttempts) {
+         if (signal?.aborted) throw new Error('Aborted');
+         
+         await new Promise(r => setTimeout(r, 5000)); // 5s poll interval
+         
+         const res = await fetch(`/api/python-processing?jobId=${jobId}`, { signal });
+         if (!res.ok) throw new Error('Status check failed');
+         
+         const data = await res.json();
+         
+         if (data.status === 'completed') {
+             return data.stems;
+         }
+         
+         if (data.status === 'failed') {
+             throw new Error(data.error || 'Server processing failed');
+         }
+         
+         // Update progress if server provides it (future) - for now just fake incremental progress
+         onProgress?.({ 
+             phase: 'separating', 
+             percentage: 10 + Math.min(80, (attempts / 20) * 80), // Fake progress 
+             message: 'Server processing...', 
+             currentSegment: 0, 
+             totalSegments: 0 
+         });
+         
+         attempts++;
+     }
+     
+     throw new Error('Server processing timed out');
 }
 

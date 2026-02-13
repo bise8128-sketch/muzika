@@ -6,7 +6,7 @@ import type { InferenceStrategy } from './inference/types';
 import { WaveformInferenceStrategy } from './inference/waveformStrategy';
 import { SpectralInferenceStrategy } from './inference/spectralStrategy';
 import { WebGPUInferenceStrategy } from './inference/webgpuStrategy';
-import type { ExecutionBackend } from './onnxSetup';
+import type { ExecutionBackend } from '@/types/model';
 
 /**
  * Factory to create the appropriate inference strategy.
