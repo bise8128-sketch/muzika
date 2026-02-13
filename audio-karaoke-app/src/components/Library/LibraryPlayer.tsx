@@ -55,7 +55,19 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
                 }
 
                 if (bufferToLoad) {
+                    console.log('[LibraryPlayer] Loading buffer:', {
+                        type: Object.prototype.toString.call(bufferToLoad),
+                        byteLength: bufferToLoad.byteLength,
+                        isView: ArrayBuffer.isView(bufferToLoad)
+                    });
+                    
+                    if (bufferToLoad.byteLength === 0) {
+                        console.warn('[LibraryPlayer] Buffer is empty!');
+                    }
+
                     await engine.load(bufferToLoad);
+                } else {
+                    console.warn('[LibraryPlayer] No buffer to load');
                 }
             } catch (e) {
                 console.error("Failed to load audio", e);
