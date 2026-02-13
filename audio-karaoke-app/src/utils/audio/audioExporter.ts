@@ -635,13 +635,15 @@ export async function exportAudio(
     audioBuffer: AudioBuffer,
     format: 'wav' | 'mp3',
     filename: string,
-    bitrate?: number
+    bitrate?: number,
+    priority?: ExportPriority,
+    onProgress?: (progress: number) => void
 ): Promise<void> {
     let blob: Blob;
 
     try {
         if (format === 'mp3') {
-            blob = await exportToMP3(audioBuffer, bitrate);
+            blob = await exportToMP3(audioBuffer, bitrate, priority, onProgress);
         } else {
             blob = await exportToWAV(audioBuffer);
         }
@@ -656,6 +658,12 @@ export async function exportAudio(
         throw new Error(`Failed to export audio: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
+
+/**
+ * Pre-warm the export worker pool for faster first export
+ * Call this on app initialization or when user hovers over export button
+ */
+export { warmUpExportPool };
 
 /**
  * Get user-friendly error message from MP3ExportError
