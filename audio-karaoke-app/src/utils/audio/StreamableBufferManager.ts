@@ -1,3 +1,4 @@
+import { bufferPool } from './bufferPool';
 
 /**
  * Manages streaming audio playback with gapless scheduling.
@@ -10,6 +11,7 @@ export class StreamableBufferManager {
     // Storage for the full audio reconstruction
     private vocalsChunks: Float32Array[] = [];
     private instrumentalsChunks: Float32Array[] = [];
+    private audioBuffers: AudioBuffer[] = [];
     private totalLength = 0;
 
     // Playback scheduling
@@ -36,6 +38,7 @@ export class StreamableBufferManager {
 
         // Create AudioBuffer for this chunk
         const chunkBuffer = this.createAudioBuffer(vocals, instrumentals);
+        this.audioBuffers.push(chunkBuffer);
 
         if (this.isPlaying) {
             this.scheduleBuffer(chunkBuffer);
@@ -43,7 +46,7 @@ export class StreamableBufferManager {
     }
 
     private createAudioBuffer(channel1: Float32Array, channel2: Float32Array): AudioBuffer {
-        const buffer = this.audioContext.createBuffer(2, channel1.length, this.sampleRate);
+        const buffer = bufferPool.acquireAudioBuffer(this.audioContext, 2, channel1.length, this.sampleRate);
         // Cast to any to avoid strict shared buffer checks for this demo
         buffer.copyToChannel(channel1 as any, 0);
         buffer.copyToChannel(channel2 as any, 1);
@@ -93,7 +96,13 @@ export class StreamableBufferManager {
 
         let accumulatedDuration = 0;
         for (let i = 0; i < this.vocalsChunks.length; i++) {
-            const buffer = this.createAudioBuffer(this.vocalsChunks[i], this.instrumentalsChunks[i]);
+            // Re-use or create buffers if needed (though they should already be in this.audioBuffers)
+            let buffer = this.audioBuffers[i];
+            if (!buffer) {
+                buffer = this.createAudioBuffer(this.vocalsChunks[i], this.instrumentalsChunks[i]);
+                this.audioBuffers[i] = buffer;
+            }
+            
             const source = this.audioContext.createBufferSource();
             source.buffer = buffer;
             source.connect(this.gainNode);
@@ -119,6 +128,11 @@ export class StreamableBufferManager {
         this.pause();
         this.vocalsChunks = [];
         this.instrumentalsChunks = [];
+        
+        // Release audio buffers back to pool
+        this.audioBuffers.forEach(buffer => bufferPool.releaseAudioBuffer(buffer));
+        this.audioBuffers = [];
+        
         this.totalLength = 0;
         this.nextStartTime = 0;
         this.scheduledNodes = [];

@@ -6,7 +6,7 @@ import { WorkerTask, WorkerPoolConfig, TaskPriority } from '../../types/worker';
 class WorkerWrapper {
     private worker: Worker;
     private currentTask: WorkerTask | null = null;
-    private readonly scriptPath: string;
+    private readonly scriptPath: string | URL;
     private readonly onTaskComplete: (wrapper: WorkerWrapper) => void;
     private readonly onError: (wrapper: WorkerWrapper, error: Error) => void;
 
@@ -15,7 +15,7 @@ class WorkerWrapper {
 
     constructor(
         id: string,
-        scriptPath: string,
+        scriptPath: string | URL,
         onTaskComplete: (wrapper: WorkerWrapper) => void,
         onError: (wrapper: WorkerWrapper, error: Error) => void
     ) {

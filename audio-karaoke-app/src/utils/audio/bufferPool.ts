@@ -12,6 +12,8 @@ class BufferPool {
     private pool: Map<number, PooledBuffer[]> = new Map();
     private maxPoolSize = 10; // Maximum buffers per size to prevent memory bloat
 
+    private audioBufferPool: Map<string, AudioBuffer[]> = new Map();
+
     /**
      * Acquire a buffer from the pool or create a new one
      * @param size - Required buffer size
@@ -61,10 +63,42 @@ class BufferPool {
     }
 
     /**
+     * Acquire an AudioBuffer from the pool
+     */
+    acquireAudioBuffer(ctx: AudioContext, channels: number, length: number, sampleRate: number): AudioBuffer {
+        const key = `${channels}-${length}-${sampleRate}`;
+        const pool = this.audioBufferPool.get(key);
+
+        if (pool && pool.length > 0) {
+            return pool.pop()!;
+        }
+
+        return ctx.createBuffer(channels, length, sampleRate);
+    }
+
+    /**
+     * Release an AudioBuffer back to the pool
+     */
+    releaseAudioBuffer(buffer: AudioBuffer): void {
+        const key = `${buffer.numberOfChannels}-${buffer.length}-${buffer.sampleRate}`;
+        let pool = this.audioBufferPool.get(key);
+
+        if (!pool) {
+            pool = [];
+            this.audioBufferPool.set(key, pool);
+        }
+
+        if (pool.length < this.maxPoolSize) {
+            pool.push(buffer);
+        }
+    }
+
+    /**
      * Clear all buffers from the pool
      */
     clear(): void {
         this.pool.clear();
+        this.audioBufferPool.clear();
     }
 
     /**
