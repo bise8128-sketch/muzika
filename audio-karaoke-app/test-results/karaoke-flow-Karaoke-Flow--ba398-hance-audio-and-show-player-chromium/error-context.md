@@ -1,0 +1,70 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - button "Go to home" [ref=e5]:
+          - img [ref=e7]
+          - generic [ref=e9]: MUZIKA
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - combobox [ref=e12] [cursor=pointer]:
+              - option "English" [selected]
+              - option "Bosanski"
+            - generic:
+              - img
+          - button "Library" [ref=e13]
+          - button "How it works" [ref=e14]
+          - button "Models" [ref=e15]
+          - link "Privacy" [ref=e16] [cursor=pointer]:
+            - /url: "#"
+          - generic [ref=e17]:
+            - status "System Online" [ref=e18]
+            - generic [ref=e19]: "Backend: online"
+          - button "Open settings" [ref=e20]:
+            - img [ref=e21]
+    - main [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e28]: 0%
+        - heading "Separating Audio..." [level=2] [ref=e29]
+        - paragraph [ref=e30]: Analyzing file...
+        - generic [ref=e33]: "Status: processing"
+    - dialog "Settings" [ref=e35]:
+      - generic [ref=e36]:
+        - heading "Settings" [level=2] [ref=e37]:
+          - img [ref=e38]
+          - text: Settings
+        - button "Close settings" [ref=e41]:
+          - img [ref=e42]
+      - generic [ref=e45]:
+        - heading "Processing Engine" [level=3] [ref=e46]
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: WebGPU Acceleration
+              - generic [ref=e51]: Faster inference using your GPU
+            - switch [checked] [ref=e52] [cursor=pointer]
+          - generic [ref=e54]:
+            - generic [ref=e55]: Model Version
+            - combobox "Model Version" [ref=e56]:
+              - option "MDX-Net Vocal 1 - Standard lightweight model optimized for high-quality instrumental extraction with minimal vocal bleed." [selected]
+              - option "MDX-Net Vocals FT - Fine-tuned MDX-Net model specifically for clean vocal extraction, ideal for isolation and karaoke lead vocals."
+              - option "Kim Vocal 2 - Premier model for ultra-clean vocal extraction with minimal artifacts. Preferred by professionals."
+              - 'option "MDX-Net Karaoke 2 - Specialized for karaoke: removes lead vocals while preserving backing harmonies."'
+              - option "MDX-Net Main - A robust general-purpose model for balanced vocal and instrumental separation."
+    - generic [ref=e59]:
+      - img [ref=e61]
+      - generic [ref=e63]:
+        - heading "Welcome to Muzika" [level=3] [ref=e69]
+        - paragraph [ref=e70]: Experience professional-grade AI audio separation right in your browser. Your files never leave your device.
+        - generic [ref=e71]:
+          - button "Skip" [ref=e72]
+          - button "Next Step" [ref=e73]
+    - contentinfo [ref=e74]:
+      - paragraph [ref=e75]: © 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.
+  - button "Open Next.js Dev Tools" [ref=e81] [cursor=pointer]:
+    - img [ref=e82]
+  - alert [ref=e85]
+```
