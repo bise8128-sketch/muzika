@@ -208,15 +208,52 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                 </p>
                             )}
 
-                            {/* Dual Text (Translation/Romanization) */}
-                            {visualSettings?.showDualText && line.translation && (
-                                <motion.p 
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: isActive ? 0.6 : 0.2 }}
-                                    className="text-lg font-bold opacity-60 mt-4 tracking-tight"
-                                >
                                     {line.translation}
                                 </motion.p>
+                            )}
+
+                            {/* Chromatic Aberration Layers (Ghost Mode only) */}
+                            {isGhostActive && (
+                                <>
+                                    <motion.div
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            color: '#ff0000',
+                                            mixBlendMode: 'screen',
+                                            x: useTransform(smoothTreble, [0.5, 1], [0, -4]),
+                                            scale: ghostScaleRed,
+                                            opacity: 0.5,
+                                            pointerEvents: 'none',
+                                            zIndex: -1
+                                        }}
+                                        className="font-black text-4xl lg:text-5xl tracking-tighter"
+                                    >
+                                        {line.text}
+                                    </motion.div>
+                                    <motion.div
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            color: '#00ffff',
+                                            mixBlendMode: 'screen',
+                                            x: useTransform(smoothTreble, [0.5, 1], [0, 4]),
+                                            scale: ghostScaleCyan,
+                                            opacity: 0.5,
+                                            pointerEvents: 'none',
+                                            zIndex: -1
+                                        }}
+                                        className="font-black text-4xl lg:text-5xl tracking-tighter"
+                                    >
+                                        {line.text}
+                                    </motion.div>
+                                </>
                             )}
                         </motion.div>
                     );
