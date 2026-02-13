@@ -8,9 +8,11 @@ export interface SeparationState {
     progress: number;
     status: 'idle' | 'processing' | 'completed' | 'error';
     currentPhase: ProcessingProgress['phase'] | null;
+
     message: string | null;
     error: string | null;
     result: SeparationResult | null;
+    executionBackend: 'webgpu' | 'wasm' | 'server' | null;
 }
 
 export function useSeparation() {
@@ -22,6 +24,7 @@ export function useSeparation() {
         message: null,
         error: null,
         result: null,
+        executionBackend: null,
     });
 
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -40,6 +43,7 @@ export function useSeparation() {
             message: 'Starting separation...',
             error: null,
             result: null,
+            executionBackend: null,
         });
 
         abortControllerRef.current = new AbortController();
@@ -55,6 +59,7 @@ export function useSeparation() {
                         progress: p.percentage,
                         currentPhase: p.phase,
                         message: p.message || null,
+                        executionBackend: p.executionBackend || s.executionBackend
                     }));
                 },
             });

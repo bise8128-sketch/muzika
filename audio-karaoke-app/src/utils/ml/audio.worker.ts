@@ -22,6 +22,8 @@ export interface SeparationMetrics {
     averageInferenceTime?: number;
 }
 
+import type { ExecutionBackend } from '@/types/model';
+
 // Define worker message types
 export type WorkerMessage =
     | { type: 'START_SEPARATION'; payload: SeparationRequest }
@@ -42,7 +44,7 @@ export type WorkerResponse =
     | { type: 'PROGRESS'; payload: ProcessingProgress }
     | { type: 'CHUNK_PLAYBACK'; payload: { vocals: Float32Array; instrumentals: Float32Array; position: number } }
     | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: SeparationMetrics } }
-    | { type: 'STREAM_READY'; payload: { sessionId: string } }
+    | { type: 'STREAM_READY'; payload: { sessionId: string; backend?: ExecutionBackend } }
     | { type: 'CHUNK_PROCESSED'; payload: { vocals: Float32Array; instrumentals: Float32Array; chunkIndex: number; sessionId: string } }
     | { type: 'ERROR'; payload: { message: string } };
 
@@ -96,8 +98,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             console.log('[audio.worker] Model loaded successfully');
             
             activeSession = { id: sessionId, engine };
-            console.log('[audio.worker] Session initialized, sending STREAM_READY');
-            ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId } });
+            const backend = engine.backendInfo?.backend;
+            
+            console.log('[audio.worker] Session initialized, sending STREAM_READY with backend:', backend);
+            ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId, backend } });
         } catch (err) {
             const errorMsg = `Failed to load model: ${(err as Error).message}`;
             console.error('[audio.worker]', errorMsg, err);

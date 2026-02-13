@@ -145,15 +145,41 @@ async function separateAudioInternal(
             }
         }
 
+
         console.log('[separateAudio] Initializing worker session...');
-        await workerPool.addTask('INIT_STREAM_SESSION', { modelInfo, sessionId }, 'HIGH');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const initResult = await workerPool.addTask<any, { sessionId: string; backend?: 'webgpu' | 'wasm' | 'server' }>(
+            'INIT_STREAM_SESSION', 
+            { modelInfo, sessionId }, 
+            'HIGH'
+        );
+        
+        const executionBackend = initResult.backend || 'wasm'; // Default to wasm if not specified
+        console.log(`[separateAudio] Worker using backend: ${executionBackend}`);
+        
+        // Report backend immediately
+        onProgress?.({ 
+            phase: 'decoding', 
+            percentage: 0, 
+            message: `Analyzing file... (Using ${executionBackend})`, 
+            currentSegment: 0, 
+            totalSegments: 0,
+            executionBackend 
+        });
 
         console.log('[separateAudio] Starting streaming segmentation...');
 
         let chunkIndex = 0;
         let totalProcessedDuration = 0;
 
-        onProgress?.({ phase: 'separating', percentage: 0, message: 'Starting separation...', currentSegment: 0, totalSegments: 0 });
+        onProgress?.({ 
+            phase: 'separating', 
+            percentage: 0, 
+            message: 'Starting separation...', 
+            currentSegment: 0, 
+            totalSegments: 0,
+            executionBackend
+        });
 
         const segmentGenerator = segmenter.segmentFile(fileSource, 5);
         const processingPromises: Promise<void>[] = [];
@@ -231,7 +257,8 @@ async function separateAudioInternal(
                     percentage: Math.min(99, percent),
                     message: `Processing... Speed: ${state.speed.toFixed(1)}x, ETA: ${state.eta.toFixed(0)}s`,
                     currentSegment: nextChunkToPlay,
-                    totalSegments: Math.ceil(totalDuration / 5)
+                    totalSegments: Math.ceil(totalDuration / 5),
+                    executionBackend
                 });
             });
 
@@ -291,7 +318,8 @@ async function separateAudioInternal(
             instrumentals: finalBuffers.instrumentals,
             originalAudio: null,
             fileHash,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            executionBackend
         };
 
     } catch (err: unknown) {

@@ -25,8 +25,10 @@ export interface ProcessingProgress {
     phase: 'loading-model' | 'decoding' | 'segmenting' | 'separating' | 'merging' | 'caching';
     currentSegment: number;
     totalSegments: number;
+
     percentage: number;
     message?: string;
+    executionBackend?: 'webgpu' | 'wasm' | 'server';
 }
 
 export interface AudioSegment {
