@@ -9,6 +9,7 @@ export class AudioVisualizer {
     private audioContext: AudioContext;
     private analyser: AnalyserNode;
     private dataArray: Uint8Array;
+    private frequencyArray: Uint8Array;
     private animationId: number | null = null;
     private isRunning: boolean = false;
 
@@ -17,6 +18,7 @@ export class AudioVisualizer {
     private autoQuality: boolean = true;
     private isQualityAdjusted: boolean = false;
     private performanceMetrics: { cpuUsage: number; latency: number; bufferUnderruns: number } | null = null;
+    public onFrame?: (metrics: { bass: number; mid: number; treble: number; energy: number }) => void;
 
     constructor(fftSize: number = 2048) {
         this.audioContext = getAudioContext();
@@ -26,6 +28,7 @@ export class AudioVisualizer {
 
         const bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(bufferLength);
+        this.frequencyArray = new Uint8Array(bufferLength);
     }
 
     /**
@@ -97,6 +100,12 @@ export class AudioVisualizer {
             // Get time domain data
             this.analyser.getByteTimeDomainData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
+            // Process audio features (Ghost Mode)
+            if (this.onFrame) {
+                this.analyser.getByteFrequencyData(this.frequencyArray as unknown as Uint8Array<ArrayBuffer>);
+                this.processAudioFeatures(this.frequencyArray);
+            }
+
             // Clear canvas
             ctx.fillStyle = 'rgba(20, 20, 20, 1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -146,6 +155,11 @@ export class AudioVisualizer {
             // Get frequency data
             this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
+            // Process audio features (Ghost Mode)
+            if (this.onFrame) {
+                this.processAudioFeatures(this.dataArray);
+            }
+
             // Clear canvas
             ctx.fillStyle = 'rgba(20, 20, 20, 1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -171,6 +185,38 @@ export class AudioVisualizer {
         };
 
         draw();
+    }
+
+    /**
+     * Process audio features and emit events
+     */
+    private processAudioFeatures(frequencyData: Uint8Array): void {
+        if (!this.onFrame) return;
+
+        const bufferLength = frequencyData.length;
+        let bass = 0;
+        let mid = 0;
+        let treble = 0;
+        let energy = 0;
+
+        // Frequency bands (approximate)
+        const bassEnd = Math.floor(bufferLength * 0.05); // Low frequency
+        const midEnd = Math.floor(bufferLength * 0.4);   // Mids
+
+        for (let i = 0; i < bufferLength; i++) {
+            const val = frequencyData[i];
+            energy += val;
+            if (i < bassEnd) bass += val;
+            else if (i < midEnd) mid += val;
+            else treble += val;
+        }
+
+        this.onFrame({
+            bass: (bass / bassEnd) / 255,
+            mid: (mid / (midEnd - bassEnd)) / 255,
+            treble: (treble / (bufferLength - midEnd)) / 255,
+            energy: (energy / bufferLength) / 255
+        });
     }
 
     /**
