@@ -10,7 +10,14 @@ import type { CachedAudio } from '@/types/storage';
  * Check if we're in a browser context with required APIs
  */
 function isBrowser(): boolean {
-    return typeof window !== 'undefined' && typeof indexedDB !== 'undefined' && typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+    const isWindow = typeof window !== 'undefined';
+    // Check for WorkerGlobalScope or similar worker context
+    const isWorker = typeof self !== 'undefined' && typeof self.importScripts === 'function';
+    // Or just generic self check if importScripts isn't reliable in modules, but standard workers usually have it.
+    // Better yet:
+    const isSelf = typeof self !== 'undefined';
+    
+    return (isWindow || isSelf) && typeof indexedDB !== 'undefined' && typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
 }
 
 export class AudioCache {

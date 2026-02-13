@@ -281,6 +281,29 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     }
 };
 
-self.onerror = (error) => {
-    console.error('[audio.worker] Worker error event:', error);
+self.onerror = (event) => {
+    console.error('[audio.worker] Uncaught Global Error:', event);
+    const msg = event instanceof ErrorEvent ? event.message : 'Unknown worker error';
+    
+    // Attempt to report back to main thread
+    try {
+        ctx.postMessage({ 
+            type: 'ERROR', 
+            payload: { message: `Uncaught worker error: ${msg}` } 
+        });
+    } catch (e) {
+        console.error('[audio.worker] Failed to report error:', e);
+    }
+};
+
+self.onunhandledrejection = (event) => {
+    console.error('[audio.worker] Unhandled Rejection:', event.reason);
+    try {
+        ctx.postMessage({ 
+            type: 'ERROR', 
+            payload: { message: `Unhandled rejection: ${event.reason}` } 
+        });
+    } catch (e) {
+        console.error('[audio.worker] Failed to report rejection:', e);
+    }
 };

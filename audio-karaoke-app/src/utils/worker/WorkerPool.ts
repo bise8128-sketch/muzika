@@ -35,12 +35,30 @@ class WorkerWrapper {
 
         worker.onerror = (error: ErrorEvent | Event) => {
             let message = 'Worker error occurred';
+            
+            // Try to extract details even from generic Event if they exist (runtime-dependent)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const errAny = error as any;
+            
             if ('message' in error) {
                 message = `Worker error: ${error.message} at ${error.filename}:${error.lineno}:${error.colno}`;
                 console.error(`[WorkerWrapper ${this.id}] Error Message:`, error.message);
                 console.error(`[WorkerWrapper ${this.id}] Error Location:`, `${error.filename}:${error.lineno}:${error.colno}`);
+            } else if (errAny.message) {
+                // Fallback for when 'message' isn't in the type definition but is present at runtime
+                message = `Worker error: ${errAny.message}`;
+                if (errAny.filename) {
+                     message += ` at ${errAny.filename}:${errAny.lineno || '?'}:${errAny.colno || '?'}`;
+                }
+                console.error(`[WorkerWrapper ${this.id}] Error (from property):`, message);
             } else {
                 console.error(`[WorkerWrapper ${this.id}] Generic Error Event:`, error);
+                
+                // If it's a generic error event, it's often a script loading failure (404) or a syntax error
+                // Check if we can infer anything
+                if (errAny.type === 'error' && !errAny.message) {
+                    message = `Worker script failed to load or had a syntax error. Script: ${this.scriptPath}`;
+                }
             }
             this.handleError(new Error(message));
         };
