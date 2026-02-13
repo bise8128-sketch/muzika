@@ -3,14 +3,15 @@ import path from 'path';
 
 test.describe('Karaoke Flow', () => {
     test.beforeEach(async ({ page }) => {
+        page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
         await page.goto('/');
         
         // Skip onboarding if present
         const skipButton = page.getByRole('button', { name: /Skip/i });
         if (await skipButton.isVisible()) {
             await skipButton.click();
+            await expect(skipButton).not.toBeVisible({ timeout: 10000 });
         }
-        await expect(skipButton).not.toBeVisible();
     });
 
     test('should enhance audio and show player', async ({ page }) => {
@@ -22,8 +23,8 @@ test.describe('Karaoke Flow', () => {
 
         // 2. Wait for processing progress
         // Should catch the toast or progress bar
-        await expect(page.getByText(/Analyzing file/i)).toBeVisible({ timeout: 10000 });
-        await expect(page.getByText(/Separating/i)).toBeVisible({ timeout: 30000 });
+        await expect(page.getByText(/Separating Audio/i)).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(/Running AI models/i)).toBeVisible({ timeout: 30000 });
 
         // 3. Wait for player to appear
         // The player header or play button should be visible

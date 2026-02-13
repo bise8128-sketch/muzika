@@ -33,7 +33,7 @@ export async function separateAudio(
     const maxWorkers = Math.min(hardwareConcurrency, 4); // Limit to 4 to avoid overhead/resource contention
     
     const workerPool = new WorkerPool({
-        workerScript: new URL('./audio.worker.ts', import.meta.url),
+        workerFactory: () => new Worker(new URL('./audio.worker.ts', import.meta.url), { type: 'module' }),
         maxWorkers
     });
 

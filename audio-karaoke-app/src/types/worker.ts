@@ -75,5 +75,6 @@ export interface WorkerPoolConfig {
     minWorkers?: number;
     maxWorkers?: number;
     idleTimeout?: number;
-    workerScript: string | URL;
+    workerScript?: string | URL;
+    workerFactory?: () => Worker;
 }

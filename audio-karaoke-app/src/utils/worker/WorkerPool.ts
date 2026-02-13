@@ -6,7 +6,7 @@ import { WorkerTask, WorkerPoolConfig, TaskPriority } from '../../types/worker';
 class WorkerWrapper {
     private worker: Worker;
     private currentTask: WorkerTask | null = null;
-    private readonly scriptPath: string | URL;
+    private readonly factoryOrScript: string | URL | (() => Worker);
     private readonly onTaskComplete: (wrapper: WorkerWrapper) => void;
     private readonly onError: (wrapper: WorkerWrapper, error: Error) => void;
 
@@ -15,19 +15,24 @@ class WorkerWrapper {
 
     constructor(
         id: string,
-        scriptPath: string | URL,
+        factoryOrScript: string | URL | (() => Worker),
         onTaskComplete: (wrapper: WorkerWrapper) => void,
         onError: (wrapper: WorkerWrapper, error: Error) => void
     ) {
         this.id = id;
-        this.scriptPath = scriptPath;
+        this.factoryOrScript = factoryOrScript;
         this.onTaskComplete = onTaskComplete;
         this.onError = onError;
         this.worker = this.initializeWorker();
     }
 
     private initializeWorker(): Worker {
-        const worker = new Worker(this.scriptPath, { type: 'module' });
+        let worker: Worker;
+        if (typeof this.factoryOrScript === 'function') {
+            worker = this.factoryOrScript();
+        } else {
+            worker = new Worker(this.factoryOrScript, { type: 'module' });
+        }
 
         worker.onmessage = (event: MessageEvent) => {
             this.handleMessage(event);
@@ -36,28 +41,19 @@ class WorkerWrapper {
         worker.onerror = (error: ErrorEvent | Event) => {
             let message = 'Worker error occurred';
             
-            // Try to extract details even from generic Event if they exist (runtime-dependent)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const errAny = error as any;
             
             if ('message' in error) {
                 message = `Worker error: ${error.message} at ${error.filename}:${error.lineno}:${error.colno}`;
                 console.error(`[WorkerWrapper ${this.id}] Error Message:`, error.message);
-                console.error(`[WorkerWrapper ${this.id}] Error Location:`, `${error.filename}:${error.lineno}:${error.colno}`);
             } else if (errAny.message) {
-                // Fallback for when 'message' isn't in the type definition but is present at runtime
                 message = `Worker error: ${errAny.message}`;
-                if (errAny.filename) {
-                     message += ` at ${errAny.filename}:${errAny.lineno || '?'}:${errAny.colno || '?'}`;
-                }
                 console.error(`[WorkerWrapper ${this.id}] Error (from property):`, message);
             } else {
                 console.error(`[WorkerWrapper ${this.id}] Generic Error Event:`, error);
-                
-                // If it's a generic error event, it's often a script loading failure (404) or a syntax error
-                // Check if we can infer anything
                 if (errAny.type === 'error' && !errAny.message) {
-                    message = `Worker script failed to load or had a syntax error. Script: ${this.scriptPath}`;
+                    message = `Worker script failed to load or had a syntax error. Source: ${this.factoryOrScript}`;
                 }
             }
             this.handleError(new Error(message));
@@ -153,29 +149,35 @@ class WorkerWrapper {
  * Manages a pool of Web Workers to execute tasks concurrently with limits.
  */
 export class WorkerPool {
-    private config: WorkerPoolConfig;
     private workers: Map<string, WorkerWrapper> = new Map();
     private taskQueue: WorkerTask[] = [];
+    private readonly maxWorkers: number;
+    private readonly minWorkers: number;
+    private readonly idleTimeout: number;
+    private readonly scriptPath?: string | URL;
+    private readonly workerFactory?: () => Worker;
     private idleTimer: ReturnType<typeof setTimeout> | null = null;
     private isDestroyed = false;
 
     constructor(config: WorkerPoolConfig) {
-        this.config = {
-            minWorkers: 0, // Default to lazy creation; workers are spawned on first task
-            maxWorkers: navigator.hardwareConcurrency || 4,
-            idleTimeout: 30000,
-            ...config
-        };
+        if (!config.workerScript && !config.workerFactory) {
+            throw new Error('WorkerPool requires either workerScript or workerFactory');
+        }
+        this.scriptPath = config.workerScript;
+        this.workerFactory = config.workerFactory;
+        this.maxWorkers = config.maxWorkers ?? (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4);
+        this.minWorkers = config.minWorkers ?? 0; // Default to 0 to allow full pruning
+        this.idleTimeout = config.idleTimeout ?? 30000; // 30s default
 
         // Only pre-create workers if minWorkers is explicitly > 0
-        if (this.config.minWorkers && this.config.minWorkers > 0) {
+        if (this.minWorkers > 0) {
             this.ensureMinWorkers();
         }
     }
 
     private ensureMinWorkers(): void {
         const currentCount = this.workers.size;
-        const min = this.config.minWorkers || 0;
+        const min = this.minWorkers;
         if (currentCount < min) {
             for (let i = currentCount; i < min; i++) {
                 this.createWorker();
@@ -185,14 +187,16 @@ export class WorkerPool {
 
     private createWorker(): WorkerWrapper {
         const id = crypto.randomUUID();
-        const worker = new WorkerWrapper(
+        const source = this.workerFactory || this.scriptPath!;
+        
+        const wrapper = new WorkerWrapper(
             id,
-            this.config.workerScript,
+            source,
             (w) => this.onWorkerTaskComplete(w),
             (w, err) => this.onWorkerError(w, err)
         );
-        this.workers.set(id, worker);
-        return worker;
+        this.workers.set(id, wrapper);
+        return wrapper;
     }
 
     private getIdleWorker(): WorkerWrapper | undefined {
@@ -251,7 +255,7 @@ export class WorkerPool {
         let worker = this.getIdleWorker();
 
         // If no idle worker, check if we can spawn a new one
-        if (!worker && this.workers.size < (this.config.maxWorkers || 4)) {
+        if (!worker && this.workers.size < (this.maxWorkers || 4)) {
             worker = this.createWorker();
         }
 
@@ -296,11 +300,11 @@ export class WorkerPool {
 
         this.idleTimer = setTimeout(() => {
             this.pruneIdleWorkers();
-        }, this.config.idleTimeout || 30000);
+        }, this.idleTimeout || 30000);
     }
 
     private pruneIdleWorkers(): void {
-        const min = this.config.minWorkers ?? 0;
+        const min = this.minWorkers ?? 0;
         if (this.workers.size <= min) return;
 
         const toRemove: string[] = [];
