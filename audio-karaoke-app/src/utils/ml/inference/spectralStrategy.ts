@@ -143,6 +143,10 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             const inputTensor = new ort.Tensor('float32', floatData, shape);
             this.track(inputTensor);
 
+            // 4. Extract Output
+            const outputNames = session.outputNames;
+            console.log('[SpectralInferenceStrategy] Model output names:', outputNames);
+
             // 3. Inference
             let results: Record<string, ort.Tensor>;
             if (this.ioBinding) {
@@ -157,10 +161,6 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
                 results = await session.run(feeds);
             }
             Object.values(results).forEach(t => this.track(t));
-
-            // 4. Extract Output
-            const outputNames = session.outputNames;
-            console.log('[SpectralInferenceStrategy] Model output names:', outputNames);
 
             // Robust output mapping
             let vocalsTensor: ort.Tensor | undefined;

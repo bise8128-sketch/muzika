@@ -51,19 +51,19 @@ export async function loadModel(
 
         try {
             session = await ort.InferenceSession.create(modelData, options);
-            console.log(`[modelManager] InferenceSession created successfully with providers: ${session.executionProviders?.join(', ') || 'unknown'}`);
+            console.log(`[modelManager] InferenceSession created successfully with providers: ${(session as any).executionProviders?.join(', ') || 'unknown'}`);
             
-            usedWebGPU = options.executionProviders &&
+            usedWebGPU = !!(options.executionProviders &&
                 (Array.isArray(options.executionProviders) ?
-                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')) :
-                    false);
+                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && (ep as any).name === 'webgpu')) :
+                    false));
 
         } catch (webGpuError) {
             // Check if we were trying to use WebGPU
-             usedWebGPU = options.executionProviders &&
+             usedWebGPU = !!(options.executionProviders &&
                 (Array.isArray(options.executionProviders) ?
-                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && ep.name === 'webgpu')) :
-                    false);
+                    options.executionProviders.some(ep => ep === 'webgpu' || (typeof ep === 'object' && (ep as any).name === 'webgpu')) :
+                    false));
 
             if (usedWebGPU) {
                 console.warn(`[modelManager] WebGPU initialization failed for model ${modelInfo.id}. Falling back to CPU (WASM)...`, webGpuError);

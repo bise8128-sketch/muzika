@@ -20,7 +20,7 @@ export interface PerformanceMetrics {
 }
 
 export interface AudioWorkletMessage {
-    type: 'config' | 'metrics' | 'error' | 'ping' | 'pong';
+    type: 'config' | 'metrics' | 'error' | 'ping' | 'pong' | 'push_samples' | 'play' | 'pause' | 'clear';
     data?: unknown;
     timestamp?: number;
 }

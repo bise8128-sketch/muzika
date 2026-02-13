@@ -12,7 +12,7 @@ import type { CachedAudio } from '@/types/storage';
 function isBrowser(): boolean {
     const isWindow = typeof window !== 'undefined';
     // Check for WorkerGlobalScope or similar worker context
-    const isWorker = typeof self !== 'undefined' && typeof self.importScripts === 'function';
+    const isWorker = typeof self !== 'undefined' && typeof (self as any).importScripts === 'function';
     // Or just generic self check if importScripts isn't reliable in modules, but standard workers usually have it.
     // Better yet:
     const isSelf = typeof self !== 'undefined';
