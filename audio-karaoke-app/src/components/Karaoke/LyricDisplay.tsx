@@ -131,6 +131,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                     const isActive = index === currentLineIndex;
                     const isPast = index < currentLineIndex;
                     const lineStyle = isActive ? style.active : (isPast ? style.past : style.future);
+                    const isGhostActive = isActive && visualSettings?.ghostMode;
 
                     return (
                         <motion.div
@@ -138,11 +139,17 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                             ref={el => { lineRefs.current[index] = el }}
                             layout
                             initial={{ opacity: 0, y: 20 }}
-                            animate={{ 
-                                opacity: isActive ? 1 : (isPast ? 0.3 : 0.1), 
+                            animate={{
+                                opacity: isActive ? 1 : (isPast ? 0.3 : 0.1),
                                 scale: isActive ? 1.1 : (isPast ? 0.95 : 0.9),
                                 y: 0,
                                 filter: isActive ? 'blur(0px)' : (isPast ? 'blur(2px)' : 'blur(4px)')
+                            }}
+                            style={{
+                                scale: isGhostActive ? ghostScale : undefined,
+                                opacity: isGhostActive ? ghostOpacity : undefined,
+                                filter: isGhostActive ? ghostBlur : undefined,
+                                fontWeight: isGhostActive ? ghostWeight : undefined,
                             }}
                             transition={{ type: "spring", damping: 20, stiffness: 100 }}
                             className={`transition-all duration-500 ease-out text-center px-8 relative z-10 ${lineStyle}`}
