@@ -6,7 +6,9 @@
 import React, { useEffect, useRef } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { useTranslations } from 'next-intl';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useTransform, useSpring } from 'framer-motion';
+import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
+import { useAudioReactivity } from '@/hooks/useAudioReactivity';
 
 export type LyricTheme = 'modern' | 'neon' | 'classic' | 'retro';
 
@@ -16,6 +18,7 @@ interface LyricDisplayProps {
     currentWordIndex: number;
     theme?: LyricTheme;
     visualSettings?: VisualSettings;
+    visualizer?: AudioVisualizer | null;
 }
 
 const THEME_STYLES: Record<LyricTheme, {
