@@ -89,7 +89,6 @@ export async function loadModel(
         sessionCache.set(modelInfo.id, session);
 
         // Return new engine instance with the cached session
-        const { InferenceEngine } = await import('./inference');
         const engine = new InferenceEngine(session, modelInfo);
         await engine.init();
         return engine;

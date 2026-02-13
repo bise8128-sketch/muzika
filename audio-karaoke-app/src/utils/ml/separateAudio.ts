@@ -7,7 +7,6 @@ import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
 import { BrowserFileSource } from '@/utils/io/BrowserFileSource';
 import { ProgressTracker } from '@/utils/progress/ProgressTracker';
 import { WorkerPool } from '@/utils/worker/WorkerPool';
-import type { WorkerResponse } from './audio.worker';
 
 export interface SeparationOptions {
     modelInfo: ModelInfo;
@@ -24,44 +23,7 @@ export interface SeparationMetrics {
     averageInferenceTime?: number;
 }
 
-function waitForWorkerMessage<T = unknown>(worker: Worker, type: string, timeoutMs = 300000): Promise<T> {
-    return new Promise((resolve, reject) => {
-        console.log(`[waitForWorkerMessage] Waiting for message type: ${type}, timeout: ${timeoutMs}ms`);
-        const timeout = setTimeout(() => {
-            cleanup();
-            console.error(`[waitForWorkerMessage] TIMEOUT waiting for: ${type}`);
-            reject(new Error(`Timeout waiting for worker message: ${type}`));
-        }, timeoutMs);
 
-        const handler = (e: MessageEvent) => {
-            console.log(`[waitForWorkerMessage] Received message type: ${e.data.type}, waiting for: ${type}`);
-            if (e.data.type === type) {
-                cleanup();
-                console.log(`[waitForWorkerMessage] Received expected message: ${type}`);
-                resolve(e.data.payload as T);
-            } else if (e.data.type === 'ERROR') {
-                cleanup();
-                console.error(`[waitForWorkerMessage] Worker error:`, e.data.payload.message);
-                reject(new Error(e.data.payload.message));
-            }
-        };
-
-        const errorHandler = (e: ErrorEvent) => {
-            cleanup();
-            console.error(`[waitForWorkerMessage] Worker error event:`, e.message);
-            reject(new Error(`Worker error: ${e.message}`));
-        };
-
-        const cleanup = () => {
-            clearTimeout(timeout);
-            worker.removeEventListener('message', handler);
-            worker.removeEventListener('error', errorHandler);
-        };
-
-        worker.addEventListener('message', handler);
-        worker.addEventListener('error', errorHandler);
-    });
-}
 
 export async function separateAudio(
     file: File,
@@ -301,12 +263,13 @@ async function separateAudioInternal(
             timestamp: Date.now()
         };
 
-    } catch (err: any) {
-        console.error('Separation failed:', err);
-        if (err?.message === 'window is not defined' || err?.toString().includes('window is not defined')) {
+    } catch (err: unknown) {
+        const errObj = err instanceof Error ? err : new Error(String(err));
+        console.error('Separation failed:', errObj);
+        if (errObj.message === 'window is not defined' || errObj.message.includes('window is not defined')) {
              throw new Error('Separation failed: Browser environment required (window is undefined).');
         }
-        throw err;
+        throw errObj;
     } finally {
         // workerPool is managed by caller (separateAudio function wrapper)
         // workerPool is managed by caller (separateAudio function wrapper)
@@ -363,12 +326,8 @@ async function serverSeparateAudio(
         if (processData.status === 'completed') {
             onProgress?.({ phase: 'separating', percentage: 100, message: 'Separation complete!', currentSegment: 0, totalSegments: 0 });
 
-            // Fetch and decode stems
-            const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : null;
-            if (!AudioContextClass) {
-                throw new Error('AudioContext not supported in this environment');
-            }
-            const ctx = new AudioContextClass();
+            // Fetch and decode stems using shared AudioContext
+            const ctx = getAudioContext();
 
             const fetchAndDecode = async (url: string) => {
                 const res = await fetch(url);

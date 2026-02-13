@@ -19,6 +19,7 @@ export interface ModelConfig {
     channels?: number;
     targetFreqs?: number;
     targetFrames?: number;
+    useWebGPU?: boolean; // Whether to use WebGPU-accelerated path
 }
 
 export interface ModelInfo {

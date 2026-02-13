@@ -300,7 +300,7 @@ export class WorkerPool {
     }
 
     private pruneIdleWorkers(): void {
-        const min = this.config.minWorkers ?? 1;
+        const min = this.config.minWorkers ?? 0;
         if (this.workers.size <= min) return;
 
         const toRemove: string[] = [];

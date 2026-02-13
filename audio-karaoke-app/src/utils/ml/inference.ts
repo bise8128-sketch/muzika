@@ -19,11 +19,10 @@ function createStrategy(modelInfo: ModelInfo, session: ort.InferenceSession): In
     switch (modelInfo.type) {
         case ModelType.DEMUCS:
         case ModelType.BS_ROFORMER:
-            if (isWebGPU) {
-                // Return SpectralInferenceStrategy with WebGPU flag? 
-                // Or just let it check inside initialize.
-            }
-            return new SpectralInferenceStrategy(modelInfo.config || {});
+            return new SpectralInferenceStrategy({
+                ...modelInfo.config || {},
+                useWebGPU: isWebGPU
+            });
         case ModelType.MDX:
         default:
             if (isWebGPU) {
