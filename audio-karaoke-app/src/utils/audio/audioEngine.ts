@@ -45,8 +45,12 @@ export class AudioEngine {
      * Load audio from ArrayBuffer
      */
     async load(buffer: ArrayBuffer) {
+        // Clone the buffer to avoid DataCloneError if the original is detached or read-only from IndexedDB
+        // This is necessary because decodeAudioData can detach the buffer, causing issues if re-used or if it's a SharedArrayBuffer without proper context
+        const bufferCopy = buffer.slice(0);
+        
         // Decode buffer
-        const audioBuffer = await context.decodeAudioData(buffer);
+        const audioBuffer = await context.decodeAudioData(bufferCopy);
         this.player.buffer = new ToneAudioBuffer(audioBuffer);
         this._duration = audioBuffer.duration;
         this.emit('load', { duration: this._duration });
