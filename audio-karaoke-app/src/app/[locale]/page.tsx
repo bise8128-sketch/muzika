@@ -158,7 +158,7 @@ export default function Home() {
     }
 
     try {
-      send({ type: 'UPLOAD_START' });
+      send({ type: 'PROCESS_START' });
       await separation.separate(file, modelInfo);
       // 'UPLOAD_COMPLETE' sent by useAppState on successful separation/processing
     } catch (e) {
