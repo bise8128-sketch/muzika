@@ -6,6 +6,7 @@ import { audioCache } from '@/utils/storage/audioCache';
 import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
 import { BrowserFileSource } from '@/utils/io/BrowserFileSource';
 import { ProgressTracker } from '@/utils/progress/ProgressTracker';
+import { WorkerPool } from '@/utils/worker/WorkerPool';
 import type { WorkerResponse } from './audio.worker';
 
 export interface SeparationOptions {
@@ -66,6 +67,27 @@ export async function separateAudio(
     file: File,
     options: SeparationOptions
 ): Promise<SeparationResult> {
+    const hardwareConcurrency = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4;
+    const maxWorkers = Math.min(hardwareConcurrency, 4); // Limit to 4 to avoid overhead/resource contention
+    
+    const workerPool = new WorkerPool({
+        workerScript: new URL('./audio.worker.ts', import.meta.url),
+        maxWorkers
+    });
+
+    try {
+        const result = await separateAudioInternal(file, options, workerPool);
+        return result;
+    } finally {
+        workerPool.terminate();
+    }
+}
+
+async function separateAudioInternal(
+    file: File,
+    options: SeparationOptions,
+    workerPool: WorkerPool
+): Promise<SeparationResult> {
     if (typeof window === "undefined") {
         // This function should not be called on the server
         // Return a dummy promise that never resolves or rejects
@@ -73,7 +95,6 @@ export async function separateAudio(
     }
     const { modelInfo, onProgress, onChunk, skipCache = false, signal } = options;
     const progressTracker = new ProgressTracker();
-    let worker: Worker | null = null;
     let bufferManager: StreamableBufferManager | null = null;
     let segmenter: BrowserAudioSegmenter | null = null;
     let fileSource: BrowserFileSource | null = null;
@@ -99,19 +120,10 @@ export async function separateAudio(
 
         sessionId = crypto.randomUUID();
 
-        console.log('[separateAudio] Creating worker...');
-        worker = new Worker(new URL('./audio.worker.ts', import.meta.url), { type: 'module' });
-
-        worker.onmessage = (e) => {
-            const { type } = e.data as WorkerResponse;
-            if (type === 'PROGRESS' && onProgress) {
-                // Forward worker progress if any
-            }
-        };
+        onProgress?.({ phase: 'decoding', percentage: 0, message: 'Analyzing file...', currentSegment: 0, totalSegments: 0 });
 
         if (signal) {
             signal.addEventListener('abort', () => {
-                if (worker) worker.postMessage({ type: 'ABORT' });
                 if (segmenter) segmenter.dispose();
             });
         }
@@ -146,12 +158,7 @@ export async function separateAudio(
         }
 
         console.log('[separateAudio] Initializing worker session...');
-        worker.postMessage({
-            type: 'INIT_STREAM_SESSION',
-            payload: { modelInfo, sessionId }
-        });
-
-        await waitForWorkerMessage(worker, 'STREAM_READY');
+        await workerPool.addTask('INIT_STREAM_SESSION', { modelInfo, sessionId }, 'HIGH');
 
         console.log('[separateAudio] Starting streaming segmentation...');
 
@@ -161,63 +168,89 @@ export async function separateAudio(
         onProgress?.({ phase: 'separating', percentage: 0, message: 'Starting separation...', currentSegment: 0, totalSegments: 0 });
 
         const segmentGenerator = segmenter.segmentFile(fileSource, 5);
+        const processingPromises: Promise<void>[] = [];
+        let nextChunkToPlay = 0;
+        const processedChunks = new Map<number, { vocals: Float32Array; instrumentals: Float32Array; startTime: number; sampleRate: number }>();
 
         for await (const segment of segmentGenerator) {
             if (signal?.aborted) throw new Error('Aborted');
 
-            console.log(`[separateAudio] Received chunk ${chunkIndex} from segmenter`);
-
+            const currentIdx = chunkIndex;
             const { data: interleaved, startTime, sampleRate, channelCount, duration } = segment;
 
-            // Send to worker
-            console.log(`[separateAudio] Sending chunk ${chunkIndex} to worker`);
-            worker.postMessage({
-                type: 'PROCESS_STREAM_CHUNK',
-                payload: {
+            console.log(`[separateAudio] Dispatching chunk ${currentIdx} to pool`);
+            
+            const taskPromise = workerPool.addTask<{ 
+                chunk: Float32Array; 
+                chunkIndex: number; 
+                sessionId: string; 
+                channels: number; 
+                sampleRate: number 
+            }, { 
+                vocals: Float32Array; 
+                instrumentals: Float32Array; 
+                chunkIndex: number 
+            }>(
+                'PROCESS_STREAM_CHUNK',
+                {
                     chunk: interleaved,
-                    chunkIndex,
+                    chunkIndex: currentIdx,
                     sessionId,
                     channels: channelCount,
                     sampleRate
-                }
-            }, [interleaved.buffer]);
-
-            const resultPayload = await waitForWorkerMessage<{ vocals: Float32Array; instrumentals: Float32Array }>(worker, 'CHUNK_PROCESSED');
-            const { vocals, instrumentals } = resultPayload;
-
-            if (bufferManager) {
-                bufferManager.addChunk(vocals, instrumentals);
-                bufferManager.play();
-            }
-
-            if (onChunk) {
-                onChunk({
-                    vocals,
-                    instrumentals,
-                    position: startTime,
+                },
+                'NORMAL',
+                [interleaved.buffer]
+            ).then(result => {
+                processedChunks.set(result.chunkIndex, {
+                    vocals: result.vocals,
+                    instrumentals: result.instrumentals,
+                    startTime,
                     sampleRate
                 });
-            }
 
-            chunkIndex++;
-            totalProcessedDuration += duration;
-            progressTracker.update(totalProcessedDuration);
-            const state = progressTracker.state;
+                // Check if we can play any consecutive chunks
+                while (processedChunks.has(nextChunkToPlay)) {
+                    const chunkData = processedChunks.get(nextChunkToPlay)!;
+                    processedChunks.delete(nextChunkToPlay);
 
-            // Calculate percentage based on totalDuration from segmenter (if available)
-            const totalDuration = segmenter.totalDuration || (file.size / (128 * 1024 / 8)); // Fallback
-            const percent = (totalProcessedDuration / totalDuration) * 100;
+                    if (bufferManager) {
+                        bufferManager.addChunk(chunkData.vocals, chunkData.instrumentals);
+                        bufferManager.play();
+                    }
 
-            onProgress?.({
-                phase: 'separating',
-                percentage: Math.min(99, percent),
-                message: `Processing... Speed: ${state.speed.toFixed(1)}x, ETA: ${state.eta.toFixed(0)}s`,
-                currentSegment: chunkIndex,
-                totalSegments: Math.ceil(totalDuration / 15)
+                    if (onChunk) {
+                        onChunk({
+                            vocals: chunkData.vocals,
+                            instrumentals: chunkData.instrumentals,
+                            position: chunkData.startTime,
+                            sampleRate: chunkData.sampleRate
+                        });
+                    }
+                    nextChunkToPlay++;
+                }
+
+                totalProcessedDuration += duration;
+                progressTracker.update(totalProcessedDuration);
+                const state = progressTracker.state;
+                const totalDuration = segmenter.totalDuration || (file.size / (128 * 1024 / 8));
+                const percent = (totalProcessedDuration / totalDuration) * 100;
+
+                onProgress?.({
+                    phase: 'separating',
+                    percentage: Math.min(99, percent),
+                    message: `Processing... Speed: ${state.speed.toFixed(1)}x, ETA: ${state.eta.toFixed(0)}s`,
+                    currentSegment: nextChunkToPlay,
+                    totalSegments: Math.ceil(totalDuration / 5)
+                });
             });
+
+            processingPromises.push(taskPromise);
+            chunkIndex++;
         }
 
-        worker.postMessage({ type: 'END_STREAM_SESSION', payload: { sessionId } });
+        await Promise.all(processingPromises);
+        await workerPool.addTask('END_STREAM_SESSION', { sessionId }, 'NORMAL');
 
         const finalBuffers = bufferManager.getAllAudioBuffers();
 
