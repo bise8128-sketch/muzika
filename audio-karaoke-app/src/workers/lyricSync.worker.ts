@@ -11,46 +11,43 @@
 import type { SyncProgress, SyncResult, WhisperSegment } from '../utils/ml/lyricSync';
 import { alignLyricsToTranscription } from '../utils/ml/lyricSync';
 
-// ── Whisper stub ────────────────────────────────────────────────
-// In a real implementation this would load the Whisper ONNX model
-// via onnxruntime-web and run inference.  This stub simulates the
-// pipeline so the integration can be tested end-to-end.
+import { WhisperEngine } from '../utils/ml/whisperEngine';
+import { ModelInfo, ModelType } from '@/types/model';
 
 async function transcribeAudio(
     audioData: Float32Array,
     sampleRate: number,
     onProgress: (p: SyncProgress) => void
 ): Promise<WhisperSegment[]> {
-    // 1. Model loading (simulated)
-    onProgress({ stage: 'loading-model', progress: 0, message: 'Loading Whisper model…' });
-    await delay(100);
-    onProgress({ stage: 'loading-model', progress: 1, message: 'Model ready.' });
+    // 1. Initialize Engine
+    const engine = new WhisperEngine();
+    
+    // Whisper model info (usually tiny for browser use)
+    const whisperModel: ModelInfo = {
+        id: 'whisper-tiny-en',
+        type: ModelType.WHISPER,
+        name: 'Whisper Tiny (English)',
+        version: '1.0',
+        size: 40 * 1024 * 1024,
+        url: '/models/whisper-tiny-en.onnx'
+    };
 
-    // 2. Transcribe (simulated — in production, run ONNX inference here)
-    onProgress({ stage: 'transcribing', progress: 0, message: 'Transcribing audio…' });
-    await delay(200);
-
-    // Generate placeholder segments based on audio duration
-    const duration = audioData.length / sampleRate;
-    const segmentCount = Math.max(1, Math.floor(duration / 5));
-    const segments: WhisperSegment[] = [];
-    for (let i = 0; i < segmentCount; i++) {
-        const start = (i / segmentCount) * duration;
-        const end = ((i + 1) / segmentCount) * duration;
-        segments.push({
-            text: `[segment ${i + 1}]`,
-            start,
-            end,
-            words: [{ word: `[segment ${i + 1}]`, start, end, probability: 0.8 }],
+    onProgress({ stage: 'loading-model', progress: 0.1, message: 'Loading AI model...' });
+    
+    await engine.load(whisperModel, (p: any) => {
+        onProgress({ 
+            stage: 'loading-model', 
+            progress: 0.1 + (p.percentage / 100) * 0.2, 
+            message: `Downloading model: ${Math.round(p.percentage)}%` 
         });
-        onProgress({
-            stage: 'transcribing',
-            progress: (i + 1) / segmentCount,
-            message: `Transcribing… ${Math.round(((i + 1) / segmentCount) * 100)}%`,
-        });
-    }
+    });
 
-    return segments;
+    // 2. Transcribe
+    onProgress({ stage: 'transcribing', progress: 0.3, message: 'Analyzing audio transcription...' });
+    
+    const transcription = await engine.transcribe(audioData);
+    
+    return transcription.segments as WhisperSegment[];
 }
 
 function delay(ms: number) {
