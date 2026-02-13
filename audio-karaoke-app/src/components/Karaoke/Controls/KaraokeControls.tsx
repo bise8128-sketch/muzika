@@ -23,7 +23,7 @@ interface KaraokeControlsProps {
         play: () => void;
         pause: () => void;
         seek: (time: number) => void;
-        setVolume: (v: number, i: number) => void;
+        setVolume: (v: number, trackIndex?: number) => void;
     };
     recorder: {
         isRecording: boolean;

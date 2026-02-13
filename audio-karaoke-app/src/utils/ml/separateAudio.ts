@@ -349,10 +349,6 @@ async function separateAudioInternal(
         }
         throw errObj;
     } finally {
-        // workerPool is managed by caller (separateAudio function wrapper)
-        // workerPool is managed by caller (separateAudio function wrapper)
-        // worker?.terminate(); // REMOVED: ensures no reference to undefined worker
-
         await segmenter?.dispose();
     }
 }
