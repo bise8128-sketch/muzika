@@ -72,6 +72,14 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
 
     // Ghost Mode Logic
     const { bass, energy, treble } = useAudioReactivity(visualizer || null);
+    const [isMobile, setIsMobile] = React.useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
     
     // Physics smoothing
     const smoothBass = useSpring(bass, { stiffness: 200, damping: 15 });
@@ -81,10 +89,10 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     // Ghost transforms
     const ghostScale = useTransform(smoothBass, [0, 0.8], [1, 1.4]);
     const ghostOpacity = useTransform(smoothEnergy, [0, 1], [0.7, 1]);
-    // We construct the filter string dynamically via useTransform if possible, 
-    // or just bind the value if framer-motion supports value template.
-    // Framer Motion handles `filter` style as "blur(Xpx)" if we map it.
-    const ghostBlurVal = useTransform(smoothTreble, [0, 1], [0, 4]);
+    
+    // Disable expensive blur on mobile or if autoQuality is on
+    const disableBlur = isMobile || (visualSettings?.autoQuality ?? false);
+    const ghostBlurVal = useTransform(smoothTreble, [0, 1], [0, disableBlur ? 0 : 4]);
     const ghostBlur = useTransform(ghostBlurVal, v => `blur(${v}px)`);
     
     const ghostWeight = useTransform(smoothBass, [0, 1], [400, 900]);
