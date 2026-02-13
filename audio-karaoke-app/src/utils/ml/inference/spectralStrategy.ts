@@ -14,6 +14,7 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
     private stft: STFT;
     private istft: ISTFT;
     private config: ModelConfig;
+    private ioBinding: any | null = null;
 
     constructor(config: ModelConfig) {
         super();
@@ -49,6 +50,17 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             }
             if (typeof timeDim === 'number' && timeDim > 0) {
                 (this.config as any).targetFrames = timeDim;
+            }
+        }
+
+        // Initialize IO Binding if WebGPU is used
+        const sess = session as any;
+        if (typeof sess.createIoBinding === 'function') {
+            try {
+                this.ioBinding = sess.createIoBinding();
+                console.log('[SpectralInferenceStrategy] IO Binding created successfully.');
+            } catch (e) {
+                console.warn('[SpectralInferenceStrategy] Failed to create IO Binding:', e);
             }
         }
     }
@@ -132,8 +144,18 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             this.track(inputTensor);
 
             // 3. Inference
-            const feeds = { [session.inputNames[0]]: inputTensor };
-            const results = await session.run(feeds);
+            let results: Record<string, ort.Tensor>;
+            if (this.ioBinding) {
+                this.ioBinding.bindInput(session.inputNames[0], inputTensor);
+                outputNames.forEach(name => this.ioBinding.bindOutput(name, 'cpu'));
+                await (session as any).run(null, this.ioBinding);
+                results = this.ioBinding.getOutputValues();
+                this.ioBinding.clearBoundInputs();
+                this.ioBinding.clearBoundOutputs();
+            } else {
+                const feeds = { [session.inputNames[0]]: inputTensor };
+                results = await session.run(feeds);
+            }
             Object.values(results).forEach(t => this.track(t));
 
             // 4. Extract Output
@@ -242,5 +264,13 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
         } finally {
             this.dispose();
         }
+    }
+
+    dispose(): void {
+        super.dispose();
+        if (this.ioBinding && (this.ioBinding as any).release) {
+            (this.ioBinding as any).release();
+        }
+        this.ioBinding = null;
     }
 }

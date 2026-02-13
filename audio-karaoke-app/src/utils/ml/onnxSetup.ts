@@ -5,19 +5,20 @@ import * as ort from 'onnxruntime-web';
  * Explicitly requests a high-performance adapter if available.
  */
 export async function checkWebGPUSupport(): Promise<boolean> {
-    if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+    const nav = typeof navigator !== 'undefined' ? navigator : (typeof self !== 'undefined' ? (self as any).navigator : null);
+    if (!nav || !('gpu' in nav)) {
         return false;
     }
     try {
         console.log('[WebGPU] Requesting high-performance adapter...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let adapter = await (navigator as any).gpu.requestAdapter({
+        let adapter = await nav.gpu.requestAdapter({
             powerPreference: 'high-performance'
         });
 
         if (!adapter) {
             console.warn('[WebGPU] High-performance adapter not found, trying default...');
-            adapter = await (navigator as any).gpu.requestAdapter();
+            adapter = await nav.gpu.requestAdapter();
         }
 
         if (adapter) {
@@ -106,7 +107,7 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
                     name: 'webgpu',
                     devicePreference: 'high-performance',
                     preferredLayout: 'NCHW'
-                } as unknown as string, // Cast to avoid TS strict type checking on experimental options
+                } as unknown as string,
                 'wasm'
             ]
             : ['wasm'],

@@ -12,11 +12,17 @@ import { WebGPUInferenceStrategy } from './inference/webgpuStrategy';
 function createStrategy(modelInfo: ModelInfo, session: ort.InferenceSession): InferenceStrategy {
     // Check if session is WebGPU enabled to use optimized strategy
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const isWebGPU = (session as any).handler === 'webgpu';
+    const sessionAny = session as any;
+    const isWebGPU = sessionAny.handler === 'webgpu' || 
+                   (sessionAny.executionProviders && sessionAny.executionProviders.includes('webgpu'));
 
     switch (modelInfo.type) {
         case ModelType.DEMUCS:
         case ModelType.BS_ROFORMER:
+            if (isWebGPU) {
+                // Return SpectralInferenceStrategy with WebGPU flag? 
+                // Or just let it check inside initialize.
+            }
             return new SpectralInferenceStrategy(modelInfo.config || {});
         case ModelType.MDX:
         default:

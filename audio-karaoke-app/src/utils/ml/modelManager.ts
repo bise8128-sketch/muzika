@@ -54,6 +54,7 @@ export async function loadModel(
 
         try {
             session = await ort.InferenceSession.create(modelData, options);
+            console.log(`[modelManager] InferenceSession created successfully with providers: ${session.executionProviders?.join(', ') || 'unknown'}`);
         } catch (webGpuError) {
             // Check if we were trying to use WebGPU
             const usedWebGPU = options.executionProviders &&
@@ -69,8 +70,13 @@ export async function loadModel(
                 fallbackOptions.executionProviders = ['wasm'];
 
                 // Create session with fallback options
-                session = await ort.InferenceSession.create(modelData, fallbackOptions);
-                console.log(`[modelManager] Fallback InferenceSession created successfully (CPU/WASM) for model ${modelInfo.id}`);
+                try {
+                    session = await ort.InferenceSession.create(modelData, fallbackOptions);
+                    console.log(`[modelManager] Fallback InferenceSession created successfully (CPU/WASM) for model ${modelInfo.id}`);
+                } catch (wasmError) {
+                    console.error(`[modelManager] WASM fallback also failed for model ${modelInfo.id}:`, wasmError);
+                    throw wasmError;
+                }
             } else {
                 throw webGpuError;
             }
