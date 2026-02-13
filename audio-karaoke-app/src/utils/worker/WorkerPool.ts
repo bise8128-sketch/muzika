@@ -91,7 +91,7 @@ class WorkerWrapper {
     private handleMessage(event: MessageEvent): void {
         if (!this.currentTask) return;
 
-        const { type, payload, id, progress } = event.data;
+        const { type, payload, id } = event.data;
 
         // Validation: Ensure response matches current task
         // If the worker supports IDs, we check. If not, we assume it's for the current task.
@@ -107,8 +107,15 @@ class WorkerWrapper {
             this.currentTask.reject(new Error(payload?.message || 'Unknown worker error'));
             this.completeTask();
         } else if (type === 'PROGRESS') {
-            if (this.currentTask.onProgress && typeof progress === 'number') {
-                this.currentTask.onProgress(progress);
+            // Progress is a pass-through notification — do NOT resolve or complete the task.
+            // The worker sends progress as { type: 'PROGRESS', payload: { percentage, ... } }
+            if (this.currentTask.onProgress) {
+                const progressValue = typeof payload === 'number'
+                    ? payload
+                    : (payload?.percentage ?? payload?.progress);
+                if (typeof progressValue === 'number') {
+                    this.currentTask.onProgress(progressValue);
+                }
             }
         } else {
             // SUCCESS, COMPLETED, DONE, STREAM_READY, CHUNK_PROCESSED, etc.

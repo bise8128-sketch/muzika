@@ -7,7 +7,7 @@ import { PlaybackController } from '@/utils/audio/playbackController';
 interface UseVisualizerOrchestratorProps {
     controller: PlaybackController;
     visualSettings: VisualSettings;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
+    canvasRef: React.RefObject<HTMLCanvasElement | null>;
     vocalsVolume: number;
     instrumentalVolume: number;
 }

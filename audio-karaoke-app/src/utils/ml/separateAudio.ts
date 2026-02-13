@@ -89,10 +89,8 @@ async function separateAudioInternal(
     workerPool: WorkerPool
 ): Promise<SeparationResult> {
     console.log('[separateAudioInternal] Executing fresh version');
-    if (typeof window === "undefined") {
-        // This function should not be called on the server
-        // Return a dummy promise that never resolves or rejects
-        return new Promise(() => {});
+    if (typeof window === 'undefined') {
+        throw new Error('separateAudio must be called in a browser environment');
     }
     const { modelInfo, onProgress, onChunk, skipCache = false, signal } = options;
     const progressTracker = new ProgressTracker();
@@ -100,11 +98,6 @@ async function separateAudioInternal(
     let segmenter: BrowserAudioSegmenter | null = null;
     let fileSource: BrowserFileSource | null = null;
     let sessionId: string | null = null;
-
-    // Additional safety check for window
-    if (typeof window === 'undefined') {
-        throw new Error('separateAudio must be called in a browser environment');
-    }
 
     try {
         const fileHash = await audioCache.hashFile(file);
@@ -123,10 +116,11 @@ async function separateAudioInternal(
 
         onProgress?.({ phase: 'decoding', percentage: 0, message: 'Analyzing file...', currentSegment: 0, totalSegments: 0 });
 
+        const abortHandler = () => {
+            if (segmenter) segmenter.dispose();
+        };
         if (signal) {
-            signal.addEventListener('abort', () => {
-                if (segmenter) segmenter.dispose();
-            });
+            signal.addEventListener('abort', abortHandler, { once: true });
         }
 
         progressTracker.start();
@@ -267,11 +261,22 @@ async function separateAudioInternal(
 
         if (!skipCache) {
             try {
-                // AudioBuffer doesn't expose the raw buffer directly in a standard way that represents all channels interleaved
-                // We use the first channel's buffer as a proxy for storage, assuming cache handles it or we accept mono for now
-                // TODO: Properly serialize multi-channel AudioBuffer
-                const vocalsBuffer = finalBuffers.vocals.getChannelData(0).buffer;
-                const instrumentalsBuffer = finalBuffers.instrumentals.getChannelData(0).buffer;
+                // Serialize all channels interleaved for stereo-safe caching
+                const serializeBuffer = (audioBuffer: AudioBuffer): ArrayBuffer => {
+                    const channels = audioBuffer.numberOfChannels;
+                    const length = audioBuffer.length;
+                    const interleaved = new Float32Array(length * channels);
+                    for (let ch = 0; ch < channels; ch++) {
+                        const channelData = audioBuffer.getChannelData(ch);
+                        for (let i = 0; i < length; i++) {
+                            interleaved[i * channels + ch] = channelData[i];
+                        }
+                    }
+                    return interleaved.buffer;
+                };
+
+                const vocalsBuffer = serializeBuffer(finalBuffers.vocals);
+                const instrumentalsBuffer = serializeBuffer(finalBuffers.instrumentals);
 
                 await audioCache.cacheAudioResult(
                     fileHash,

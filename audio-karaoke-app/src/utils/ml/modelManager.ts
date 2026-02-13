@@ -105,8 +105,11 @@ export async function loadModel(
 export function unloadModel(modelId: string): void {
     const session = sessionCache.get(modelId);
     if (session) {
-        // Note: InferenceSession doesn't have an explicit 'dispose' but we can null it out
-        // and rely on GC. Tensors should be disposed separately.
+        try {
+            session.release();
+        } catch (e) {
+            console.warn(`[modelManager] Failed to release session for ${modelId}:`, e);
+        }
         sessionCache.delete(modelId);
     }
 }

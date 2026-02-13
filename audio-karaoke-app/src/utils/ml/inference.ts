@@ -57,6 +57,12 @@ export class InferenceEngine {
 
     dispose() {
         this.strategy.dispose();
+        // Release the ONNX session to free GPU/CPU resources
+        try {
+            this.session.release();
+        } catch (e) {
+            console.warn('[InferenceEngine] Failed to release session:', e);
+        }
     }
 }
 
