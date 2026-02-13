@@ -394,7 +394,7 @@ muzika/
 
 ## Available Scripts
 
-### Frontend Scripts (audio-karaoke-app/package.json)
+### Frontend Scripts (../audio-karaoke-app/package.json)
 
 | Script | Description |
 |--------|-------------|

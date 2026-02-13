@@ -8,15 +8,15 @@ This directory contains comprehensive deployment documentation for the Muzika Au
 
 | Document | Purpose | Time | Best For |
 |----------|---------|------|----------|
-| [QUICK_DEPLOY.md](./QUICK_DEPLOY.md) | Fast deployment commands | 5-15 min | Getting live quickly |
-| [VERCEL_SETUP.md](./VERCEL_SETUP.md) | Vercel dashboard walkthrough | 10-20 min | First-time Vercel users |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Comprehensive deployment guide | 30+ min | Understanding all options |
+| [quick_deploy.md](./quick_deploy.md) | Fast deployment commands | 5-15 min | Getting live quickly |
+| [vercel_setup.md](./vercel_setup.md) | Vercel dashboard walkthrough | 10-20 min | First-time Vercel users |
+| [deployment.md](./deployment.md) | Comprehensive deployment guide | 30+ min | Understanding all options |
 
 ### 📊 Status & Overview
 
 | Document | Purpose |
 |----------|---------|
-| [DEPLOYMENT_STATUS.md](./DEPLOYMENT_STATUS.md) | Pre-deployment checklist & status report |
+| [status.md](./status.md) | Pre-deployment checklist & status report |
 | [README.md](./README.md) | Project overview |
 
 ---
@@ -24,7 +24,7 @@ This directory contains comprehensive deployment documentation for the Muzika Au
 ## 🎯 Quick Navigation
 
 ### I want to deploy RIGHT NOW
-→ Go to [QUICK_DEPLOY.md](./QUICK_DEPLOY.md)
+→ Go to [quick_deploy.md](./quick_deploy.md)
 
 ```bash
 # 1. Install Vercel CLI
@@ -36,13 +36,13 @@ vercel --prod
 ```
 
 ### I want to use Vercel but need step-by-step help
-→ Go to [VERCEL_SETUP.md](./VERCEL_SETUP.md)
+→ Go to [vercel_setup.md](./vercel_setup.md)
 
 ### I want to understand all deployment options
-→ Go to [DEPLOYMENT.md](./DEPLOYMENT.md)
+→ Go to [deployment.md](./deployment.md)
 
 ### I want to use Docker (self-hosted)
-→ Go to [QUICK_DEPLOY.md](./QUICK_DEPLOY.md#-deploy-with-docker-self-hosted) or [DEPLOYMENT.md](./DEPLOYMENT.md#-docker-deployment-alternative)
+→ Go to [quick_deploy.md](./quick_deploy.md#-deploy-with-docker-self-hosted) or [deployment.md](./deployment.md#-docker-deployment-alternative)
 
 ---
 
@@ -50,36 +50,36 @@ vercel --prod
 
 ### ✅ Production Files Created
 
-1. **[vercel.json](./vercel.json)**
-   - Vercel platform configuration
-   - Security headers (COOP, COEP, CSP, X-Frame-Options, etc.)
-   - Cache headers for static assets
-   - Function timeout settings
-   - Framework detection
+1.  **[vercel.json](../../audio-karaoke-app/vercel.json)**
+    - Vercel platform configuration
+    - Security headers (COOP, COEP, CSP, X-Frame-Options, etc.)
+    - Cache headers for static assets
+    - Function timeout settings
+    - Framework detection
 
-2. **[.vercelignore](./.vercelignore)**
-   - Files excluded from Vercel deployment
-   - Reduces deployment package size
-   - Prevents uploading unnecessary dependencies
+2.  **[.vercelignore](../../audio-karaoke-app/.vercelignore)**
+    - Files excluded from Vercel deployment
+    - Reduces deployment package size
+    - Prevents uploading unnecessary dependencies
 
-3. **[docker-compose.yml](./docker-compose.yml)**
-   - Docker orchestration file
-   - Service configuration for containerized deployment
-   - Health checks and restart policies
-   - Resource limits (1 CPU, 1GB RAM)
+3.  **[docker-compose.yml](../../audio-karaoke-app/docker-compose.yml)**
+    - Docker orchestration file
+    - Service configuration for containerized deployment
+    - Health checks and restart policies
+    - Resource limits (1 CPU, 1GB RAM)
 
-4. **[Dockerfile](./Dockerfile)** (Already Present)
-   - Multi-stage build configuration
-   - Lightweight Alpine Linux base
-   - Production optimizations
-   - Non-root user for security
+4.  **[Dockerfile](../../audio-karaoke-app/Dockerfile)** (Already Present)
+    - Multi-stage build configuration
+    - Lightweight Alpine Linux base
+    - Production optimizations
+    - Non-root user for security
 
-5. **[next.config.ts](./next.config.ts)** (Enhanced)
-   - WebAssembly support
-   - Web Worker configuration
-   - Security headers (COOP, COEP, CSP, etc.)
-   - Asset caching policies
-   - Content-Security-Policy for WASM execution
+5.  **[next.config.ts](../../audio-karaoke-app/next.config.ts)** (Enhanced)
+    - WebAssembly support
+    - Web Worker configuration
+    - Security headers (COOP, COEP, CSP, etc.)
+    - Asset caching policies
+    - Content-Security-Policy for WASM execution
 
 ### ✅ Build Status
 
@@ -224,12 +224,12 @@ The first time users upload audio:
 Your Muzika Audio Karaoke app is fully configured and ready for deployment.
 
 ### Next Steps:
-1. **Choose** your deployment platform (Vercel recommended)
-2. **Follow** the appropriate guide:
-   - Quick: [QUICK_DEPLOY.md](./QUICK_DEPLOY.md)
-   - Detailed: [DEPLOYMENT.md](./DEPLOYMENT.md)
-   - Vercel UI: [VERCEL_SETUP.md](./VERCEL_SETUP.md)
-3. **Deploy** and start sharing!
+1.  **Choose** your deployment platform (Vercel recommended)
+2.  **Follow** the appropriate guide:
+    - Quick: [quick_deploy.md](./quick_deploy.md)
+    - Detailed: [deployment.md](./deployment.md)
+    - Vercel UI: [vercel_setup.md](./vercel_setup.md)
+3.  **Deploy** and start sharing!
 
 ---
 

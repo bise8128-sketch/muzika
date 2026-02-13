@@ -18,30 +18,30 @@ Audio Sources → Processing Pipeline → Effects → Output
 
 ### 1.2 Core Components
 
-#### Audio Context Management ([`audioContext.ts`](audio-karaoke-app/src/utils/audio/audioContext.ts))
+#### Audio Context Management ([`audioContext.ts`](../audio-karaoke-app/src/utils/audio/audioContext.ts))
 - **Purpose**: Global AudioContext initialization and state management
 - **Sample Rate**: 44100 Hz (standard for audio processing)
 - **Features**: Volume control, context lifecycle management
 - **Current Limitations**: Single gain node, limited effects routing
 
-#### Playback Controller ([`playbackController.ts`](audio-karaoke-app/src/utils/audio/playbackController.ts))
+#### Playback Controller ([`playbackController.ts`](../audio-karaoke-app/src/utils/audio/playbackController.ts))
 - **Purpose**: Real-time audio playback with effects processing
 - **Architecture**: ScriptProcessorNode + SoundTouchJS integration
 - **Current Effects**: Reverb, Echo, Pitch/Tempo control
 - **Processing Loop**: 4096 sample buffer size with manual mixing
 
-#### Audio Processor ([`audioProcessor.ts`](audio-karaoke-app/src/utils/audio/audioProcessor.ts))
+#### Audio Processor ([`audioProcessor.ts`](../audio-karaoke-app/src/utils/audio/audioProcessor.ts))
 - **Purpose**: Audio segmentation, crossfading, buffer manipulation
 - **Features**: Segment-based processing, crossfade support, normalization
 - **Segment Duration**: 30 seconds with 0.5s crossfade
 
-#### Pitch/Tempo Processing ([`pitchTempo.ts`](audio-karaoke-app/src/utils/audio/pitchTempo.ts))
+#### Pitch/Tempo Processing ([`pitchTempo.ts`](../audio-karaoke-app/src/utils/audio/pitchTempo.ts))
 - **Purpose**: Real-time pitch and tempo manipulation
 - **Technology**: SoundTouchJS library
 - **Implementation**: Separate left/right channel processing
 - **Range**: ±12 semitones, 0.5x-2.0x tempo
 
-#### Spectral Processing ([`stft.ts`](audio-karaoke-app/src/utils/audio/stft.ts))
+#### Spectral Processing ([`stft.ts`](../audio-karaoke-app/src/utils/audio/stft.ts))
 - **Purpose**: Short-Time Fourier Transform for advanced processing
 - **FFT Size**: 4096 samples, hop length 1024 samples
 - **Window Function**: Hann window

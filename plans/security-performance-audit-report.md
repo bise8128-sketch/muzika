@@ -26,7 +26,7 @@ This audit identified **23 issues** across security and performance domains. The
 
 ### 1. XSS Vulnerability via `dangerouslySetInnerHTML`
 
-**Location:** [`audio-karaoke-app/src/app/[locale]/page.tsx:662`](audio-karaoke-app/src/app/[locale]/page.tsx:662)
+**Location:** [`audio-karaoke-app/src/app/[locale]/page.tsx:662`](../audio-karaoke-app/src/app/[locale]/page.tsx:662)
 
 **Code:**
 ```tsx
@@ -48,7 +48,7 @@ This audit identified **23 issues** across security and performance domains. The
 
 ### 2. Path Traversal Vulnerability in File Proxy
 
-**Location:** [`audio-karaoke-app/src/app/api/backend-files/[...path]/route.ts:9-11`](audio-karaoke-app/src/app/api/backend-files/[...path]/route.ts:9)
+**Location:** [`audio-karaoke-app/src/app/api/backend-files/[...path]/route.ts:9-11`](../audio-karaoke-app/src/app/api/backend-files/[...path]/route.ts:9)
 
 **Code:**
 ```typescript
@@ -73,14 +73,14 @@ const url = `${PYTHON_SERVICE_URL}/files/${filePath}`;
 
 ### 3. Overly Permissive CORS Configuration
 
-**Location:** [`audio-karaoke-app/src/middleware.ts:39`](audio-karaoke-app/src/middleware.ts:39)
+**Location:** [`audio-karaoke-app/src/middleware.ts:39`](../audio-karaoke-app/src/middleware.ts:39)
 
 **Code:**
 ```typescript
 response.headers.set('Access-Control-Allow-Origin', '*');
 ```
 
-**Also in:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:114`](audio-karaoke-app/src/app/api/extract-youtube/route.ts:114)
+**Also in:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:114`](../audio-karaoke-app/src/app/api/extract-youtube/route.ts:114)
 
 **Impact:** 
 - Any website can make cross-origin requests to your API
@@ -110,7 +110,7 @@ if (origin && allowedOrigins.includes(origin)) {
 
 ### 4. Missing Input Validation in Python Processing API
 
-**Location:** [`audio-karaoke-app/src/app/api/python-processing/route.ts:19`](audio-karaoke-app/src/app/api/python-processing/route.ts:19)
+**Location:** [`audio-karaoke-app/src/app/api/python-processing/route.ts:19`](../audio-karaoke-app/src/app/api/python-processing/route.ts:19)
 
 **Code:**
 ```typescript
@@ -138,7 +138,7 @@ const processSchema = z.object({
 
 ### 5. Memory Exhaustion with Large Audio Files
 
-**Location:** [`audio-karaoke-app/src/utils/ml/separateAudio.ts:222-238`](audio-karaoke-app/src/utils/ml/separateAudio.ts:222)
+**Location:** [`audio-karaoke-app/src/utils/ml/separateAudio.ts:222-238`](../audio-karaoke-app/src/utils/ml/separateAudio.ts:222)
 
 **Code:**
 ```typescript
@@ -168,7 +168,7 @@ return {
 
 ### 6. Worker Pool Memory Leak
 
-**Location:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:337-371`](audio-karaoke-app/src/utils/audio/audioExporter.ts:337)
+**Location:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:337-371`](../audio-karaoke-app/src/utils/audio/audioExporter.ts:337)
 
 **Code:**
 ```typescript
@@ -235,7 +235,7 @@ release(worker: Worker): void {
 
 ### 8. Insecure Error Messages Expose Internal Details
 
-**Location:** [`audio-karaoke-app/src/app/api/python-processing/route.ts:124`](audio-karaoke-app/src/app/api/python-processing/route.ts:124)
+**Location:** [`audio-karaoke-app/src/app/api/python-processing/route.ts:124`](../audio-karaoke-app/src/app/api/python-processing/route.ts:124)
 
 **Code:**
 ```typescript
@@ -265,7 +265,7 @@ const publicErrors: Record<string, string> = {
 
 ### 9. YouTube URL Validation Insufficient
 
-**Location:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:18-25`](audio-karaoke-app/src/app/api/extract-youtube/route.ts:18)
+**Location:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:18-25`](../audio-karaoke-app/src/app/api/extract-youtube/route.ts:18)
 
 **Code:**
 ```typescript
@@ -310,7 +310,7 @@ function isValidYouTubeUrl(url: string): { valid: boolean; videoId?: string } {
 
 ### 10. Client-Side Only File Validation
 
-**Location:** [`audio-karaoke-app/src/components/AudioUpload/AudioUpload.tsx:39-67`](audio-karaoke-app/src/components/AudioUpload/AudioUpload.tsx:39)
+**Location:** [`audio-karaoke-app/src/components/AudioUpload/AudioUpload.tsx:39-67`](../audio-karaoke-app/src/components/AudioUpload/AudioUpload.tsx:39)
 
 **Impact:** Validation can be bypassed by:
 - Modifying the client-side code
@@ -323,7 +323,7 @@ function isValidYouTubeUrl(url: string): { valid: boolean; videoId?: string } {
 
 ### 11. LRC Parser Vulnerable to Malicious Content
 
-**Location:** [`audio-karaoke-app/src/utils/karaoke/lrcParser.ts:13-84`](audio-karaoke-app/src/utils/karaoke/lrcParser.ts:13)
+**Location:** [`audio-karaoke-app/src/utils/karaoke/lrcParser.ts:13-84`](../audio-karaoke-app/src/utils/karaoke/lrcParser.ts:13)
 
 **Code:**
 ```typescript
@@ -351,7 +351,7 @@ parsedLines.push({
 
 ### 12. Missing Content Security Policy
 
-**Location:** [`audio-karaoke-app/src/middleware.ts`](audio-karaoke-app/src/middleware.ts)
+**Location:** [`audio-karaoke-app/src/middleware.ts`](../audio-karaoke-app/src/middleware.ts)
 
 **Impact:** Without CSP, the application is more vulnerable to:
 - XSS attacks
@@ -367,7 +367,7 @@ parsedLines.push({
 
 ### 13. Batch Processing Race Conditions
 
-**Location:** [`audio-karaoke-app/src/hooks/useBatchSeparation.ts:141-191`](audio-karaoke-app/src/hooks/useBatchSeparation.ts:141)
+**Location:** [`audio-karaoke-app/src/hooks/useBatchSeparation.ts:141-191`](../audio-karaoke-app/src/hooks/useBatchSeparation.ts:141)
 
 **Code:**
 ```typescript
@@ -391,7 +391,7 @@ const runBatchLoop = async (model: ModelInfo) => {
 
 ### 14. AudioContext Not Properly Closed
 
-**Location:** [`audio-karaoke-app/src/app/[locale]/page.tsx:158-162`](audio-karaoke-app/src/app/[locale]/page.tsx:158)
+**Location:** [`audio-karaoke-app/src/app/[locale]/page.tsx:158-162`](../audio-karaoke-app/src/app/[locale]/page.tsx:158)
 
 **Code:**
 ```typescript
@@ -433,7 +433,7 @@ try {
 
 ### 16. Unbounded History Storage
 
-**Location:** [`audio-karaoke-app/src/utils/storage/historyStore.ts`](audio-karaoke-app/src/utils/storage/historyStore.ts)
+**Location:** [`audio-karaoke-app/src/utils/storage/historyStore.ts`](../audio-karaoke-app/src/utils/storage/historyStore.ts)
 
 **Impact:**
 - IndexedDB grows unbounded
@@ -449,7 +449,7 @@ try {
 
 ### 17. Missing Input Sanitization in LyricDisplay
 
-**Location:** [`audio-karaoke-app/src/components/Karaoke/LyricDisplay.tsx:131-133`](audio-karaoke-app/src/components/Karaoke/LyricDisplay.tsx:131)
+**Location:** [`audio-karaoke-app/src/components/Karaoke/LyricDisplay.tsx:131-133`](../audio-karaoke-app/src/components/Karaoke/LyricDisplay.tsx:131)
 
 **Code:**
 ```tsx
@@ -498,7 +498,7 @@ const logger = {
 
 ### 20. Missing TypeScript Strict Checks
 
-**Location:** [`audio-karaoke-app/tsconfig.json`](audio-karaoke-app/tsconfig.json)
+**Location:** [`audio-karaoke-app/tsconfig.json`](../audio-karaoke-app/tsconfig.json)
 
 **Impact:** Potential runtime errors from type coercion.
 
@@ -520,7 +520,7 @@ const logger = {
 
 ### 22. Missing AbortController Cleanup
 
-**Location:** [`audio-karaoke-app/src/hooks/useSeparation.ts:111-117`](audio-karaoke-app/src/hooks/useSeparation.ts:111)
+**Location:** [`audio-karaoke-app/src/hooks/useSeparation.ts:111-117`](../audio-karaoke-app/src/hooks/useSeparation.ts:111)
 
 **Code:**
 ```typescript
@@ -554,17 +554,17 @@ useEffect(() => {
 ### Rendering Performance
 
 1. **Unnecessary Re-renders in KaraokePlayer**
-   - Location: [`KaraokePlayer.tsx`](audio-karaoke-app/src/components/Karaoke/KaraokePlayer.tsx)
+   - Location: [`KaraokePlayer.tsx`](../audio-karaoke-app/src/components/Karaoke/KaraokePlayer.tsx)
    - Multiple useEffect hooks trigger state updates that cause cascading re-renders
    - Consider using useMemo and useCallback more extensively
 
 2. **Large List Rendering Without Virtualization**
-   - Location: [`LibraryGrid.tsx`](audio-karaoke-app/src/components/Library/LibraryGrid.tsx)
+   - Location: [`LibraryGrid.tsx`](../audio-karaoke-app/src/components/Library/LibraryGrid.tsx)
    - All songs rendered in DOM simultaneously
    - Consider react-window or react-virtualized for large libraries
 
 3. **Heavy Computations on Main Thread**
-   - Location: [`audioExporter.ts`](audio-karaoke-app/src/utils/audio/audioExporter.ts)
+   - Location: [`audioExporter.ts`](../audio-karaoke-app/src/utils/audio/audioExporter.ts)
    - WAV encoding done synchronously
    - Already uses workers for MP3, extend to WAV
 
@@ -585,7 +585,7 @@ useEffect(() => {
    - Implement automatic memory management
 
 2. **Worker Blob URLs Not Revoked**
-   - Location: [`audioExporter.ts:334`](audio-karaoke-app/src/utils/audio/audioExporter.ts:334)
+   - Location: [`audioExporter.ts:334`](../audio-karaoke-app/src/utils/audio/audioExporter.ts:334)
    - Blob URLs created but never revoked
 
 ---

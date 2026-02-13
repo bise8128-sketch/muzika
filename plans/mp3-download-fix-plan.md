@@ -8,7 +8,7 @@ Based on analysis of the codebase, the MP3 download functionality uses FFmpeg.wa
 
 ### 1. Worker URL Resolution Issue
 
-**File:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:113`](audio-karaoke-app/src/utils/audio/audioExporter.ts:113)
+**File:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:113`](../audio-karaoke-app/src/utils/audio/audioExporter.ts:113)
 
 The worker is created using:
 
@@ -20,7 +20,7 @@ This may fail in certain Next.js environments due to bundling complexities.
 
 ### 2. FFmpeg UMD Loading Issues
 
-**File:** [`audio-karaoke-app/src/utils/audio/mp3.worker.ts:59`](audio-karaoke-app/src/utils/audio/mp3.worker.ts:59)
+**File:** [`audio-karaoke-app/src/utils/audio/mp3.worker.ts:59`](../audio-karaoke-app/src/utils/audio/mp3.worker.ts:59)
 
 The worker uses `importScripts` to load FFmpeg:
 
@@ -37,7 +37,7 @@ Potential failures:
 
 ### 3. SharedArrayBuffer/Cross-Origin Isolation
 
-**File:** [`audio-karaoke-app/next.config.ts:90-96`](audio-karaoke-app/next.config.ts:90-96)
+**File:** [`audio-karaoke-app/next.config.ts:90-96`](../audio-karaoke-app/next.config.ts:90-96)
 
 FFmpeg.wasm requires `SharedArrayBuffer` which needs specific COOP/COEP headers:
 
@@ -56,7 +56,7 @@ These headers may not be properly enforced in all deployment environments.
 
 ### 4. Worker Termination Race Conditions
 
-**File:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:128-132`](audio-karaoke-app/src/utils/audio/audioExporter.ts:128-132)
+**File:** [`audio-karaoke-app/src/utils/audio/audioExporter.ts:128-132`](../audio-karaoke-app/src/utils/audio/audioExporter.ts:128-132)
 
 The worker is terminated immediately after success/error:
 
@@ -69,7 +69,7 @@ This could cause issues if multiple exports are triggered quickly.
 
 ### 5. Limited Error Handling
 
-**File:** [`audio-karaoke-app/src/utils/audio/mp3.worker.ts:77-79`](audio-karaoke-app/src/utils/audio/mp3.worker.ts:77-79)
+**File:** [`audio-karaoke-app/src/utils/audio/mp3.worker.ts:77-79`](../audio-karaoke-app/src/utils/audio/mp3.worker.ts:77-79)
 
 Error messages are generic:
 
@@ -140,8 +140,8 @@ Some browsers may have issues with the worker implementation or SharedArrayBuffe
 
 ### Phase 1: Core Fixes (High Priority)
 
-1. Fix worker URL resolution in [`audioExporter.ts`](audio-karaoke-app/src/utils/audio/audioExporter.ts)
-2. Improve FFmpeg loading with better error handling in [`mp3.worker.ts`](audio-karaoke-app/src/utils/audio/mp3.worker.ts)
+1. Fix worker URL resolution in [`audioExporter.ts`](../audio-karaoke-app/src/utils/audio/audioExporter.ts)
+2. Improve FFmpeg loading with better error handling in [`mp3.worker.ts`](../audio-karaoke-app/src/utils/audio/mp3.worker.ts)
 3. Add detailed error messages and user feedback
 
 ### Phase 2: Robustness Improvements (Medium Priority)
@@ -158,25 +158,25 @@ Some browsers may have issues with the worker implementation or SharedArrayBuffe
 
 ## Files to Modify
 
-1. [`audio-karaoke-app/src/utils/audio/audioExporter.ts`](audio-karaoke-app/src/utils/audio/audioExporter.ts)
+1. [`audio-karaoke-app/src/utils/audio/audioExporter.ts`](../audio-karaoke-app/src/utils/audio/audioExporter.ts)
    - Fix worker initialization
    - Add error handling
    - Implement worker pool
 
-2. [`audio-karaoke-app/src/utils/audio/mp3.worker.ts`](audio-karaoke-app/src/utils/audio/mp3.worker.ts)
+2. [`audio-karaoke-app/src/utils/audio/mp3.worker.ts`](../audio-karaoke-app/src/utils/audio/mp3.worker.ts)
    - Improve FFmpeg loading
    - Add detailed error reporting
    - Add retry logic
 
-3. [`audio-karaoke-app/next.config.ts`](audio-karaoke-app/next.config.ts)
+3. [`audio-karaoke-app/next.config.ts`](../audio-karaoke-app/next.config.ts)
    - Verify COOP/COEP headers
    - Add additional security headers if needed
 
-4. [`audio-karaoke-app/src/app/[locale]/page.tsx`](audio-karaoke-app/src/app/[locale]/page.tsx)
+4. [`audio-karaoke-app/src/app/[locale]/page.tsx`](../audio-karaoke-app/src/app/[locale]/page.tsx)
    - Add error handling for download failures
    - Add user feedback for download status
 
-5. [`audio-karaoke-app/src/components/SeparationEngine/ResultsDisplay.tsx`](audio-karaoke-app/src/components/SeparationEngine/ResultsDisplay.tsx)
+5. [`audio-karaoke-app/src/components/SeparationEngine/ResultsDisplay.tsx`](../audio-karaoke-app/src/components/SeparationEngine/ResultsDisplay.tsx)
    - Add loading states for MP3 downloads
    - Add error display
 
