@@ -11,6 +11,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Documentation link validation job
+  docs-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate documentation links
+        run: python3 scripts/check_md_links.py
+
   ci:
     runs-on: ubuntu-latest
     defaults:
