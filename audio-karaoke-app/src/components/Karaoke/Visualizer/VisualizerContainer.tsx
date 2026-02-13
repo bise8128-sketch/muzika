@@ -11,6 +11,7 @@ import {
     X
 } from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
+import { VoicePreset, VoiceTransformSettings } from '@/types/audio';
 import { LyricTheme, LyricDisplay } from '../LyricDisplay';
 import { LyricEditor } from '../LyricEditor';
 import { CDGRenderer } from '../CDGRenderer';
@@ -45,10 +46,10 @@ interface VisualizerContainerProps {
     
     voiceFxProps: {
         currentPreset: string;
-        settings: any;
+        settings: VoiceTransformSettings;
         isMonitoring: boolean;
-        onPresetChange: (presetId: string) => void;
-        onSettingsChange: (settings: any) => void;
+        onPresetChange: (preset: VoicePreset) => void;
+        onSettingsChange: (settings: Partial<VoiceTransformSettings>) => void;
         onToggleMonitoring: () => void;
     };
     practiceProps: any;
