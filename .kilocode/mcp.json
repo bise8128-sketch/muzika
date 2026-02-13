@@ -1,23 +1,10 @@
 {
   "mcpServers": {
-    "browserbase": {
-      "command": "npx",
-      "args": [
-        "@browserbasehq/mcp"
-      ],
-      "env": {
-        "BROWSERBASE_API_KEY": "bb_live_1zIKB4m0MWOrCowuGrnM80IU0RQ",
-        "BROWSERBASE_PROJECT_ID": "66c2c282-bcb6-4d66-b88c-58581bdcf3ab"
-      }
-    },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
+      "args": ["-y", "@upstash/context7-mcp"],
       "env": {
-        "DEFAULT_MINIMUM_TOKENS": ""
+        "DEFAULT_MINIMUM_TOKENS": "1000"
       }
     },
     "filesystem": {
@@ -25,7 +12,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/home/k"
+        "/home/k/Downloads/muzika"
       ]
     },
     "git": {
@@ -33,29 +20,20 @@
       "args": [
         "mcp-server-git",
         "--repository",
-        "https://github.com/bise8128-sketch/muzika"
+        "/home/k/Downloads/muzika"
       ]
     },
     "playwright": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@0.0.38"
-      ]
+      "args": ["-y", "@playwright/mcp@0.0.38"]
     },
     "sequentialthinking": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "memory": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
     }
   }
 }
