@@ -6,6 +6,7 @@
 import React, { useEffect, useRef } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type LyricTheme = 'modern' | 'neon' | 'classic' | 'retro';
 
@@ -25,31 +26,31 @@ const THEME_STYLES: Record<LyricTheme, {
     gradient: string;
 }> = {
     modern: {
-        container: 'space-y-8 py-32',
-        active: 'scale-110 opacity-100 py-4 text-karaoke-effect',
-        past: 'text-2xl text-white/40 blur-[1px] scale-95',
-        future: 'text-2xl text-white/20 blur-[2px] scale-90',
+        container: 'space-y-12 py-48',
+        active: 'text-karaoke-effect opacity-100 py-6 scale-110',
+        past: 'text-3xl text-white/20 blur-[2px] scale-95 origin-center',
+        future: 'text-3xl text-white/10 blur-[4px] scale-90 origin-center',
         gradient: 'text-gradient'
     },
     neon: {
-        container: 'space-y-6 py-24',
-        active: 'scale-105 opacity-100 py-4 text-karaoke-effect',
-        past: 'text-2xl text-pink-500/30 blur-[0.5px] scale-95',
-        future: 'text-2xl text-cyan-500/20 blur-[1px] scale-90',
+        container: 'space-y-10 py-40',
+        active: 'text-karaoke-effect opacity-100 py-6 scale-105',
+        past: 'text-3xl text-pink-500/10 blur-[1px] scale-95',
+        future: 'text-3xl text-cyan-500/10 blur-[2px] scale-90',
         gradient: 'bg-clip-text text-transparent bg-linear-to-r from-cyan-400 to-blue-500'
     },
     classic: {
-        container: 'space-y-4 py-20',
-        active: 'scale-100 opacity-100 py-2 text-karaoke-effect',
-        past: 'text-2xl text-white/60 scale-100 [text-shadow:1px_1px_0_#000]',
-        future: 'text-2xl text-white/40 scale-100 [text-shadow:1px_1px_0_#000]',
+        container: 'space-y-6 py-32',
+        active: 'text-karaoke-effect opacity-100 py-4 scale-100',
+        past: 'text-3xl text-white/40 scale-100 [text-shadow:2px_2px_0_#000]',
+        future: 'text-3xl text-white/20 scale-100 [text-shadow:2px_2px_0_#000]',
         gradient: ''
     },
     retro: {
-        container: 'space-y-2 py-16 font-mono',
-        active: 'scale-100 opacity-100 py-1 text-karaoke-effect',
-        past: 'text-xl text-green-900 scale-100',
-        future: 'text-xl text-green-900/40 scale-100',
+        container: 'space-y-4 py-24 font-mono',
+        active: 'text-karaoke-effect opacity-100 py-2 scale-100',
+        past: 'text-2xl text-green-900/40 scale-100',
+        future: 'text-2xl text-green-900/20 scale-100',
         gradient: ''
     }
 };
@@ -69,18 +70,22 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
 
     // Auto-scroll to active line
     useEffect(() => {
-        if (currentLineIndex !== -1 && lineRefs.current[currentLineIndex]) {
-            lineRefs.current[currentLineIndex]?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
+        if (currentLineIndex !== -1 && lineRefs.current[currentLineIndex] && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const target = lineRefs.current[currentLineIndex]!;
+            const offset = target.offsetTop - container.clientHeight / 2 + target.clientHeight / 2;
+            
+            container.scrollTo({
+                top: offset,
+                behavior: 'smooth'
             });
         }
     }, [currentLineIndex]);
 
     if (!lyrics) {
         return (
-            <div className="flex items-center justify-center h-full text-white/40">
-                <p>{t('waitingForLyrics') || 'Waiting for lyrics...'}</p>
+            <div className="flex items-center justify-center h-full text-white/20">
+                <p className="font-black uppercase tracking-[0.5em] text-xs">{t('waitingForLyrics') || 'Awaiting Data Signal...'}</p>
             </div>
         );
     }
@@ -88,58 +93,79 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     return (
         <div
             ref={scrollContainerRef}
-            className={`h-full overflow-y-auto no-scrollbar mask-gradient transition-all duration-500 ${style.container}`}
+            className={`h-full overflow-y-auto no-scrollbar mask-gradient relative ${style.container}`}
             style={{
-                fontSize: (visualSettings?.fontSize === 'lg' || visualSettings?.fontSize === 'xl') ? '1.25rem' : visualSettings?.fontSize === 'sm' ? '0.875rem' : '1rem',
-                fontWeight: visualSettings?.fontWeight || 'bold'
+                fontSize: (visualSettings?.fontSize === 'lg' || visualSettings?.fontSize === 'xl') ? '1.5rem' : visualSettings?.fontSize === 'sm' ? '1rem' : '1.25rem',
+                fontWeight: visualSettings?.fontWeight || '900'
             }}
         >
-            {lyrics.lines.map((line, index) => {
-                const isActive = index === currentLineIndex;
-                const isPast = index < currentLineIndex;
-                const lineStyle = isActive ? style.active : (isPast ? style.past : style.future);
+            <AnimatePresence mode="popLayout">
+                {lyrics.lines.map((line, index) => {
+                    const isActive = index === currentLineIndex;
+                    const isPast = index < currentLineIndex;
+                    const lineStyle = isActive ? style.active : (isPast ? style.past : style.future);
 
-                return (
-                    <div
-                        key={index}
-                        ref={el => { lineRefs.current[index] = el }}
-                        className={`transition-all duration-500 ease-out transform text-center px-4 ${lineStyle}`}
-                    >
-                        {/* Word-by-word highlighting if active */}
-                        {isActive && line.words ? (
-                            <p className={style.gradient}>
-                                {line.words.map((word, wIndex) => {
-                                    const isWordActive = wIndex === currentWordIndex;
-                                    const isWordPast = wIndex < currentWordIndex;
+                    return (
+                        <motion.div
+                            key={index}
+                            ref={el => { lineRefs.current[index] = el }}
+                            layout
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ 
+                                opacity: isActive ? 1 : (isPast ? 0.3 : 0.1), 
+                                scale: isActive ? 1.1 : (isPast ? 0.95 : 0.9),
+                                y: 0,
+                                filter: isActive ? 'blur(0px)' : (isPast ? 'blur(2px)' : 'blur(4px)')
+                            }}
+                            transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                            className={`transition-all duration-500 ease-out text-center px-8 relative z-10 ${lineStyle}`}
+                        >
+                            {/* Word-by-word highlighting if active */}
+                            {isActive && line.words ? (
+                                <p className={`leading-relaxed italic ${style.gradient} drop-shadow-2xl`}>
+                                    {line.words.map((word, wIndex) => {
+                                        const isWordActive = wIndex === currentWordIndex;
+                                        const isWordPast = wIndex < currentWordIndex;
 
-                                    // Highlight past words and current word
-                                    const wordColor = (isWordPast || isWordActive)
-                                        ? (visualSettings?.highlightColor || 'text-yellow-400')
-                                        : 'text-white';
+                                        // Highlight past words and current word
+                                        const wordColor = (isWordPast || isWordActive)
+                                            ? (visualSettings?.highlightColor || 'text-yellow-400')
+                                            : 'text-white/60';
 
-                                    return (
-                                        <span
-                                            key={wIndex}
-                                            className={`inline-block transition-colors duration-200 mr-1 ${wordColor}`}
-                                        >
-                                            {word.text}
-                                        </span>
-                                    );
-                                })}
-                            </p>
-                        ) : (
-                            <p className={isActive ? (visualSettings?.highlightColor || 'text-yellow-400') : ''}>
-                                {line.text}
-                            </p>
-                        )}
+                                        return (
+                                            <motion.span
+                                                key={wIndex}
+                                                animate={{ 
+                                                    scale: isWordActive ? 1.1 : 1,
+                                                    color: (isWordPast || isWordActive) ? '#facc15' : '#ffffff66'
+                                                }}
+                                                className={`inline-block mr-2 text-4xl lg:text-5xl font-black tracking-tighter`}
+                                            >
+                                                {word.text}
+                                            </motion.span>
+                                        );
+                                    })}
+                                </p>
+                            ) : (
+                                <p className={`text-4xl lg:text-5xl font-black tracking-tighter ${isActive ? (visualSettings?.highlightColor || 'text-yellow-400 opacity-100') : 'opacity-20'}`}>
+                                    {line.text}
+                                </p>
+                            )}
 
-                        {/* Dual Text (Translation/Romanization) */}
-                        {visualSettings?.showDualText && line.translation && (
-                            <p className="text-sm opacity-60 mt-1">{line.translation}</p>
-                        )}
-                    </div>
-                );
-            })}
+                            {/* Dual Text (Translation/Romanization) */}
+                            {visualSettings?.showDualText && line.translation && (
+                                <motion.p 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: isActive ? 0.6 : 0.2 }}
+                                    className="text-lg font-bold opacity-60 mt-4 tracking-tight"
+                                >
+                                    {line.translation}
+                                </motion.p>
+                            )}
+                        </motion.div>
+                    );
+                })}
+            </AnimatePresence>
         </div>
     );
 };
