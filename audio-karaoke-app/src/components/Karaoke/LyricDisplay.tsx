@@ -29,31 +29,31 @@ const THEME_STYLES: Record<LyricTheme, {
     gradient: string;
 }> = {
     modern: {
-        container: 'space-y-12 py-48',
-        active: 'text-karaoke-effect opacity-100 py-6 scale-110',
-        past: 'text-3xl text-white/20 blur-[2px] scale-95 origin-center',
-        future: 'text-3xl text-white/10 blur-[4px] scale-90 origin-center',
-        gradient: 'text-gradient'
+        container: 'space-y-16 py-64',
+        active: 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] opacity-100 py-8 scale-115 z-20',
+        past: 'text-white/30 blur-[3px] scale-90 translate-z-[-50px] origin-center',
+        future: 'text-white/10 blur-[6px] scale-80 translate-z-[-100px] origin-center',
+        gradient: 'bg-clip-text text-transparent bg-linear-to-b from-[hsl(280,80%,70%)] to-[hsl(200,90%,60%)]'
     },
     neon: {
-        container: 'space-y-10 py-40',
-        active: 'text-karaoke-effect opacity-100 py-6 scale-105',
-        past: 'text-3xl text-pink-500/10 blur-[1px] scale-95',
-        future: 'text-3xl text-cyan-500/10 blur-[2px] scale-90',
-        gradient: 'bg-clip-text text-transparent bg-linear-to-r from-cyan-400 to-blue-500'
+        container: 'space-y-12 py-48',
+        active: 'text-karaoke-effect opacity-100 py-6 scale-110 drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]',
+        past: 'text-pink-500/20 blur-[2px] scale-95 -rotate-1',
+        future: 'text-cyan-500/10 blur-[4px] scale-90 rotate-1',
+        gradient: 'bg-clip-text text-transparent bg-linear-to-r from-[hsl(180,100%,50%)] to-[hsl(240,100%,50%)]'
     },
     classic: {
-        container: 'space-y-6 py-32',
-        active: 'text-karaoke-effect opacity-100 py-4 scale-100',
-        past: 'text-3xl text-white/40 scale-100 [text-shadow:2px_2px_0_#000]',
-        future: 'text-3xl text-white/20 scale-100 [text-shadow:2px_2px_0_#000]',
+        container: 'space-y-8 py-32',
+        active: 'text-white opacity-100 py-4 scale-100 drop-shadow-lg',
+        past: 'text-white/40 scale-100 [text-shadow:2px_2px_0_#000]',
+        future: 'text-white/20 scale-100 [text-shadow:2px_2px_0_#000]',
         gradient: ''
     },
     retro: {
         container: 'space-y-4 py-24 font-mono',
-        active: 'text-karaoke-effect opacity-100 py-2 scale-100',
-        past: 'text-2xl text-green-900/40 scale-100',
-        future: 'text-2xl text-green-900/20 scale-100',
+        active: 'text-green-400 opacity-100 py-2 scale-100 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]',
+        past: 'text-green-900/40 scale-100',
+        future: 'text-green-900/20 scale-100',
         gradient: ''
     }
 };
@@ -146,21 +146,35 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                             key={index}
                             ref={el => { lineRefs.current[index] = el }}
                             layout
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 20, z: -100 }}
                             animate={{
                                 opacity: isActive ? 1 : (isPast ? 0.3 : 0.1),
-                                scale: isActive ? 1.1 : (isPast ? 0.95 : 0.9),
+                                scale: isActive ? 1.15 : (isPast ? 0.9 : 0.8),
                                 y: 0,
-                                filter: isActive ? 'blur(0px)' : (isPast ? 'blur(2px)' : 'blur(4px)')
+                                z: isActive ? 0 : (isPast ? -50 : -100),
+                                filter: isActive ? 'blur(0px)' : (isPast ? 'blur(3px)' : 'blur(6px)'),
+                                rotateX: isPast ? -5 : (isActive ? 0 : 5)
                             }}
                             style={{
                                 scale: isGhostActive ? ghostScale : undefined,
                                 opacity: isGhostActive ? ghostOpacity : undefined,
                                 filter: isGhostActive ? ghostBlur : undefined,
                                 fontWeight: isGhostActive ? ghostWeight : undefined,
+                                perspective: '1000px',
+                                transformStyle: 'preserve-3d',
+                                backdropFilter: (isActive || isPast) ? 'blur(12px)' : 'none',
+                                backgroundColor: (isActive || isPast) ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                                borderRadius: '24px',
+                                border: (isActive || isPast) ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                                padding: isActive ? '2rem' : '1rem'
                             }}
-                            transition={{ type: "spring", damping: 20, stiffness: 100 }}
-                            className={`transition-all duration-500 ease-out text-center px-8 relative z-10 ${lineStyle}`}
+                            transition={{ 
+                                type: "spring", 
+                                damping: 25, 
+                                stiffness: 120,
+                                opacity: { duration: 0.4 }
+                            }}
+                            className={`transition-all duration-700 ease-out text-center px-8 relative z-10 ${lineStyle}`}
                         >
                             {/* Word-by-word highlighting if active */}
                             {isActive && line.words ? (

@@ -21,6 +21,7 @@ import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
 import { useKaraokeExport } from '@/hooks/useKaraokeExport';
 import { useKaraokeEffects } from '@/hooks/useKaraokeEffects';
 import { useKaraokeEngine } from '@/hooks/useKaraokeEngine';
+import { useVisualizerOrchestrator } from '@/hooks/useVisualizerOrchestrator';
 
 // Sub-components
 import { VisualizerContainer } from './Visualizer/VisualizerContainer';
@@ -104,59 +105,13 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const visualizerRef = useRef<AudioVisualizer | null>(null);
-    const [visualizerInstance, setVisualizerInstance] = useState<AudioVisualizer | null>(null);
-
-    useEffect(() => {
-        if (!visualizerRef.current) {
-            visualizerRef.current = new AudioVisualizer();
-            setVisualizerInstance(visualizerRef.current);
-        }
-        visualizerRef.current.setAutoQuality(visualSettings.autoQuality);
-
-        if (canvasRef.current) {
-            visualizerRef.current.start();
-            
-            // Start the appropriate visualization based on mode
-            const { visualizationMode } = visualSettings;
-            switch (visualizationMode) {
-                case 'waveform':
-                    visualizerRef.current.drawWaveform(canvasRef.current);
-                    break;
-                case '3d-landscape':
-                    visualizerRef.current.draw3DLandscape(canvasRef.current);
-                    break;
-                case 'spectrogram':
-                    visualizerRef.current.drawSpectrogram(canvasRef.current);
-                    break;
-                case 'bars':
-                default:
-                    visualizerRef.current.drawSpectrum(canvasRef.current);
-                    break;
-            }
-        }
-
-        return () => {
-            visualizerRef.current?.stop();
-        };
-    }, [controller, visualSettings.visualizationMode, visualSettings.autoQuality]);
-
-    // Handle metrics updates
-    useEffect(() => {
-        const workletManager = getWorkletManager();
-        if (!workletManager || !visualizerRef.current) return;
-        
-        workletManager.onMetricsUpdate((metrics: { cpuUsage: number; latency: number; bufferUnderruns: number }) => {
-            visualizerRef.current?.setPerformanceMetrics(metrics);
-        });
-    }, [controller]);
-
-    useEffect(() => {
-        const gainNodes = controller.getGainNodes();
-        if (gainNodes.length > 0 && visualizerRef.current) {
-            gainNodes.forEach(node => visualizerRef.current?.setSource(node));
-        }
-    }, [controller, playback.vocalsVolume, playback.instrumentalVolume]);
+    const visualizerInstance = useVisualizerOrchestrator({
+        controller,
+        visualSettings,
+        canvasRef,
+        vocalsVolume: playback.vocalsVolume,
+        instrumentalVolume: playback.instrumentalVolume
+    });
 
     // Cleanup and Sync
     useEffect(() => {
