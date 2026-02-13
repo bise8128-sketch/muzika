@@ -15,7 +15,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({ isStageMode, onExitS
                 onExitStageMode();
                 saveSettings({ stageModeEnabled: false });
             }}
-            className="absolute top-4 md:top-8 left-4 md:left-8 z-[110] p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring"
+            className="absolute top-4 md:top-8 left-4 md:left-8 z-110 p-3 md:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-xl transition-all focus-ring"
             title="Exit Stage Mode (F)"
             aria-label="Exit Stage Mode"
         >

@@ -6,6 +6,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
