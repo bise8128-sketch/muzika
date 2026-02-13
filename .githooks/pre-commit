@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# Pre-commit hook to validate documentation links
+# This hook runs the link validation script before each commit
+#
+
+echo "🔍 Validating documentation links..."
+
+# Get the directory where this script is located
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$HOOK_DIR/.." && pwd)"
+
+# Run the link validation script
+python3 "$PROJECT_ROOT/scripts/check_md_links.py"
+
+# Capture the exit code
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ Documentation links are valid!"
+else
+    echo "❌ Documentation link validation failed. Please fix the broken links before committing."
+    exit 1
+fi
