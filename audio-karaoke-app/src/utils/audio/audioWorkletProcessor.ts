@@ -27,11 +27,22 @@ export interface AudioWorkletMessage {
 
 // Global registerProcessor function - this will be available in the AudioWorklet context
 
+import { RingBuffer } from './RingBuffer';
+
+// Define a base class that works in both Worklet and Main thread contexts for compilation
+let BaseProcessor: any = class {
+    port = { postMessage: (_msg: any, _transfers?: any) => {}, onmessage: null as any };
+};
+
+if (typeof AudioWorkletProcessor !== 'undefined') {
+    BaseProcessor = AudioWorkletProcessor;
+}
+
 /**
  * Generic audio processor for basic audio manipulation
  * This is the actual AudioWorklet processor that runs in the audio thread
  */
-export class GenericAudioProcessor {
+export class GenericAudioProcessor extends BaseProcessor {
     private config: AudioWorkletProcessorConfig;
     private metrics: PerformanceMetrics;
     private lastProcessTime: number = 0;
@@ -39,9 +50,13 @@ export class GenericAudioProcessor {
     private startTime: number = performance.now();
     private gain: number = 1.0;
     private bypass: boolean = false;
-    private pingInterval: number | null = null;
+    
+    // Pipelining
+    private ringBuffer: RingBuffer;
+    private isPlaying: boolean = false;
 
     constructor() {
+        super();
         this.config = {
             bufferSize: 128,
             sampleRate: 44100,
@@ -58,15 +73,10 @@ export class GenericAudioProcessor {
             timestamp: performance.now()
         };
 
-        this.initializeMessageHandling();
-        this.startPerformanceMonitoring();
-    }
+        // Initialize ring buffer with 1 second of capacity by default
+        this.ringBuffer = new RingBuffer(44100 * 1, 2);
 
-    /**
-     * Initialize message handling for configuration and control
-     */
-    private initializeMessageHandling(): void {
-        self.onmessage = (event: MessageEvent<AudioWorkletMessage>) => {
+        this.port.onmessage = (event: MessageEvent<AudioWorkletMessage>) => {
             try {
                 this.handleMessage(event.data);
             } catch (error) {
@@ -75,6 +85,12 @@ export class GenericAudioProcessor {
                 }
             }
         };
+
+        if (this.config.enablePerformanceMonitoring) {
+            setInterval(() => {
+                this.reportMetrics();
+            }, 1000);
+        }
     }
 
     /**
@@ -82,72 +98,27 @@ export class GenericAudioProcessor {
      */
     private handleMessage(message: AudioWorkletMessage): void {
         switch (message.type) {
+            case 'push_samples':
+                const { channels } = message.data as { channels: Float32Array[] };
+                this.ringBuffer.push(channels);
+                break;
+            case 'play':
+                this.isPlaying = true;
+                break;
+            case 'pause':
+                this.isPlaying = false;
+                break;
+            case 'clear':
+                this.ringBuffer.clear();
+                break;
             case 'config':
-                this.updateConfig(message.data as Partial<AudioWorkletProcessorConfig>);
+                const newConfig = message.data as Partial<AudioWorkletProcessorConfig>;
+                this.config = { ...this.config, ...newConfig };
                 break;
             case 'ping':
-                this.handlePing();
+                this.port.postMessage({ type: 'pong', timestamp: performance.now() });
                 break;
-            case 'metrics':
-                this.reportMetrics();
-                break;
-            default:
-                if (this.config.enableErrorHandling) {
-                    console.warn(`Unknown message type: ${message.type}`);
-                }
         }
-    }
-
-    /**
-     * Update processor configuration
-     */
-    private updateConfig(newConfig: Partial<AudioWorkletProcessorConfig>): void {
-        this.config = { ...this.config, ...newConfig };
-    }
-
-    /**
-     * Handle ping for latency measurement
-     */
-    private handlePing(): void {
-        const pongMessage: AudioWorkletMessage = {
-            type: 'pong',
-            timestamp: performance.now()
-        };
-        self.postMessage(pongMessage);
-    }
-
-    /**
-     * Start performance monitoring
-     */
-    private startPerformanceMonitoring(): void {
-        if (!this.config.enablePerformanceMonitoring) return;
-
-        this.pingInterval = setInterval(() => {
-            this.updateMetrics();
-            this.reportMetrics();
-        }, 1000) as unknown as number;
-    }
-
-    /**
-     * Update performance metrics
-     */
-    private updateMetrics(): void {
-        const currentTime = performance.now();
-        const deltaTime = currentTime - this.lastProcessTime;
-
-        this.metrics.processingTime = deltaTime;
-        this.metrics.timestamp = currentTime;
-
-        // Estimate memory usage (approximation)
-        const perf = performance as unknown as { memory?: { usedJSHeapSize: number } };
-        if (perf.memory) {
-            this.metrics.memoryUsage = perf.memory.usedJSHeapSize;
-        }
-
-        // Calculate CPU usage (approximation based on processing time)
-        this.metrics.cpuUsage = Math.min(100, (deltaTime / 16.67) * 100); // Assuming 60fps baseline
-
-        this.lastProcessTime = currentTime;
     }
 
     /**
@@ -156,31 +127,22 @@ export class GenericAudioProcessor {
     private reportMetrics(): void {
         if (!this.config.enablePerformanceMonitoring) return;
 
-        const message: AudioWorkletMessage = {
+        const currentTime = performance.now();
+        this.metrics.memoryUsage = (performance as any).memory?.usedJSHeapSize || 0;
+        this.metrics.timestamp = currentTime;
+
+        this.port.postMessage({
             type: 'metrics',
             data: this.metrics
-        };
-
-        self.postMessage(message);
+        });
     }
 
-    /**
-     * Handle errors gracefully
-     */
     private handleError(error: unknown, context: string): void {
         const message = error instanceof Error ? error.message : String(error);
-        const errorMessage: AudioWorkletMessage = {
+        this.port.postMessage({
             type: 'error',
-            data: {
-                error: message,
-                context,
-                timestamp: performance.now(),
-                processor: 'GenericAudioProcessor'
-            }
-        };
-
-        self.postMessage(errorMessage);
-        console.error(`AudioWorklet error in ${context}:`, error);
+            data: { error: message, context, timestamp: performance.now() }
+        });
     }
 
     /**
@@ -189,43 +151,43 @@ export class GenericAudioProcessor {
     process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
         try {
             const startTime = performance.now();
-
-            const inputChannels = inputs[0];
             const outputChannels = outputs[0];
 
-            if (!inputChannels || !outputChannels) return true;
+            if (!outputChannels || !outputChannels[0]) return true;
 
-            if (this.bypass) {
-                // Bypass mode: copy input to output
-                for (let channel = 0; channel < inputChannels.length && channel < outputChannels.length; channel++) {
-                    const input = inputChannels[channel];
-                    const output = outputChannels[channel];
-                    if (input && output && input.length === output.length) {
-                        output.set(input);
-                    }
+            if (this.isPlaying && !this.bypass) {
+                const read = this.ringBuffer.pull(outputChannels);
+                
+                if (read < outputChannels[0].length) {
+                    this.metrics.bufferUnderruns++;
                 }
-            } else {
-                // Process each channel
-                for (let channel = 0; channel < inputChannels.length && channel < outputChannels.length; channel++) {
-                    const input = inputChannels[channel];
-                    const output = outputChannels[channel];
 
-                    if (input && output && input.length === output.length) {
-                        // Apply gain
-                        for (let sample = 0; sample < input.length; sample++) {
-                            output[sample] = input[sample] * this.gain;
+                // Apply gain
+                if (this.gain !== 1.0) {
+                    for (let c = 0; c < outputChannels.length; c++) {
+                        const out = outputChannels[c];
+                        for (let i = 0; i < out.length; i++) {
+                            out[i] *= this.gain;
                         }
                     }
+                }
+            } else if (this.bypass && inputs[0]) {
+                const inputChannels = inputs[0];
+                for (let c = 0; c < inputChannels.length && c < outputChannels.length; c++) {
+                    outputChannels[c].set(inputChannels[c]);
+                }
+            } else {
+                // Silence
+                for (let c = 0; c < outputChannels.length; c++) {
+                    outputChannels[c].fill(0);
                 }
             }
 
             // Update metrics
-            this.processCount++;
-            this.lastProcessTime = performance.now();
-
             if (this.config.enablePerformanceMonitoring) {
-                this.metrics.processingTime = this.lastProcessTime - startTime;
-                this.metrics.latency = this.lastProcessTime - this.startTime;
+                const endTime = performance.now();
+                this.metrics.processingTime = endTime - startTime;
+                this.metrics.cpuUsage = (this.metrics.processingTime / (128 / 44.1)) * 100; // ~2.9ms for 128 samples at 44.1kHz
             }
 
             return true;
@@ -234,20 +196,14 @@ export class GenericAudioProcessor {
             if (this.config.enableErrorHandling) {
                 this.handleError(error, 'audio processing');
             }
-            return false; // Indicate processing failure
+            return false;
         }
     }
 
-    /**
-     * Set gain level
-     */
     setGain(gain: number): void {
         this.gain = Math.max(0, Math.min(2, gain));
     }
 
-    /**
-     * Set bypass mode
-     */
     setBypass(bypass: boolean): void {
         this.bypass = bypass;
     }

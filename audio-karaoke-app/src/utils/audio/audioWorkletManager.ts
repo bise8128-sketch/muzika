@@ -139,6 +139,45 @@ export class AudioWorkletManager {
     }
 
     /**
+     * Push audio samples to the worklet for playback
+     */
+    pushSamples(channels: Float32Array[]): void {
+        if (this.workletNode) {
+            this.workletNode.port.postMessage({
+                type: 'push_samples',
+                data: { channels }
+            }, channels.map(c => c.buffer)); // Transfer buffers for zero-copy
+        }
+    }
+
+    /**
+     * Start playback in the worklet
+     */
+    play(): void {
+        if (this.workletNode) {
+            this.workletNode.port.postMessage({ type: 'play' });
+        }
+    }
+
+    /**
+     * Pause playback in the worklet
+     */
+    pause(): void {
+        if (this.workletNode) {
+            this.workletNode.port.postMessage({ type: 'pause' });
+        }
+    }
+
+    /**
+     * Clear the worklet's ring buffer
+     */
+    clear(): void {
+        if (this.workletNode) {
+            this.workletNode.port.postMessage({ type: 'clear' });
+        }
+    }
+
+    /**
      * Register a callback for performance metrics updates
      */
     onMetricsUpdate(callback: (metrics: any) => void): void {

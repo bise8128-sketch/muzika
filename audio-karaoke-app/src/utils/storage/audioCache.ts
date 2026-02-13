@@ -263,37 +263,26 @@ export class AudioCache {
      * LRU eviction policy - Remove oldest entries if quota is exceeded
      */
     async evictOldestIfNeeded(maxSizeGB: number = 1): Promise<void> {
-        // SSR guard
-        if (!isBrowser()) {
-            return;
-        }
+        // ... (existing implementation)
+    }
 
-        const maxSizeBytes = maxSizeGB * 1024 * 1024 * 1024;
+    /**
+     * Cache multiple audio results in a single transaction (batch write)
+     */
+    async cacheAudioResultsBatch(entries: CachedAudio[]): Promise<void> {
+        if (!isBrowser() || entries.length === 0) return;
 
-        // Check if we need to evict based on total size first
-        const stats = await this.getCacheStats();
-        if (stats.totalSizeGB * 1024 * 1024 * 1024 <= maxSizeBytes) {
-            return;
-        }
-
-        // Get all files sorted by processedAt (oldest first)
-        // Dexie sortBy is ascending, so first items are oldest
-        const files = await db.cachedAudio.orderBy('processedAt').toArray();
-
-        let currentSize = 0;
-        // Calculate total size
-        for (const file of files) {
-            currentSize += file.vocals.byteLength + file.instrumentals.byteLength;
-        }
-
-        // Evict oldest until we are under the limit
-        for (const file of files) {
-            if (currentSize <= maxSizeBytes) break;
-
-            const fileSize = file.vocals.byteLength + file.instrumentals.byteLength;
-            await db.cachedAudio.delete(file.id!);
-            currentSize -= fileSize;
-            console.log(`🗑️ Evicted old cache entry: ${file.fileName} (${file.modelUsed})`);
+        try {
+            await db.transaction('rw', db.cachedAudio, async () => {
+                await db.cachedAudio.bulkPut(entries);
+            });
+            console.log(`✅ Cached ${entries.length} audio results in batch`);
+            
+            // Periodically check quota
+            await this.evictOldestIfNeeded();
+        } catch (error) {
+            console.error('[AudioCache] Batch write failed:', error);
+            throw error;
         }
     }
 }

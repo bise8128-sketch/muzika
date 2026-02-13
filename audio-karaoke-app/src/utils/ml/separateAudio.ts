@@ -262,6 +262,23 @@ async function separateAudioInternal(
         // But that's a larger refactor of the whole app's data model.
         // For now, we solve the "processing buffer overflow" by chunking, but "result buffer overflow" remains a risk for extremely large files unless we change return type.
 
+        if (!skipCache) {
+            try {
+                await audioCache.cacheAudioResult(
+                    fileHash,
+                    file.name,
+                    file.size,
+                    finalBuffers.vocals.buffer, // Assuming we want the underlying buffer
+                    finalBuffers.instrumentals.buffer,
+                    segmenter.totalDuration || 0,
+                    ctx.sampleRate,
+                    modelInfo.id
+                );
+            } catch (cacheError) {
+                console.warn('[separateAudio] Failed to cache results:', cacheError);
+            }
+        }
+
         return {
             vocals: finalBuffers.vocals,
             instrumentals: finalBuffers.instrumentals,
