@@ -1,9 +1,9 @@
 /**
  * Audio processing utilities
  * Handles audio segmentation, crossfading, and buffer manipulation
+ * This file is worker-safe (no DOM/AudioContext dependencies)
  */
 
-import { getAudioContext } from './audioContext';
 import type { AudioSegment } from '@/types/audio';
 
 /**
@@ -18,10 +18,7 @@ const DEFAULT_SEGMENT_DURATION = 15;
 const CROSSFADE_DURATION = 1.0;
 
 /**
- * Segment audio into chunks for processing
- * @param audioBuffer - Input AudioBuffer
- * @param segmentDuration - Duration of each segment in seconds (default: 15s)
- * @returns Array of audio segments
+ * Simple interface for audio buffer metadata
  */
 export interface SimpleAudioBuffer {
     sampleRate: number;
@@ -79,34 +76,23 @@ export function segmentAudio(
 }
 
 /**
- * Merge audio segments back into a single buffer with crossfading
+ * Merge audio segments back into a single Float32Array with crossfading
  * @param segments - Array of processed segments
  * @param sampleRate - Sample rate
- * @returns Merged AudioBuffer
+ * @param channels - Number of channels (default: 2)
+ * @returns Merged Float32Array
  */
-export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: true, channels?: number): AudioBuffer;
-export function mergeSegments(segments: Float32Array[], sampleRate: number, returnAudioBuffer: false, channels?: number): Float32Array;
-export function mergeSegments(segments: Float32Array[], sampleRate: number, channels?: number): Float32Array;
 export function mergeSegments(
     segments: Float32Array[],
     sampleRate: number,
-    arg3: boolean | number = false,
-    arg4?: number
-): AudioBuffer | Float32Array {
+    channels: number = 2
+): Float32Array {
     if (segments.length === 0) {
         throw new Error('Cannot merge empty segments array');
     }
 
-    const returnAudioBuffer = typeof arg3 === 'boolean' ? arg3 : false;
-    const channels = typeof arg3 === 'number' ? arg3 : (arg4 || 2);
-
-    // Prepare helper to return correct type
-    const finish = (data: Float32Array) => {
-        return returnAudioBuffer ? createAudioBufferFromFloat32(data, sampleRate, channels) : data;
-    };
-
     if (segments.length === 1) {
-        return finish(segments[0]);
+        return segments[0];
     }
 
     const crossfadeFrames = Math.floor(CROSSFADE_DURATION * sampleRate);
@@ -150,7 +136,7 @@ export function mergeSegments(
         writePosition += crossfadeSamples + remaining.length;
     }
 
-    return finish(merged);
+    return merged;
 }
 
 /**
@@ -187,24 +173,6 @@ export function applyCrossfade(
 }
 
 /**
- * Create AudioBuffer from Float32Array
- */
-function createAudioBufferFromFloat32(data: Float32Array, sampleRate: number, channels: number = 1): AudioBuffer {
-    const audioContext = getAudioContext();
-    const samplesPerChannel = data.length / channels;
-    const audioBuffer = audioContext.createBuffer(channels, samplesPerChannel, sampleRate);
-
-    for (let c = 0; c < channels; c++) {
-        const channelData = audioBuffer.getChannelData(c);
-        for (let i = 0; i < samplesPerChannel; i++) {
-            channelData[i] = data[i * channels + c];
-        }
-    }
-
-    return audioBuffer;
-}
-
-/**
  * Normalize audio to prevent clipping
  */
 export function normalizeAudio(data: Float32Array): Float32Array {
@@ -225,27 +193,4 @@ export function normalizeAudio(data: Float32Array): Float32Array {
     }
 
     return normalized;
-}
-
-/**
- * Resample audio to target sample rate using OfflineAudioContext
- */
-export async function resampleAudio(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
-    if (audioBuffer.sampleRate === targetSampleRate) {
-        return audioBuffer;
-    }
-
-    const newLength = Math.ceil(audioBuffer.duration * targetSampleRate);
-    const offlineCtx = new OfflineAudioContext(
-        audioBuffer.numberOfChannels,
-        newLength,
-        targetSampleRate
-    );
-
-    const source = offlineCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(offlineCtx.destination);
-    source.start(0);
-
-    return await offlineCtx.startRendering();
 }
