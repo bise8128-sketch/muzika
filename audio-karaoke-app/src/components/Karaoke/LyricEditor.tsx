@@ -1,7 +1,18 @@
 'use client';
 
-import { LyricEditorProps } from './types'; // Assuming types are in a separate file or can be defined here
+import React, { useState, useEffect } from 'react';
+import { LRCData, LyricLine } from '@/types/karaoke';
+import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
+import { useTranslations } from 'next-intl';
 import { useLyricSync } from '@/hooks/useLyricSync';
+import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
+
+interface LyricEditorProps {
+    currentTime: number;
+    onSave: (lrc: LRCData) => void;
+    initialLRC?: LRCData | null;
+    controller: PlaybackController;
+}
 
 export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, initialLRC, controller }) => {
     const t = useTranslations('LyricEditor');
@@ -33,42 +44,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         }
     }, [progress]);
 
-    // ... (rest of the component)
-
-    return (
-        <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">{t('title')}</h2>
-                <div className="flex gap-2">
-                    {editMode === 'text' && (
-                        <>
-                            <button
-                                onClick={handleAISync}
-                                disabled={isProcessing || lines.length === 0}
-                                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full text-sm font-medium transition-all flex items-center gap-2 border border-purple-500/30"
-                            >
-                                {isProcessing ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
-                                        <span>{Math.round((progress?.progress || 0) * 100)}%</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        {t('aiSync')}
-                                    </>
-                                )}
-                            </button>
-                            <button
-                                onClick={handlePaste}
-                                // ...
-
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
         setRawText(text);
-        const newLines = text.split('\n').map(line => ({
+        const newLines = text.split('\n').filter(l => l.trim()).map(line => ({
             startTime: 0,
             endTime: 0,
             text: line.trim()
@@ -76,7 +55,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         setLines(newLines);
     };
 
-    const startSync = () => {
+    const startManualSync = () => {
         setEditMode('sync');
         setActiveLineIndex(0);
     };
@@ -106,14 +85,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
 
     const downloadLRC = () => {
         let content = '';
-        // Add metadata
         if (initialLRC?.metadata) {
             Object.entries(initialLRC.metadata).forEach(([key, value]) => {
                 content += `[${key}:${value}]\n`;
             });
         }
 
-        // Add lines
         lines.forEach(line => {
             content += `${formatLRCTimestamp(line.startTime)}${line.text}\n`;
         });
@@ -132,7 +109,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
             const text = await navigator.clipboard.readText();
             if (text) {
                 setRawText(text);
-                const newLines = text.split('\n').map(line => ({
+                const newLines = text.split('\n').filter(l => l.trim()).map(line => ({
                     startTime: 0,
                     endTime: 0,
                     text: line.trim()
@@ -159,6 +136,25 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     {editMode === 'text' && (
                         <>
                             <button
+                                onClick={handleAISync}
+                                disabled={isProcessing || lines.length === 0}
+                                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full text-sm font-medium transition-all flex items-center gap-2 border border-purple-500/30"
+                            >
+                                {isProcessing ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
+                                        <span>{Math.round((progress?.progress || 0) * 100)}%</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        AI Auto-Sync
+                                    </>
+                                )}
+                            </button>
+                            <button
                                 onClick={handlePaste}
                                 className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-full text-sm font-medium transition-all flex items-center gap-2"
                             >
@@ -177,15 +173,13 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                     )}
                     <button
                         onClick={() => setEditMode('text')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
                     >
                         {t('editText')}
                     </button>
                     <button
-                        onClick={startSync}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'sync' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
+                        onClick={startManualSync}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'sync' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
                     >
                         {t('syncMode')}
                     </button>
@@ -241,6 +235,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     {t('download')}
+                </button>
+                <button
+                    onClick={handleSave}
+                    className="px-8 py-2 bg-primary hover:bg-primary/80 text-white rounded-full font-bold transition-all shadow-lg shadow-primary/20"
+                >
+                    {t('save')}
                 </button>
             </div>
         </div>

@@ -238,6 +238,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     setLyrics(data);
                     setShowEditor(false);
                 }}
+                controller={playback}
                 onVisualSettingsChange={setVisualSettings}
                 onCloseVisualSettings={() => setIsVisualSettingsOpen(false)}
                 onCloseVoiceFx={() => setShowVoiceFx(false)}
