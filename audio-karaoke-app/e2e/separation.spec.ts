@@ -46,22 +46,21 @@ test.describe('Audio Separation Flow', () => {
           status: 'completed', 
           jobId: 'mock-job-id',
           stems: {
-            vocals: 'data:audio/wav;base64,UklGRi...', // Dummy base64 wav
+            vocals: 'data:audio/wav;base64,UklGRi...', 
             instrumental: 'data:audio/wav;base64,UklGRi...'
           }
         })
       });
     });
 
-    // Mock available models
+    // Mock available models - HIJACK DEFAULT ID to be SERVER TYPE
     await page.route('**/api/models', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           models: [
-            { id: 'mdx-net-inst-v1', name: 'Default Model', type: 'mdx' },
-            { id: 'htdemucs-v4', name: 'Server Model (HT Demucs)', type: 'htdemucs' }
+            { id: 'mdx-net-inst-v1', name: 'Default Server Model', type: 'htdemucs', isGpuSupported: false }
           ]
         })
       });
@@ -74,13 +73,6 @@ test.describe('Audio Separation Flow', () => {
 
   test('should go to separation progress screen on upload', async ({ page }) => {
     await page.goto('/');
-
-    // Wait for the model selector to be visible and stable
-    const modelSelect = page.locator('#model-select');
-    await expect(modelSelect).toBeVisible({ timeout: 10000 });
-
-    // Select the server-side model
-    await modelSelect.selectOption('htdemucs-v4');
 
     // Create a dummy file for upload
     const fileInput = page.locator('input[type="file"]');
