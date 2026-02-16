@@ -14,7 +14,17 @@ test.describe('Audio Separation Flow', () => {
         createConvolver() { return { connect: () => {}, disconnect: () => {}, buffer: null }; }
         createDynamicsCompressor() { return { connect: () => {}, disconnect: () => {}, threshold: { value: 0 }, knee: { value: 0 }, ratio: { value: 0 }, attack: { value: 0 }, release: { value: 0 } }; }
         createOscillator() { return { start: () => {}, stop: () => {}, connect: () => {}, disconnect: () => {} }; }
+        createOscillator() { return { start: () => {}, stop: () => {}, connect: () => {}, disconnect: () => {} }; }
         createMediaElementSource() { return { connect: () => {}, disconnect: () => {} }; }
+        createBuffer(channels, length, sampleRate) {
+           return {
+             numberOfChannels: channels,
+             length: length,
+             sampleRate: sampleRate,
+             duration: length / sampleRate,
+             getChannelData: () => new Float32Array(length)
+           };
+        }
         destination = {};
         decodeAudioData() {
           return Promise.resolve({
