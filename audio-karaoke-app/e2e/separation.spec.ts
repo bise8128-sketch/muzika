@@ -78,7 +78,7 @@ test.describe('Audio Separation Flow', () => {
     });
 
     // Mock successful processing initiation
-    await page.route('**/api/python-processing', async route => {
+    await page.route('**/api/python-processing*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -86,8 +86,9 @@ test.describe('Audio Separation Flow', () => {
           status: 'completed', 
           jobId: 'mock-job-id',
           stems: {
-            vocals: 'data:audio/wav;base64,UklGRi...', 
-            instrumental: 'data:audio/wav;base64,UklGRi...'
+            // A more substantial dummy WAV base64 (approx 44 bytes header + some zero data)
+            vocals: 'data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', 
+            instrumental: 'data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
           }
         })
       });
@@ -103,6 +104,15 @@ test.describe('Audio Separation Flow', () => {
             { id: 'mdx-net-inst-v1', name: 'Default Server Model', type: 'htdemucs', isGpuSupported: false }
           ]
         })
+      });
+    });
+
+    // Mock status to be online
+    await page.route('**/api/status', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ services: { modelRepository: 'connected' } })
       });
     });
 
