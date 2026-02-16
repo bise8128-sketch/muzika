@@ -122,9 +122,28 @@ jest.mock('../Visualizer/VisualizerContainer', () => ({
     VisualizerContainer: () => <div data-testid="visualizer-container">Visualizer</div>
 }));
 
+jest.mock('@/utils/audio/playbackController', () => {
+    return {
+        PlaybackController: jest.fn().mockImplementation(() => ({
+            setVoiceBuffer: jest.fn(),
+            setVolume: jest.fn(),
+            setEQ: jest.fn(),
+            play: jest.fn(),
+            pause: jest.fn(),
+            stop: jest.fn(),
+            seek: jest.fn(),
+            context: new MockAudioContext(),
+            vocalsVolume: 1,
+            instrumentalVolume: 1,
+            bass: 0,
+            mid: 0,
+            treble: 0
+        }))
+    };
+});
+
 // Setup Controller Mock
-const mockController = new PlaybackController();
-(mockController as any).context = new MockAudioContext();
+const mockController = new (require('@/utils/audio/playbackController').PlaybackController)();
 
 describe('KaraokePlayer', () => {
     it('renders without crashing', () => {
