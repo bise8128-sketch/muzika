@@ -26,10 +26,35 @@ test.describe('Audio Separation Flow', () => {
           });
         }
       };
+
+      // Recursive dummy node to handle any property access (e.g., delayTime.value)
+      const dummyNodeHandler = {
+        get(target, prop) {
+          if (prop === 'connect' || prop === 'disconnect' || prop === 'start' || prop === 'stop') return () => {};
+          // Default all other properties to be AudioParams
+          return { value: 0, setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} };
+        }
+      };
+
+      const proxyHandler = {
+        get(target, prop) {
+          if (prop in target) return target[prop];
+          console.log(`[MockAudioContext] Accessed missing property: ${String(prop)}`);
+          return () => {
+             console.log(`[MockAudioContext] Called missing method: ${String(prop)}`);
+             return new Proxy({}, dummyNodeHandler);
+          };
+        }
+      };
+
       // @ts-ignore
-      window.AudioContext = MockAudioContext;
+      window.AudioContext = new Proxy(MockAudioContext, {
+          construct(target, args) {
+              return new Proxy(new target(...args), proxyHandler);
+          }
+      });
       // @ts-ignore
-      window.webkitAudioContext = MockAudioContext;
+      window.webkitAudioContext = window.AudioContext;
     });
 
     // Enable console logging from the browser
