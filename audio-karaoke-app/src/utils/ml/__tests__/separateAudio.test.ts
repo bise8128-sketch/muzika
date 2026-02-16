@@ -25,6 +25,37 @@ jest.mock('@/utils/worker/WorkerPool', () => {
     };
 });
 
+jest.mock('@/utils/audio/BrowserAudioSegmenter', () => {
+    return {
+        BrowserAudioSegmenter: jest.fn().mockImplementation(() => ({
+            segmentFile: jest.fn().mockImplementation(async function* () {
+                yield {
+                    data: new Float32Array(100),
+                    startTime: 0,
+                    sampleRate: 44100,
+                    channelCount: 2,
+                    duration: 1
+                };
+            }),
+            dispose: jest.fn(),
+            totalDuration: 10
+        }))
+    };
+});
+
+jest.mock('@/utils/audio/StreamableBufferManager', () => {
+    return {
+        StreamableBufferManager: jest.fn().mockImplementation(() => ({
+            addChunk: jest.fn(),
+            play: jest.fn(),
+            getAllAudioBuffers: jest.fn().mockReturnValue({
+                vocals: { length: 100, getChannelData: () => new Float32Array(100) },
+                instrumentals: { length: 100, getChannelData: () => new Float32Array(100) }
+            })
+        }))
+    };
+});
+
 describe('separateAudio', () => {
     const mockFile = new File(['dummy content'], 'test.mp3', { type: 'audio/mpeg' });
     const mockModelInfo = {
@@ -45,8 +76,8 @@ describe('separateAudio', () => {
 
     it('should check cache before processing', async () => {
         (audioCache.getCachedAudio as jest.Mock).mockResolvedValue({
-            vocals: new ArrayBuffer(10),
-            instrumentals: new ArrayBuffer(10),
+            vocals: new ArrayBuffer(16),
+            instrumentals: new ArrayBuffer(16),
             processedAt: Date.now()
         });
 
