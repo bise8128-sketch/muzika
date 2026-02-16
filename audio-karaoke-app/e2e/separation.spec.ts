@@ -55,6 +55,9 @@ test.describe('Audio Separation Flow', () => {
         }
       };
 
+      // Mark onboarding as completed
+      localStorage.setItem('muzika_onboarding_completed', 'true');
+
       // @ts-expect-error - Mocking AudioContext
       window.AudioContext = new Proxy(MockAudioContext, {
           construct(target: typeof MockAudioContext, args: unknown[]) {
@@ -87,11 +90,19 @@ test.describe('Audio Separation Flow', () => {
           status: 'completed', 
           jobId: 'mock-job-id',
           stems: {
-            // A more substantial dummy WAV base64 (approx 44 bytes header + some zero data)
-            vocals: 'data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', 
-            instrumental: 'data:audio/wav;base64,UklGRmQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+            vocals: '/mock-audio/vocals.wav', 
+            instrumental: '/mock-audio/instrumental.wav'
           }
         })
+      });
+    });
+
+    // Mock the mock audio files to avoid "Failed to fetch"
+    await page.route('**/mock-audio/*.wav', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'audio/wav',
+        body: Buffer.from('RIFF....WAVEfmt ') // Minimal RIFF header
       });
     });
 
