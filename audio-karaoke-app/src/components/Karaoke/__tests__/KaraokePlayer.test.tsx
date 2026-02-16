@@ -173,7 +173,6 @@ describe('KaraokePlayer', () => {
 
     it('shows pitch analysis button', () => {
         render(<KaraokePlayer controller={mockController} />);
-        screen.debug();
         expect(screen.getByText(/pitchAnalysis/i)).toBeInTheDocument();
     });
 });
