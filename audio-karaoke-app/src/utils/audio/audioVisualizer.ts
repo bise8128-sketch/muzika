@@ -314,6 +314,104 @@ export class AudioVisualizer {
         draw();
     }
 
+    /**
+     * Draw particle fluid visualization
+     * Uses frequency data to drive particle motion and color
+     */
+    drawFluid(canvas: HTMLCanvasElement): void {
+        if (!this.isRunning) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Initialize particles if needed
+        const particleCount = this.isQualityAdjusted ? 50 : 100;
+        const particles: Array<{x: number, y: number, vx: number, vy: number, size: number, color: string}> = [];
+        
+        for(let i=0; i<particleCount; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: 0,
+                vy: 0,
+                size: Math.random() * 3 + 1,
+                color: `hsla(${Math.random() * 60 + 200}, 100%, 50%, 0.5)`
+            });
+        }
+
+        const draw = () => {
+            if (!this.isRunning) return;
+            this.animationId = requestAnimationFrame(draw);
+
+            // Get frequency data
+            this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+            
+            // Process audio features (Ghost Mode)
+            if (this.onFrame) {
+                this.processAudioFeatures(this.dataArray);
+            }
+
+            // Fade out
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Calculate energy for speed
+            let energy = 0;
+            for(let i=0; i<this.dataArray.length; i++) {
+                energy += this.dataArray[i];
+            }
+            energy = energy / this.dataArray.length;
+            const speedMultiplier = 1 + (energy / 255) * 5;
+
+            // Draw particles
+            particles.forEach((p, i) => {
+                // Map frequency bin to particle
+                const freqIndex = Math.floor((i / particleCount) * (this.dataArray.length / 2)); // Use lower half of spectrum
+                const freqValue = this.dataArray[freqIndex];
+                
+                // Update physics driven by audio
+                const angle = (freqIndex / this.dataArray.length) * Math.PI * 4 + Date.now() * 0.001;
+                const force = (freqValue / 255) * speedMultiplier;
+                
+                p.vx += Math.cos(angle) * force * 0.5;
+                p.vy += Math.sin(angle) * force * 0.5;
+                
+                // Friction
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wrap around screen
+                if(p.x < 0) p.x = canvas.width;
+                if(p.x > canvas.width) p.x = 0;
+                if(p.y < 0) p.y = canvas.height;
+                if(p.y > canvas.height) p.y = 0;
+
+                // Dynamic properties
+                const size = p.size * (1 + (freqValue / 255));
+                const hue = 200 + (freqValue / 255) * 100; // Blue to Purple/Pink
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${0.5 + (freqValue/255)*0.5})`;
+                ctx.fill();
+                
+                // Connect particles if close
+                /* 
+                // Optimization: Connect lines can be expensive. 
+                // Enable only on high-end devices or if particle count is low.
+                if (!this.isQualityAdjusted) {
+                     // ... connection logic ...
+                }
+                */
+            });
+
+            this.drawMetricsOverlay(ctx, canvas);
+        };
+        draw();
+    }
+
     private updateHistory(): void {
         this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
         this.history.unshift(new Uint8Array(this.dataArray));

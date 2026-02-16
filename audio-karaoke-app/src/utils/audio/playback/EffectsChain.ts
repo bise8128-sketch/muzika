@@ -41,6 +41,9 @@ export class EffectsChain {
     private pitch: number = 0;
     private tempo: number = 1.0;
 
+    // Master Dynamics
+    private compressorNode: DynamicsCompressorNode;
+
     constructor() {
         this.audioContext = getAudioContext();
         this.processor = new RealtimeAudioProcessor(this.audioContext.sampleRate);
@@ -58,6 +61,14 @@ export class EffectsChain {
         this.echoNode = this.audioContext.createDelay();
         this.echoFeedback = this.audioContext.createGain();
         this.echoGain = this.audioContext.createGain();
+
+        // Master Dynamics
+        this.compressorNode = this.audioContext.createDynamicsCompressor();
+        this.compressorNode.threshold.value = -24;
+        this.compressorNode.knee.value = 30;
+        this.compressorNode.ratio.value = 12;
+        this.compressorNode.attack.value = 0.003;
+        this.compressorNode.release.value = 0.25;
 
         // EQ & Master
         this.masterGain = this.audioContext.createGain();
@@ -79,8 +90,9 @@ export class EffectsChain {
         this.trebleNode.frequency.value = 3000;
         this.trebleNode.gain.value = 0;
 
-        // Master Chain: masterGain -> bass -> mid -> treble -> destination
-        this.masterGain.connect(this.bassNode);
+        // Master Chain: masterGain -> compressor -> bass -> mid -> treble -> destination
+        this.masterGain.connect(this.compressorNode);
+        this.compressorNode.connect(this.bassNode);
         this.bassNode.connect(this.midNode);
         this.midNode.connect(this.trebleNode);
         this.trebleNode.connect(this.audioContext.destination);
@@ -298,5 +310,6 @@ export class EffectsChain {
         this.reverbProcessor.destroy();
         this.echoProcessor.destroy();
         this.pitchCorrector.destroy();
+        this.compressorNode.disconnect();
     }
 }

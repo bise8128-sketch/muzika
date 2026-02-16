@@ -43,6 +43,9 @@ export const useVisualizerOrchestrator = ({
                 case 'spectrogram':
                     visualizerRef.current.drawSpectrogram(canvasRef.current);
                     break;
+                case 'fluid':
+                    visualizerRef.current.drawFluid(canvasRef.current);
+                    break;
                 case 'bars':
                 default:
                     visualizerRef.current.drawSpectrum(canvasRef.current);

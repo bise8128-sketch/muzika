@@ -126,7 +126,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
                                     <label className="block text-sm text-gray-400 mb-2">{t('visualizationMode') || 'Visualization Mode'}</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {(['bars', 'waveform', '3d-landscape', 'spectrogram'] as const).map((mode) => (
+                                        {(['bars', 'waveform', '3d-landscape', 'spectrogram', 'fluid'] as const).map((mode) => (
                                             <button
                                                 key={mode}
                                                 onClick={() => handleVisualChange('visualizationMode', mode)}
