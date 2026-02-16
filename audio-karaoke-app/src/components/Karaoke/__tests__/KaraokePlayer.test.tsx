@@ -114,8 +114,8 @@ jest.mock('@/hooks/useVoiceTransform', () => ({
     })
 }));
 
-jest.mock('../ControlPanel', () => ({
-    ControlPanel: () => <div data-testid="control-panel">Controls</div>
+jest.mock('../Controls/KaraokeControls', () => ({
+    KaraokeControls: () => <div data-testid="karaoke-controls">Controls</div>
 }));
 
 jest.mock('../Visualizer/VisualizerContainer', () => ({

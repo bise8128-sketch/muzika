@@ -26,6 +26,9 @@ const config: Config = {
         '<rootDir>/src/**/__tests__/**/*.[jt]s?(x)',
         '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)',
     ],
+    transformIgnorePatterns: [
+        '/node_modules/(?!(soundtouchjs|music-metadata-browser|pitch-shift|@distube)/)',
+    ],
 };
 
 export default createJestConfig(config);
