@@ -3,6 +3,31 @@ import path from 'path';
 
 test.describe('Audio Separation Flow', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock AudioContext to allow decoding of dummy data
+    await page.addInitScript(() => {
+      const MockAudioContext = class {
+        state = 'running';
+        sampleRate = 44100;
+        createBufferSource() { return { start: () => {}, connect: () => {}, disconnect: () => {}, stop: () => {} }; }
+        createGain() { return { connect: () => {}, gain: { value: 1 } }; }
+        createAnalyser() { return { connect: () => {}, fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {}, getFloatTimeDomainData: () => {} }; }
+        destination = {};
+        decodeAudioData() {
+          return Promise.resolve({
+            length: 44100 * 5,
+            numberOfChannels: 2,
+            sampleRate: 44100,
+            duration: 5,
+            getChannelData: () => new Float32Array(44100 * 5)
+          });
+        }
+      };
+      // @ts-ignore
+      window.AudioContext = MockAudioContext;
+      // @ts-ignore
+      window.webkitAudioContext = MockAudioContext;
+    });
+
     // Mock successful upload
     await page.route('**/api/backend-upload', async route => {
       await route.fulfill({
