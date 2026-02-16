@@ -48,8 +48,12 @@ test.describe('Audio Separation Flow', () => {
   test('should go to separation progress screen on upload', async ({ page }) => {
     await page.goto('/');
 
+    // Wait for the model selector to be visible and stable
+    const modelSelect = page.locator('#model-select');
+    await expect(modelSelect).toBeVisible({ timeout: 10000 });
+
     // Select the server-side model
-    await page.selectOption('#model-select', 'htdemucs-v4');
+    await modelSelect.selectOption('htdemucs-v4');
 
     // Create a dummy file for upload
     const fileInput = page.locator('input[type="file"]');
