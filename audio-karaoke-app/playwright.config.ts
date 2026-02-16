@@ -48,6 +48,6 @@ export default defineConfig({
     command: 'npm run dev:next-only',
     url: 'http://localhost:3030',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 300 * 1000,
   },
 });
