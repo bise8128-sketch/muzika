@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
 
 test.describe('Audio Separation Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,10 +12,8 @@ test.describe('Audio Separation Flow', () => {
         createAnalyser() { return { connect: () => {}, disconnect: () => {}, fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {}, getFloatTimeDomainData: () => {} }; }
         createConvolver() { return { connect: () => {}, disconnect: () => {}, buffer: null }; }
         createDynamicsCompressor() { return { connect: () => {}, disconnect: () => {}, threshold: { value: 0 }, knee: { value: 0 }, ratio: { value: 0 }, attack: { value: 0 }, release: { value: 0 } }; }
-        createOscillator() { return { start: () => {}, stop: () => {}, connect: () => {}, disconnect: () => {} }; }
-        createOscillator() { return { start: () => {}, stop: () => {}, connect: () => {}, disconnect: () => {} }; }
         createMediaElementSource() { return { connect: () => {}, disconnect: () => {} }; }
-        createBuffer(channels, length, sampleRate) {
+        createBuffer(channels: number, length: number, sampleRate: number) {
            return {
              numberOfChannels: channels,
              length: length,
@@ -57,13 +54,13 @@ test.describe('Audio Separation Flow', () => {
         }
       };
 
-      // @ts-ignore
+      // @ts-expect-error - Mocking AudioContext
       window.AudioContext = new Proxy(MockAudioContext, {
-          construct(target, args) {
+          construct(target: any, args: any[]) {
               return new Proxy(new target(...args), proxyHandler);
           }
       });
-      // @ts-ignore
+      // @ts-expect-error - Mocking webkitAudioContext
       window.webkitAudioContext = window.AudioContext;
     });
 
@@ -127,11 +124,12 @@ test.describe('Audio Separation Flow', () => {
     // Since our mock returns 'completed' immediately, it might jump to results.
     // We check for either the processing message OR a results indicator.
     
-    // Use a race condition check or just wait for one that implies success.
-    // "Separating Audio..." is a heading in ProcessingView.
-    // "Download" is in ResultsView.
     
-    // We'll wait for the "Download" button which confirms the full flow.
-    await expect(page.getByRole('button', { name: /Download/i }).first()).toBeVisible({ timeout: 20000 });
+    // Check for the "Separation Complete" heading or "WAV" button.
+    // "Separation Complete" is a heading in ResultsDisplay.
+    await expect(page.getByRole('heading', { name: /Separation Complete/i })).toBeVisible({ timeout: 20000 });
+    
+    // Verification of "WAV" download button presence.
+    await expect(page.getByRole('button', { name: /WAV/i }).first()).toBeVisible();
   });
 });
