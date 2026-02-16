@@ -33,10 +33,12 @@ test.describe('Audio Separation Flow', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          { id: 'mdx-net-inst-v1', name: 'Default Model', type: 'mdx' },
-          { id: 'htdemucs-v4', name: 'Server Model (HT Demucs)', type: 'htdemucs' }
-        ])
+        body: JSON.stringify({
+          models: [
+            { id: 'mdx-net-inst-v1', name: 'Default Model', type: 'mdx' },
+            { id: 'htdemucs-v4', name: 'Server Model (HT Demucs)', type: 'htdemucs' }
+          ]
+        })
       });
     });
 
