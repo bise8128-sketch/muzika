@@ -7,6 +7,7 @@ test.describe('Audio Separation Flow', () => {
       const MockAudioContext = class {
         state = 'running';
         sampleRate = 44100;
+        constructor(..._args: unknown[]) {}
         createBufferSource() { return { start: () => {}, connect: () => {}, disconnect: () => {}, stop: () => {}, buffer: null, loop: false }; }
         createGain() { return { connect: () => {}, disconnect: () => {}, gain: { value: 1, setValueAtTime: () => {} } }; }
         createAnalyser() { return { connect: () => {}, disconnect: () => {}, fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {}, getFloatTimeDomainData: () => {} }; }
@@ -36,7 +37,7 @@ test.describe('Audio Separation Flow', () => {
 
       // Recursive dummy node to handle any property access (e.g., delayTime.value)
       const dummyNodeHandler = {
-        get(_target, prop) {
+        get(_target: object, prop: string | symbol) {
           if (prop === 'connect' || prop === 'disconnect' || prop === 'start' || prop === 'stop') return () => {};
           // Default all other properties to be AudioParams
           return { value: 0, setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} };
@@ -44,8 +45,8 @@ test.describe('Audio Separation Flow', () => {
       };
 
       const proxyHandler = {
-        get(target, prop) {
-          if (prop in target) return target[prop];
+        get(target: InstanceType<typeof MockAudioContext>, prop: string | symbol) {
+          if (prop in target) return Reflect.get(target, prop);
           console.log(`[MockAudioContext] Accessed missing property: ${String(prop)}`);
           return () => {
              console.log(`[MockAudioContext] Called missing method: ${String(prop)}`);
@@ -56,7 +57,7 @@ test.describe('Audio Separation Flow', () => {
 
       // @ts-expect-error - Mocking AudioContext
       window.AudioContext = new Proxy(MockAudioContext, {
-          construct(target: any, args: any[]) {
+          construct(target: typeof MockAudioContext, args: unknown[]) {
               return new Proxy(new target(...args), proxyHandler);
           }
       });
