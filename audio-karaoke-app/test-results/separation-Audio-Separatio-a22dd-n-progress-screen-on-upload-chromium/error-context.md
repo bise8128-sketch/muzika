@@ -1,0 +1,68 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - button "Go to home" [ref=e5]:
+          - img [ref=e7]
+          - generic [ref=e9]: MUZIKA
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - combobox [ref=e12] [cursor=pointer]:
+              - option "English" [selected]
+              - option "Bosanski"
+            - generic:
+              - img
+          - button "Library" [ref=e13]
+          - button "How it works" [ref=e14]
+          - button "Models" [ref=e15]
+          - link "Privacy" [ref=e16] [cursor=pointer]:
+            - /url: "#"
+          - generic [ref=e17]:
+            - status "System Online" [ref=e18]
+            - generic [ref=e19]: "Backend: online"
+          - button "Open settings" [ref=e20]:
+            - img [ref=e21]
+    - main [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e28]: 10%
+        - heading "Separating Audio..." [level=2] [ref=e29]
+        - paragraph [ref=e30]: Starting server-side separation...
+        - generic [ref=e32]: Running on Cloud Server
+        - generic [ref=e35]: "Status: processing"
+    - dialog "Settings" [ref=e37]:
+      - generic [ref=e38]:
+        - heading "Settings" [level=2] [ref=e39]:
+          - img [ref=e40]
+          - text: Settings
+        - button "Close settings" [ref=e43]:
+          - img [ref=e44]
+      - generic [ref=e47]:
+        - heading "Processing Engine" [level=3] [ref=e48]
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: WebGPU Acceleration
+              - generic [ref=e53]: Faster inference using your GPU
+            - switch [checked] [ref=e54] [cursor=pointer]
+          - generic [ref=e56]:
+            - generic [ref=e57]: Model Version
+            - combobox "Model Version" [ref=e58]:
+              - option "Default Model"
+              - option "Server Model (HT Demucs)" [selected]
+    - generic [ref=e61]:
+      - img [ref=e63]
+      - generic [ref=e65]:
+        - heading "Welcome to Muzika" [level=3] [ref=e71]
+        - paragraph [ref=e72]: Experience professional-grade AI audio separation right in your browser. Your files never leave your device.
+        - generic [ref=e73]:
+          - button "Skip" [ref=e74]
+          - button "Next Step" [ref=e75]
+    - contentinfo [ref=e76]:
+      - paragraph [ref=e77]: © 2026 Muzika. Built with Next.js, ONNX, and Tailwind 4.
+  - button "Open Next.js Dev Tools" [ref=e83] [cursor=pointer]:
+    - img [ref=e84]
+  - alert [ref=e87]
+```

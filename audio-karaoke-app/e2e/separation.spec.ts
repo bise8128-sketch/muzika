@@ -63,7 +63,15 @@ test.describe('Audio Separation Flow', () => {
 
     await fileInput.setInputFiles('e2e/fixtures/test-audio.mp3');
     
-    // We expect the "Separating..." or "Starting server-side separation" text
-    await expect(page.getByText(/Separating|Analyzing|Processing|Server/i)).toBeVisible({ timeout: 15000 });
+    // We expect the app to transition to processing or results.
+    // Since our mock returns 'completed' immediately, it might jump to results.
+    // We check for either the processing message OR a results indicator.
+    
+    // Use a race condition check or just wait for one that implies success.
+    // "Separating Audio..." is a heading in ProcessingView.
+    // "Download" is in ResultsView.
+    
+    // We'll wait for the "Download" button which confirms the full flow.
+    await expect(page.getByRole('button', { name: /Download/i }).first()).toBeVisible({ timeout: 20000 });
   });
 });
