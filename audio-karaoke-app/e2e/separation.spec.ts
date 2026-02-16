@@ -36,7 +36,7 @@ test.describe('Audio Separation Flow', () => {
 
       // Recursive dummy node to handle any property access (e.g., delayTime.value)
       const dummyNodeHandler = {
-        get(target, prop) {
+        get(_target, prop) {
           if (prop === 'connect' || prop === 'disconnect' || prop === 'start' || prop === 'stop') return () => {};
           // Default all other properties to be AudioParams
           return { value: 0, setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} };
