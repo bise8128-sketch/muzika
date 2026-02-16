@@ -8,9 +8,12 @@ test.describe('Audio Separation Flow', () => {
       const MockAudioContext = class {
         state = 'running';
         sampleRate = 44100;
-        createBufferSource() { return { start: () => {}, connect: () => {}, disconnect: () => {}, stop: () => {} }; }
-        createGain() { return { connect: () => {}, gain: { value: 1 } }; }
-        createAnalyser() { return { connect: () => {}, fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {}, getFloatTimeDomainData: () => {} }; }
+        createBufferSource() { return { start: () => {}, connect: () => {}, disconnect: () => {}, stop: () => {}, buffer: null, loop: false }; }
+        createGain() { return { connect: () => {}, disconnect: () => {}, gain: { value: 1, setValueAtTime: () => {} } }; }
+        createAnalyser() { return { connect: () => {}, disconnect: () => {}, fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {}, getFloatTimeDomainData: () => {} }; }
+        createConvolver() { return { connect: () => {}, disconnect: () => {}, buffer: null }; }
+        createDynamicsCompressor() { return { connect: () => {}, disconnect: () => {}, threshold: { value: 0 }, knee: { value: 0 }, ratio: { value: 0 }, attack: { value: 0 }, release: { value: 0 } }; }
+        createOscillator() { return { start: () => {}, stop: () => {}, connect: () => {}, disconnect: () => {} }; }
         destination = {};
         decodeAudioData() {
           return Promise.resolve({
@@ -27,6 +30,10 @@ test.describe('Audio Separation Flow', () => {
       // @ts-ignore
       window.webkitAudioContext = MockAudioContext;
     });
+
+    // Enable console logging from the browser
+    page.on('console', msg => console.log(`BROWSER_LOG: ${msg.text()}`));
+    page.on('pageerror', err => console.log(`BROWSER_ERROR: ${err}`));
 
     // Mock successful upload
     await page.route('**/api/backend-upload', async route => {
