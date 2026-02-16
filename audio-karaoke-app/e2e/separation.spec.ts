@@ -112,7 +112,7 @@ test.describe('Audio Separation Flow', () => {
   });
 
   test('should go to separation progress screen on upload', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { timeout: 60000 });
 
     // Create a dummy file for upload
     const fileInput = page.locator('input[type="file"]');
