@@ -142,6 +142,26 @@ jest.mock('@/utils/audio/playbackController', () => {
     };
 });
 
+jest.mock('../EffectsPanel', () => ({
+    EffectsPanel: () => <div data-testid="effects-panel">Effects</div>
+}));
+
+jest.mock('../StemIsolationPanel', () => ({
+    StemIsolationPanel: () => <div data-testid="stem-isolation">Stems</div>
+}));
+
+jest.mock('../PitchVisualizer', () => ({
+    PitchVisualizer: () => <div data-testid="pitch-visualizer">PitchVis</div>
+}));
+
+jest.mock('../PlayerHeader', () => ({
+    PlayerHeader: () => <div data-testid="player-header">Header</div>
+}));
+
+jest.mock('../../UI/ErrorBoundary', () => ({
+    ErrorBoundary: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+}));
+
 // Setup Controller Mock
 const mockController = new (require('@/utils/audio/playbackController').PlaybackController)();
 
