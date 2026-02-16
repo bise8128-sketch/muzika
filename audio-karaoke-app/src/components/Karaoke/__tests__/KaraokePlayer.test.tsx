@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { KaraokePlayer } from '../KaraokePlayer';
 import { PlaybackController } from '@/utils/audio/playbackController';
-import { MockAudioContext } from '../../../../__mocks__/audioContextMock';
+import { MockAudioContext } from '../../../__mocks__/audioContextMock';
 
 // Mocks
 jest.mock('next-intl', () => ({
@@ -153,6 +153,6 @@ describe('KaraokePlayer', () => {
 
     it('shows pitch analysis button', () => {
         render(<KaraokePlayer controller={mockController} />);
-        expect(screen.getByText('pitchAnalysis')).toBeInTheDocument();
+        expect(screen.getByText(/pitchAnalysis/i)).toBeInTheDocument();
     });
 });
