@@ -110,7 +110,7 @@ describe('alignLyricsToTranscription', () => {
 
         expect(result.lines).toHaveLength(1);
         expect(result.lines[0].words).toHaveLength(3);
-        expect(result.lines[0].timestamp).toBe(0);
+        expect(result.lines[0].startTime).toBe(0);
         expect(result.confidence).toBeGreaterThan(0);
     });
 

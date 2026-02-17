@@ -22,6 +22,18 @@ if (!Blob.prototype.arrayBuffer) {
     };
 }
 
+import { jest } from '@jest/globals';
+
+// Mock next-intl
+jest.mock('next-intl', () => ({
+    useTranslations: () => (key: string) => key,
+    useLocale: () => 'en',
+    useMessages: () => ({}),
+    useNow: () => new Date(),
+    useTimeZone: () => 'UTC',
+    NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Polyfill for fetch (missing in Node < 18 or some Jest environments)
 if (!global.fetch) {
     (global as any).fetch = jest.fn().mockImplementation(() => 
