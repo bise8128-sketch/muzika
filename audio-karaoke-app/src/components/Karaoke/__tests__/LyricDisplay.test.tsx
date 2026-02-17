@@ -56,7 +56,12 @@ describe('LyricDisplay', () => {
 
     it('renders lyrics lines correctly', () => {
         render(<LyricDisplay lyrics={mockLyrics} currentLineIndex={0} currentWordIndex={-1} />);
-        expect(screen.getByText('First line of lyrics')).toBeInTheDocument();
+        
+        // Active line with words
+        expect(screen.getByText('First')).toBeInTheDocument();
+        expect(screen.getByText('line')).toBeInTheDocument();
+        
+        // Non-active line
         expect(screen.getByText('Second line here')).toBeInTheDocument();
     });
 });
