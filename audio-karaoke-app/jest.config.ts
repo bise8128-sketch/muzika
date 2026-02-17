@@ -27,7 +27,7 @@ const config: Config = {
         '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)',
     ],
     transformIgnorePatterns: [
-        '/node_modules/(?!(soundtouchjs|music-metadata-browser|pitch-shift|@distube)/)',
+        '/node_modules/(?!(soundtouchjs|music-metadata-browser|pitch-shift|@distube|next-intl|use-intl)/)',
     ],
 };
 

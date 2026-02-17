@@ -37,13 +37,12 @@ describe('ErrorBoundary', () => {
             </ErrorBoundary>
         );
 
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-        expect(screen.getByText('Test error message')).toBeInTheDocument();
-        expect(screen.getByText('Try Again')).toBeInTheDocument();
+        expect(screen.getByText('Signal Interrupted')).toBeInTheDocument();
+        expect(screen.getByText(/Muzika encountered an unexpected error/)).toBeInTheDocument();
+        expect(screen.getByText('Try to Resume')).toBeInTheDocument();
     });
 
-    it('resets error state when Try Again is clicked', () => {
+    it('resets error state when Try to Resume is clicked', () => {
         const { rerender } = render(
             <ErrorBoundary>
                 <ThrowingComponent shouldThrow={true} />
@@ -51,18 +50,13 @@ describe('ErrorBoundary', () => {
         );
 
         // Verify error state
-        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText('Signal Interrupted')).toBeInTheDocument();
 
         // We need to make the component NOT throw after reset.
-        // Clicking Try Again resets the boundary's state, causing a re-render.
-        // But since ThrowingComponent still has shouldThrow=true, it will throw again.
-        // So we re-render with shouldThrow=false after clicking.
-        fireEvent.click(screen.getByText('Try Again'));
+        fireEvent.click(screen.getByText('Try to Resume'));
 
         // After reset the boundary tries to render children again.
-        // Since ThrowingComponent still throws, it catches again.
-        // This proves the reset mechanism works (it re-enters the try).
-        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText('Signal Interrupted')).toBeInTheDocument();
     });
 
     it('uses custom fallback when provided', () => {

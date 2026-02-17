@@ -22,18 +22,52 @@ if (!Blob.prototype.arrayBuffer) {
     };
 }
 
+// Polyfill for fetch (missing in Node < 18 or some Jest environments)
+if (!global.fetch) {
+    (global as any).fetch = jest.fn().mockImplementation(() => 
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({}),
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+            text: () => Promise.resolve(''),
+            blob: () => Promise.resolve(new Blob())
+        })
+    );
+}
+
+// Polyfill for Response and Headers if missing
+if (!global.Response) {
+    (global as any).Response = class {
+        constructor(public body: any, public init: any) {}
+        get ok() { return this.init?.status ? (this.init.status >= 200 && this.init.status < 300) : true; }
+        json() { return Promise.resolve(JSON.parse(this.body)); }
+    };
+}
+
 // Mock for AudioContext
 class AudioContextMock {
     state = 'suspended';
+    sampleRate = 44100;
+    currentTime = 0;
     resume = jest.fn().mockResolvedValue(undefined);
     suspend = jest.fn().mockResolvedValue(undefined);
     close = jest.fn().mockResolvedValue(undefined);
     createGain = jest.fn().mockReturnValue({
-        gain: { value: 1 },
+        gain: { value: 1, setValueAtTime: jest.fn() },
         connect: jest.fn(),
+        disconnect: jest.fn()
+    });
+    createBufferSource = jest.fn().mockReturnValue({
+        buffer: null,
+        connect: jest.fn(),
+        disconnect: jest.fn(),
+        start: jest.fn(),
+        stop: jest.fn(),
+        onended: null,
+        playbackRate: { value: 1, setValueAtTime: jest.fn() }
     });
     decodeAudioData = jest.fn().mockImplementation((buffer) => {
-        if (buffer.byteLength === 0) {
+        if (!buffer || buffer.byteLength === 0) {
             return Promise.reject(new Error('Failed to decode'));
         }
         return Promise.resolve({

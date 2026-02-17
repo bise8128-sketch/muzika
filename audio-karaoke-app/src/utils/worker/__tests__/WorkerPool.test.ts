@@ -359,7 +359,7 @@ describe('WorkerPool', () => {
                                 data: {
                                     type: 'PROGRESS',
                                     id: message.id,
-                                    progress: 50
+                                    payload: 50
                                 }
                             } as MessageEvent);
                         }
