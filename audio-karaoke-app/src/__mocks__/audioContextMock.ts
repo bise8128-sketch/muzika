@@ -62,12 +62,24 @@ export class MockAudioContext {
   }
 
   createBuffer(currentChannels: number, length: number, sampleRate: number) {
+      const channels = Array.from({ length: currentChannels }, () => new Float32Array(length));
       return {
           length,
           duration: length / sampleRate,
           sampleRate,
           numberOfChannels: currentChannels,
-          getChannelData: jest.fn(() => new Float32Array(length))
+          getChannelData: jest.fn((channel) => {
+              if (channel >= currentChannels) {
+                  throw new Error('Channel index out of bounds');
+              }
+              return channels[channel];
+          }),
+          copyToChannel: jest.fn((source, channelNumber, startInChannel = 0) => {
+              if (channelNumber >= currentChannels) {
+                  throw new Error('Channel index out of bounds');
+              }
+              channels[channelNumber].set(source, startInChannel);
+          })
       };
   }
 

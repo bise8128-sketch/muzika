@@ -44,12 +44,22 @@ class AudioContextMock {
             getChannelData: jest.fn().mockReturnValue(new Float32Array(441000)),
         });
     });
-    createBuffer = jest.fn().mockReturnValue({
-        duration: 10,
-        sampleRate: 44100,
-        numberOfChannels: 1,
-        length: 441000,
-        getChannelData: jest.fn().mockReturnValue(new Float32Array(441000)),
+    createBuffer = jest.fn((numberOfChannels, length, sampleRate) => {
+        const channels = Array.from({ length: numberOfChannels }, () => new Float32Array(length));
+        return {
+            length,
+            duration: length / sampleRate,
+            sampleRate,
+            numberOfChannels,
+            getChannelData: jest.fn((channel) => {
+                if (channel >= numberOfChannels) throw new Error('Channel index out of bounds');
+                return channels[channel];
+            }),
+            copyToChannel: jest.fn((source, channelNumber, startInChannel = 0) => {
+                if (channelNumber >= numberOfChannels) throw new Error('Channel index out of bounds');
+                channels[channelNumber].set(source, startInChannel);
+            }),
+        };
     });
     destination = {};
 }
@@ -58,3 +68,28 @@ class AudioContextMock {
 (window as any).AudioContext = AudioContextMock;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).webkitAudioContext = AudioContextMock;
+
+// Clean up IndexedDB after each test to prevent state leakage
+afterEach(async () => {
+    if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+        try {
+            const databases = await indexedDB.databases();
+            await Promise.all(
+                databases.map((db) => {
+                    if (db.name) {
+                        return new Promise<void>((resolve, reject) => {
+                            const request = indexedDB.deleteDatabase(db.name!);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                            request.onblocked = () => resolve();
+                        });
+                    }
+                    return Promise.resolve();
+                })
+            );
+        } catch (error) {
+            console.error('Failed to clear IndexedDB:', error);
+        }
+    }
+});
+
