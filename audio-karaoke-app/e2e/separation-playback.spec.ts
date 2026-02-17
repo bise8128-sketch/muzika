@@ -132,21 +132,21 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
 
   test('should verify pitch/tempo adjustment and visualizer sync', async ({ page }) => {
     // 1. Upload file
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.getByTestId('audio-upload-input');
     await expect(fileInput).toBeAttached();
     await fileInput.setInputFiles('e2e/fixtures/dummy.mp3');
 
     // 2. Wait for processing to complete and player to appear
-    await expect(page.getByText(/Separating Audio/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('processing-view')).toBeVisible({ timeout: 10000 });
     
     // Wait for the player container to be visible
     // Identifying player by a robust selector, e.g., the container with "Original" preset or play button
-    const playerContainer = page.locator('.glass-premium'); 
+    const playerContainer = page.getByTestId('visualizer-container');
     await expect(playerContainer).toBeVisible({ timeout: 30000 });
     
     // 3. Verify Visualizer is present
     // The visualizer is likely a canvas inside the player container
-    const visualizerCanvas = playerContainer.locator('canvas');
+    const visualizerCanvas = page.getByTestId('visualizer-canvas');
     await expect(visualizerCanvas).toBeVisible();
     
     // Check if canvas has dimensions (implies it's ready to draw)
@@ -158,7 +158,7 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
     // 4. Verify Pitch Adjustment
     // Locate pitch slider - typically input[type="range"] with min="-12"
     // Using a more specific locator strategy if possible
-    const pitchSlider = page.locator('input[type="range"][min="-12"]');
+    const pitchSlider = page.getByTestId('pitch-slider');
     await expect(pitchSlider).toBeVisible();
     
     // Change pitch to +2
@@ -166,21 +166,21 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
     // Trigger change event if needed (fill usually triggers input/change)
     
     // Verify the display updates to show +2
-    await expect(page.getByText('+2', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('pitch-value')).toHaveText('+2');
 
     // 5. Verify Tempo Adjustment
     // Locate tempo slider - typically input[type="range"] with step="0.05" or min="0.5"
-    const tempoSlider = page.locator('input[type="range"][min="0.5"]');
+    const tempoSlider = page.getByTestId('tempo-slider');
     await expect(tempoSlider).toBeVisible();
     
     // Change tempo to 1.25x
     await tempoSlider.fill('1.25');
     
     // Verify the display updates to show 1.25x
-    await expect(page.getByText('1.25x')).toBeVisible();
+    await expect(page.getByTestId('tempo-value')).toHaveText('1.25x');
 
     // 6. Start Playback and verify visualizer is "active" (optional advanced check)
-    const playButton = page.getByTitle('Play/Pause');
+    const playButton = page.getByTestId('play-pause-button');
     await playButton.click();
     
     // Wait a bit for playback to start

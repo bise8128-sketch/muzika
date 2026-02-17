@@ -34,9 +34,10 @@ export const PitchTempoControls: React.FC<PitchTempoControlsProps> = ({
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="text-xs font-medium text-gray-300">Pitch (Semitones)</label>
-                        <span className="text-xs font-mono text-purple-400">{pitch > 0 ? `+${pitch}` : pitch}</span>
+                        <span className="text-xs font-mono text-purple-400" data-testid="pitch-value">{pitch > 0 ? `+${pitch}` : pitch}</span>
                     </div>
                     <input
+                        data-testid="pitch-slider"
                         type="range"
                         min={-12}
                         max={12}
@@ -56,9 +57,10 @@ export const PitchTempoControls: React.FC<PitchTempoControlsProps> = ({
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="text-xs font-medium text-gray-300">Tempo (Speed)</label>
-                        <span className="text-xs font-mono text-pink-400">{tempo.toFixed(2)}x</span>
+                        <span className="text-xs font-mono text-pink-400" data-testid="tempo-value">{tempo.toFixed(2)}x</span>
                     </div>
                     <input
+                        data-testid="tempo-slider"
                         type="range"
                         min={0.5}
                         max={2.0}

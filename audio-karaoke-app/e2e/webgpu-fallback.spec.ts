@@ -14,9 +14,11 @@ test.describe('WebGPU Fallback Verification', () => {
 
         // Simulating absence of WebGPU by deleting navigator.gpu
         await page.addInitScript(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            delete (navigator as any).gpu;
-            console.log('INIT SCRIPT: Simulated WebGPU absence (navigator.gpu deleted)');
+            Object.defineProperty(navigator, 'gpu', {
+                get: () => undefined,
+                configurable: true
+            });
+            console.log('INIT SCRIPT: Simulated WebGPU absence (navigator.gpu undefined)');
         });
 
         await page.goto('/');
@@ -31,7 +33,7 @@ test.describe('WebGPU Fallback Verification', () => {
 
     test('should fallback to WASM when WebGPU is not available', async ({ page }) => {
         // 1. Upload file
-        const fileInput = page.locator('input[type="file"]');
+        const fileInput = page.getByTestId('audio-upload-input');
         await expect(fileInput).toBeAttached();
         
         // Use an absolute path or relative to project root
@@ -39,17 +41,18 @@ test.describe('WebGPU Fallback Verification', () => {
         await fileInput.setInputFiles(fixturePath);
 
         // 2. Verify ProcessingView is visible
-        const processingHeader = page.getByText(/Separating Audio/i);
-        await expect(processingHeader).toBeVisible({ timeout: 20000 });
+        const processingView = page.getByTestId('processing-view');
+        await expect(processingView).toBeVisible({ timeout: 20000 });
 
         // 3. Verify Backend Indicator shows WASM
-        const backendIndicator = page.getByText(/WASM \(CPU\)/i);
+        const backendIndicator = page.getByTestId('backend-indicator');
+        await expect(backendIndicator).toContainText(/WASM \(CPU\)/i);
         await expect(backendIndicator).toBeVisible({ timeout: 15000 });
         
         console.log('SUCCESS: "WASM (CPU)" indicator found in ProcessingView');
 
         // 4. Wait for processing to complete (player to appear)
-        const playerContainer = page.locator('.glass-premium');
+        const playerContainer = page.getByTestId('visualizer-container');
         await expect(playerContainer).toBeVisible({ timeout: 90000 });
         
         console.log('SUCCESS: Processing completed successfully on WASM');
