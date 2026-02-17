@@ -151,6 +151,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                             ref={fileInputRef}
                             type="file"
                             id="audio-upload-input"
+                            data-testid="audio-upload-input"
                             accept="audio/*"
                             multiple
                             onChange={handleFileChange}

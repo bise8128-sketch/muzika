@@ -16,7 +16,10 @@ export function ProcessingView({ progress, message, status, executionBackend }: 
   const t = useTranslations('HomePage');
 
   return (
-    <div className="max-w-2xl mx-auto py-20 text-center animate-in zoom-in-95 duration-500">
+    <div
+      className="max-w-2xl mx-auto py-20 text-center animate-in zoom-in-95 duration-500"
+      data-testid="processing-view"
+    >
       <div className="relative inline-block mb-12">
         <div className="w-32 h-32 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
         <div className="absolute inset-0 flex items-center justify-center font-bold text-2xl">
@@ -31,7 +34,9 @@ export function ProcessingView({ progress, message, status, executionBackend }: 
       {/* Backend Indicator */}
       {executionBackend && (
         <div className="mt-4 flex justify-center">
-            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+            <div
+                data-testid="backend-indicator"
+                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
                 executionBackend === 'webgpu' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
                 executionBackend === 'server' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
                 'bg-amber-500/10 border-amber-500/20 text-amber-400'
@@ -43,7 +48,7 @@ export function ProcessingView({ progress, message, status, executionBackend }: 
 
       <div className="mt-12 space-y-2 max-w-sm mx-auto">
         <div className="flex justify-between text-xs text-muted-foreground uppercase tracking-widest px-1">
-          <span>{t('status', { status })}</span>
+          <span data-testid="processing-status">{t('status', { status })}</span>
         </div>
         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
           <div

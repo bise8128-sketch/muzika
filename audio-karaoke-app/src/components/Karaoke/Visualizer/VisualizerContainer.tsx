@@ -125,7 +125,8 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
     };
 
     return (
-        <motion.div 
+        <motion.div
+            data-testid="visualizer-container"
             ref={containerRef}
             onMouseMove={handleMouseMove}
             layout
@@ -138,6 +139,7 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
         >
             {/* Background Visualizer */}
             <canvas
+                data-testid="visualizer-canvas"
                 ref={canvasRef}
                 className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${
                     isStageMode ? 'opacity-80' : 'opacity-40'
