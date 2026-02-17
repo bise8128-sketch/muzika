@@ -18,8 +18,8 @@ test('diagnostic: check interaction blockers', async ({ page }) => {
     const overlayCount = await page.locator('div[class*="overlay"], div[class*="backdrop"], div[class*="modal"]').count();
     console.log(`Found ${overlayCount} potential overlay elements.`);
 
-    // 4. Trace a click on a known element (e.g., the last nav button)
-    const settingsButton = page.locator('nav button').last();
+    // 4. Trace a click on a known element (e.g., the settings button)
+    const settingsButton = page.getByTestId('settings-button');
     if (await settingsButton.isVisible()) {
         const box = await settingsButton.boundingBox();
         console.log('Settings button bounding box:', box);
