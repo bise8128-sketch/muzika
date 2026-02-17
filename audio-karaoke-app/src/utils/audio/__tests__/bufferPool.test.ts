@@ -1,10 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { bufferPool } from '../bufferPool';
 
 describe('BufferPool AudioBuffer support', () => {
     it('should acquire and release AudioBuffers', () => {
         const mockCtx = {
-            createBuffer: vi.fn().mockImplementation((ch, len, sr) => ({
+            createBuffer: jest.fn().mockImplementation((ch, len, sr) => ({
                 numberOfChannels: ch,
                 length: len,
                 sampleRate: sr
@@ -23,7 +22,7 @@ describe('BufferPool AudioBuffer support', () => {
 
     it('should respect maxPoolSize', () => {
         const mockCtx = {
-            createBuffer: vi.fn().mockImplementation((ch, len, sr) => ({
+            createBuffer: jest.fn().mockImplementation((ch, len, sr) => ({
                 numberOfChannels: ch,
                 length: len,
                 sampleRate: sr
