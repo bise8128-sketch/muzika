@@ -1,13 +1,4 @@
-import {
-    createPlaylist,
-    getAllPlaylists,
-    getPlaylistById,
-    updatePlaylist,
-    deletePlaylist,
-    addSongToPlaylist,
-    removeSongFromPlaylist,
-    reorderPlaylistSongs,
-} from '../playlistStorage';
+import { playlistStorage } from '../playlistStorage';
 import { db } from '../audioDatabase';
 import { Playlist } from '@/types/storage';
 
@@ -37,7 +28,7 @@ describe('playlistStorage', () => {
             const name = 'My Playlist';
             (db.playlists.add as jest.Mock).mockResolvedValue(1);
 
-            const id = await createPlaylist(name);
+            const id = await playlistStorage.createPlaylist(name);
 
             expect(id).toBe(1);
             expect(db.playlists.add).toHaveBeenCalledWith(expect.objectContaining({
@@ -57,7 +48,7 @@ describe('playlistStorage', () => {
             ];
             (db.playlists.toArray as jest.Mock).mockResolvedValue(mockPlaylists);
 
-            const result = await getAllPlaylists();
+            const result = await playlistStorage.getAllPlaylists();
 
             expect(result).toEqual(mockPlaylists);
             expect(db.playlists.orderBy).toHaveBeenCalledWith('updatedAt');
@@ -70,7 +61,7 @@ describe('playlistStorage', () => {
             (db.playlists.get as jest.Mock).mockResolvedValue(playlist);
             (db.playlists.update as jest.Mock).mockResolvedValue(1);
 
-            await addSongToPlaylist(1, 3);
+            await playlistStorage.addSongToPlaylist(1, 3);
 
             expect(db.playlists.update).toHaveBeenCalledWith(1, expect.objectContaining({
                 songIds: [1, 2, 3],

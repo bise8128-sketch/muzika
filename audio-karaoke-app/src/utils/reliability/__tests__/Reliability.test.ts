@@ -122,37 +122,15 @@ describe('RetryHandler', () => {
             .mockRejectedValueOnce(new Error('fail 2'))
             .mockResolvedValue('success');
 
-        const promise = retryHandler.execute(fn, { baseDelay: 100, backoffFactor: 2 });
+        const execution = retryHandler.execute(fn, { baseDelay: 100, backoffFactor: 2 });
 
-        // Fast-forward time for retries
-        // 1st retry delay: 100 * 2^0 = 100
-        // 2nd retry delay: 100 * 2^1 = 200
+        // Fast-forward through all retries
+        for (let i = 0; i < 3; i++) {
+            await Promise.resolve();
+            jest.runAllTimers();
+        }
 
-        // We need to advance timers because the retry logic waits
-        // However, await retryHandler.execute blocks. We can't await it then advance timers.
-        // We need to start it, then advance timers, then await result.
-
-        // But since execute uses `await new Promise(...)` with setTimeout, 
-        // we can advance timers inside if we run pending promises.
-        // Jest's runAllTimers works well here.
-
-        // Actually, awaiting the promise in `it` block with fake timers is tricky if we don't control the flow.
-        // Easier way:
-
-        let result;
-        const execution = retryHandler.execute(fn, { baseDelay: 100 }).then(r => result = r);
-
-        // Wait for first attempt (immediate)
-        await Promise.resolve();
-        // Advance for first retry delay
-        jest.advanceTimersByTime(100);
-        await Promise.resolve(); // allow microtasks to run
-
-        // Advance for second retry delay
-        jest.advanceTimersByTime(200);
-        await Promise.resolve();
-
-        await execution;
+        const result = await execution;
         expect(result).toBe('success');
         expect(fn).toHaveBeenCalledTimes(3);
     });

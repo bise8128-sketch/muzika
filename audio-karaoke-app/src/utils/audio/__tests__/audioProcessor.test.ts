@@ -37,13 +37,18 @@ describe('audioProcessor', () => {
     describe('mergeSegments', () => {
         it('should merge segments correctly', () => {
             const sampleRate = 44100;
-            const crossfadeSamples = 1.0 * sampleRate; // CROSSFADE_DURATION is 1.0
-            const segment1 = new Float32Array(2 * sampleRate).fill(0.5);
-            const segment2 = new Float32Array(2 * sampleRate).fill(1.0);
+            const channels = 2;
+            const crossfadeFrames = 1.0 * sampleRate; 
+            const crossfadeSamples = crossfadeFrames * channels;
+            
+            // 2 seconds of stereo data each
+            const segment1 = new Float32Array(2 * sampleRate * channels).fill(0.5);
+            const segment2 = new Float32Array(2 * sampleRate * channels).fill(1.0);
 
-            const merged = mergeSegments([segment1, segment2], sampleRate);
+            const merged = mergeSegments([segment1, segment2], sampleRate, channels);
 
-            const expectedLength = segment1.length + segment2.length - crossfadeSamples;
+            // 2s + 2s - 1s overlap = 3s total
+            const expectedLength = 3 * sampleRate * channels;
             expect(merged.length).toBe(expectedLength);
 
             // Verify first part is 0.5
