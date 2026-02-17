@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 
 test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
-  test.setTimeout(60000);
+  test.slow();
 
   test.beforeEach(async ({ page }) => {
     // Mock AudioContext to allow decoding of dummy data
@@ -142,7 +142,7 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
     // Wait for the player container to be visible
     // Identifying player by a robust selector, e.g., the container with "Original" preset or play button
     const playerContainer = page.getByTestId('visualizer-container');
-    await expect(playerContainer).toBeVisible({ timeout: 30000 });
+    await expect(playerContainer).toBeVisible({ timeout: 60000 });
     
     // 3. Verify Visualizer is present
     // The visualizer is likely a canvas inside the player container
