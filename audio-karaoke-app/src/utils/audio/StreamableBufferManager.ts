@@ -47,6 +47,19 @@ export class StreamableBufferManager {
 
     private createAudioBuffer(channel1: Float32Array, channel2: Float32Array): AudioBuffer {
         const buffer = bufferPool.acquireAudioBuffer(this.audioContext, 2, channel1.length, this.sampleRate);
+        
+        // Safety check for buffer allocation failure
+        if (!buffer) {
+            // In a real scenario, we might want to throw or handle this gracefully.
+            // For now, create a fallback buffer directly from context if pool failed, 
+            // or just ensure we don't crash.
+            // If acquireAudioBuffer returns undefined, it usually means createBuffer failed or something is wrong with mocks.
+             const fallback = this.audioContext.createBuffer(2, channel1.length, this.sampleRate);
+             fallback.copyToChannel(channel1 as any, 0);
+             fallback.copyToChannel(channel2 as any, 1);
+             return fallback;
+        }
+
         // Cast to any to avoid strict shared buffer checks for this demo
         buffer.copyToChannel(channel1 as any, 0);
         buffer.copyToChannel(channel2 as any, 1);
