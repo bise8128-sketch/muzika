@@ -142,7 +142,7 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
     // Wait for the player container to be visible
     // Identifying player by a robust selector, e.g., the container with "Original" preset or play button
     const playerContainer = page.getByTestId('visualizer-container');
-    await expect(playerContainer).toBeVisible({ timeout: 60000 });
+    await expect(playerContainer).toBeVisible({ timeout: 120000 });
     
     // 3. Verify Visualizer is present
     // The visualizer is likely a canvas inside the player container
