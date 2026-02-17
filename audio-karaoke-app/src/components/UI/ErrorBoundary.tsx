@@ -2,7 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: ReactNode | ((error: Error, reset: () => void) => ReactNode);
   onReset?: () => void;
 }
 
@@ -32,7 +32,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      if (this.props.fallback) {
+        if (typeof this.props.fallback === 'function') {
+          return this.props.fallback(this.state.error!, this.handleReset);
+        }
+        return this.props.fallback;
+      }
 
       return (
         <div className="flex flex-col items-center justify-center p-12 m-8 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 text-center animate-in fade-in zoom-in duration-500">
