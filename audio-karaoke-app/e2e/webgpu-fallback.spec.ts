@@ -52,8 +52,14 @@ test.describe('WebGPU Fallback Verification', () => {
         console.log('SUCCESS: "WASM (CPU)" indicator found in ProcessingView');
 
         // 4. Wait for processing to complete (player to appear)
+        // Processing finished, wait for "Try Karaoke" button and click it to enter player
+        const tryKaraokeButton = page.getByRole('button', { name: /try karaoke/i });
+        // Increase timeout as separation might take time
+        await expect(tryKaraokeButton).toBeVisible({ timeout: 90000 });
+        await tryKaraokeButton.click();
+
         const playerContainer = page.getByTestId('visualizer-container');
-        await expect(playerContainer).toBeVisible({ timeout: 90000 });
+        await expect(playerContainer).toBeVisible({ timeout: 30000 });
         
         console.log('SUCCESS: Processing completed successfully on WASM');
     });

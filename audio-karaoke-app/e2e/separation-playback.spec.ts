@@ -138,6 +138,12 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
 
     // 2. Wait for processing to complete and player to appear
     await expect(page.getByTestId('processing-view')).toBeVisible({ timeout: 10000 });
+
+    // Processing finished, wait for "Try Karaoke" button and click it to enter player
+    const tryKaraokeButton = page.getByRole('button', { name: /try karaoke/i });
+    // Increase timeout as separation might take time
+    await expect(tryKaraokeButton).toBeVisible({ timeout: 120000 });
+    await tryKaraokeButton.click();
     
     // Wait for the player container to be visible
     // Identifying player by a robust selector, e.g., the container with "Original" preset or play button
