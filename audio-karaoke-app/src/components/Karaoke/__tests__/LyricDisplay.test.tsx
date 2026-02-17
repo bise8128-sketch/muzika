@@ -39,7 +39,12 @@ describe('LyricDisplay', () => {
         al: 'Test Album',
         length: '03:00',
         lines: [
-            { text: 'First line of lyrics', startTime: 0, endTime: 5, words: [] },
+            { 
+                text: 'First line of lyrics', 
+                startTime: 0, 
+                endTime: 5, 
+                words: [{ text: 'First', startTime: 0, endTime: 1 }, { text: 'line', startTime: 1, endTime: 2 }] 
+            },
             { text: 'Second line here', startTime: 5, endTime: 10, words: [] },
         ],
     };
