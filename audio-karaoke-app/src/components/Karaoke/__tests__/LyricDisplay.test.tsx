@@ -28,6 +28,10 @@ jest.mock('framer-motion', () => ({
     useSpring: () => ({ get: () => 0 }),
 }));
 
+// Mock scrollIntoView and scrollTo as they're not supported in JSDOM
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
+window.HTMLElement.prototype.scrollTo = jest.fn();
+
 describe('LyricDisplay', () => {
     const mockLyrics: LRCData = {
         ti: 'Test Song',
