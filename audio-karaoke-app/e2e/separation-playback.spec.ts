@@ -142,11 +142,14 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
     // Processing finished, wait for "Try Karaoke" button and click it to enter player
     const tryKaraokeButton = page.getByRole('button', { name: /try karaoke/i });
     
-    // Wait for any loading overlay to disappear
-    // The class bg-black/80 is commonly used for overlays in Tailwind
-    await page.locator('.bg-black\\/80').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {
-      // Ignore timeout if overlay doesn't exist or disappears quickly
-    });
+    // Wait for any loading overlay or onboarding to disappear
+    // The class bg-black/80 is used for onboarding and other overlays
+    // We wait for it to be hidden or detached so it doesn't block the click
+    try {
+      await page.waitForSelector('.bg-black\\/80', { state: 'hidden', timeout: 30000 });
+    } catch (e) {
+      // If it's not there or doesn't disappear, Playwright's click will handle it with its own retry logic
+    }
 
     // Increase timeout as separation might take time
     await expect(tryKaraokeButton).toBeVisible({ timeout: 120000 });
