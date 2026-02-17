@@ -27,9 +27,10 @@ describe('audioProcessor', () => {
             const segments = segmentAudio(mockAudioBuffer, 5);
             const sampleRate = 44100;
             const overlapSamples = 1.0 * sampleRate; // CROSSFADE_DURATION is 1.0
+            const channels = 2;
 
-            // Segment 0: 0 to 5s + overlap = 6.0s
-            expect(segments[0].data.length).toBe(5 * sampleRate + overlapSamples);
+            // Segment 0: 0 to 5s + overlap = 6.0s. Since it is interleaved stereo, length is doubled.
+            expect(segments[0].data.length).toBe((5 * sampleRate + overlapSamples) * channels);
         });
     });
 

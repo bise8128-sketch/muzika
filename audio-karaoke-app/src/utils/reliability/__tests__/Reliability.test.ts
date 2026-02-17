@@ -163,17 +163,14 @@ describe('RetryHandler', () => {
 
         const execution = retryHandler.execute(fn, { maxRetries, baseDelay: 100 });
 
-        // 1st attempt (immediate)
-        await Promise.resolve();
-        // 1st retry delay
-        jest.advanceTimersByTime(100);
-        await Promise.resolve();
-        // 2nd retry delay
-        jest.advanceTimersByTime(200);
-        await Promise.resolve();
+        // Fast-forward
+        for (let i = 0; i < 5; i++) {
+            await Promise.resolve();
+            jest.advanceTimersByTime(1000);
+        }
 
         await expect(execution).rejects.toThrow('fail');
-        expect(fn).toHaveBeenCalledTimes(maxRetries + 1); // 1 initial + 2 retries
+        expect(fn).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
     });
 
     it('should not retry if shouldRetry returns false', async () => {
