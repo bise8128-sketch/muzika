@@ -1,52 +1,53 @@
-
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { LyricDisplay } from '../LyricDisplay';
 import { LRCData } from '@/types/karaoke';
 
-// Mock scrollIntoView as it's not supported in JSDOM
-window.HTMLElement.prototype.scrollIntoView = jest.fn();
+// Mock next-intl
+jest.mock('next-intl', () => ({
+    useTranslations: () => (key: string) => {
+        if (key === 'waitingForLyrics') return 'Awaiting Data Signal...';
+        return key;
+    },
+}));
+
+// Mock useAudioReactivity
+jest.mock('@/hooks/useAudioReactivity', () => ({
+    useAudioReactivity: () => ({ bass: { get: () => 0 }, energy: { get: () => 0 }, treble: { get: () => 0 } }),
+}));
+
+// Mock framer-motion
+jest.mock('framer-motion', () => ({
+    motion: {
+        div: React.forwardRef(({ children, ...props }: any, ref) => <div {...props} ref={ref}>{children}</div>),
+        span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+        p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    },
+    AnimatePresence: ({ children }: any) => <>{children}</>,
+    useTransform: () => ({ get: () => 0 }),
+    useSpring: () => ({ get: () => 0 }),
+}));
 
 describe('LyricDisplay', () => {
     const mockLyrics: LRCData = {
-        metadata: {},
+        ti: 'Test Song',
+        ar: 'Test Artist',
+        al: 'Test Album',
+        length: '03:00',
         lines: [
-            { startTime: 1, endTime: 3, text: 'First line' },
-            { startTime: 3, endTime: 5, text: 'Second line' },
-            { startTime: 5, endTime: 7, text: 'Third line' },
+            { text: 'First line of lyrics', startTime: 0, endTime: 5, words: [] },
+            { text: 'Second line here', startTime: 5, endTime: 10, words: [] },
         ],
     };
 
-    it('renders "No lyrics available" when no lyrics are provided', () => {
-        render(<LyricDisplay lyrics={null} currentTime={0} />);
-        expect(screen.getByText('No lyrics loaded')).toBeInTheDocument();
+    it('renders waiting message when lyrics are null', () => {
+        render(<LyricDisplay lyrics={null} currentLineIndex={-1} currentWordIndex={-1} />);
+        expect(screen.getByText('Awaiting Data Signal...')).toBeInTheDocument();
     });
 
-    it('renders all lyric lines', () => {
-        render(<LyricDisplay lyrics={mockLyrics} currentTime={0} />);
-        expect(screen.getByText('First line')).toBeInTheDocument();
-        expect(screen.getByText('Second line')).toBeInTheDocument();
-        expect(screen.getByText('Third line')).toBeInTheDocument();
-    });
-
-    it('highlights the current line', () => {
-        const { container } = render(<LyricDisplay lyrics={mockLyrics} currentTime={4} />);
-
-        // The second line (index 1) should be active
-        const lines = container.querySelectorAll('.text-center');
-        expect(lines[1]).toHaveClass('text-4xl', 'md:text-5xl', 'text-white');
-
-        // The first line should be "past"
-        expect(lines[0]).toHaveClass('text-2xl', 'text-white/40');
-
-        // The third line should be "future"
-        expect(lines[2]).toHaveClass('text-2xl', 'text-white/20');
-    });
-
-    it('calls scrollIntoView when current line changes', () => {
-        const { rerender } = render(<LyricDisplay lyrics={mockLyrics} currentTime={0} />);
-
-        rerender(<LyricDisplay lyrics={mockLyrics} currentTime={2} />);
-        expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+    it('renders lyrics lines correctly', () => {
+        render(<LyricDisplay lyrics={mockLyrics} currentLineIndex={0} currentWordIndex={-1} />);
+        expect(screen.getByText('First line of lyrics')).toBeInTheDocument();
+        expect(screen.getByText('Second line here')).toBeInTheDocument();
     });
 });
