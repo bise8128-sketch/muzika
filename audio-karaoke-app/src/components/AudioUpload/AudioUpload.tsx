@@ -7,6 +7,7 @@ import YouTubeInput from '@/components/YouTubeInput';
 import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
 import { DirectKaraokeUpload } from './DirectKaraokeUpload';
 import { ExtractedMetadata } from '@/types/schema';
+import { ErrorBoundary } from '@/components/UI/ErrorBoundary';
 
 interface AudioUploadProps {
     onUpload: (files: File[], isKaraokeMode?: boolean, metadata?: ExtractedMetadata[]) => void;
@@ -18,7 +19,15 @@ interface AudioUploadProps {
     onServerProcessing?: (url: string, config: { model: string, format: string }) => void;
 }
 
-export const AudioUpload: React.FC<AudioUploadProps> = ({
+export const AudioUpload: React.FC<AudioUploadProps> = (props) => {
+    return (
+        <ErrorBoundary>
+            <AudioUploadContent {...props} />
+        </ErrorBoundary>
+    );
+};
+
+const AudioUploadContent: React.FC<AudioUploadProps> = ({
     onUpload,
     isLoading,
     autoStartKaraoke = false,

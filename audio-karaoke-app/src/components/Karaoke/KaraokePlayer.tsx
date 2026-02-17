@@ -38,6 +38,14 @@ interface KaraokePlayerProps {
 }
 
 export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
+    return (
+        <ErrorBoundary>
+            <KaraokePlayerContent controller={controller} />
+        </ErrorBoundary>
+    );
+};
+
+const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const t = useTranslations('KaraokePlayer');
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);

@@ -141,6 +141,13 @@ test.describe('Karaoke Flow - Pitch, Tempo & Visualizer', () => {
 
     // Processing finished, wait for "Try Karaoke" button and click it to enter player
     const tryKaraokeButton = page.getByRole('button', { name: /try karaoke/i });
+    
+    // Wait for any loading overlay to disappear
+    // The class bg-black/80 is commonly used for overlays in Tailwind
+    await page.locator('.bg-black\\/80').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {
+      // Ignore timeout if overlay doesn't exist or disappears quickly
+    });
+
     // Increase timeout as separation might take time
     await expect(tryKaraokeButton).toBeVisible({ timeout: 120000 });
     await tryKaraokeButton.click();
