@@ -202,6 +202,7 @@ export default function YouTubeInput({ onAudioExtracted, onUrlSubmit, mode = 'cl
                     placeholder={t('placeholder')}
                     disabled={disabled || loading}
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    aria-label={t('placeholder')}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
                 />
                 <button
