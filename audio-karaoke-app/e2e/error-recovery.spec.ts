@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
  * - Backend offline
  */
 test.describe('Error Recovery', () => {
-    test.setTimeout(60000);
+
 
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {

@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * Simulates a real user configuring and persisting app settings.
  */
 test.describe('Settings and Preferences', () => {
-    test.setTimeout(60000);
+
 
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {

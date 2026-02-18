@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * Simulates how users with assistive technologies interact with the app.
  */
 test.describe('Accessibility', () => {
-    test.setTimeout(30000);
+
 
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {

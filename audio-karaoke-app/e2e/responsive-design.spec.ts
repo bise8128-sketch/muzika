@@ -14,7 +14,7 @@ const VIEWPORTS = {
 };
 
 test.describe('Responsive Design', () => {
-    test.setTimeout(30000);
+
 
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {

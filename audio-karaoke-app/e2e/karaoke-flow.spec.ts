@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 
 test.describe('Karaoke Flow', () => {
-    test.setTimeout(60000); // Increase timeout for dev mode compilation
+
     
     test.beforeEach(async ({ page }) => {
         page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
