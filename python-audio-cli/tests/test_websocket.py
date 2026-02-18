@@ -83,7 +83,9 @@ class TestWebSocketBroadcast:
             # Drain initial messages (join + room-state)
             for _ in range(3):
                 try:
-                    ws.receive_json()
+                    data = ws.receive_json()
+                    if data["type"] == "room-state":
+                        break
                 except Exception:
                     break
 
@@ -105,7 +107,9 @@ class TestWebSocketBroadcast:
             # Drain initial messages
             for _ in range(3):
                 try:
-                    ws.receive_json()
+                    data = ws.receive_json()
+                    if data["type"] == "room-state":
+                        break
                 except Exception:
                     break
 
@@ -128,7 +132,9 @@ class TestWebSocketMultiParticipant:
             # Drain ws1 initial messages
             for _ in range(3):
                 try:
-                    ws1.receive_json()
+                    data = ws1.receive_json()
+                    if data["type"] == "room-state":
+                        break
                 except Exception:
                     break
 
@@ -141,7 +147,9 @@ class TestWebSocketMultiParticipant:
                 # Drain ws2 initial messages
                 for _ in range(3):
                     try:
-                        ws2.receive_json()
+                        data = ws2.receive_json()
+                        if data["type"] == "room-state":
+                            break
                     except Exception:
                         break
 
@@ -164,10 +172,12 @@ class TestWebSocketDisconnect:
     def test_disconnect_sends_leave_message(self):
         """When a user disconnects, remaining users should get a 'leave' message."""
         with client.websocket_connect("/ws/rooms/room-leave/user-stay?name=Stayer") as ws_stay:
-            # Drain initial messages
+            # Drain initial messages (join + room-state)
             for _ in range(3):
                 try:
-                    ws_stay.receive_json()
+                    data = ws.receive_json()
+                    if data["type"] == "room-state":
+                        break
                 except Exception:
                     break
 
@@ -193,7 +203,9 @@ class TestWebSocketDisconnect:
         with client.websocket_connect("/ws/rooms/room-cleanup/user-only?name=Solo") as ws:
             for _ in range(3):
                 try:
-                    ws.receive_json()
+                    data = ws.receive_json()
+                    if data["type"] == "room-state":
+                        break
                 except Exception:
                     break
 
