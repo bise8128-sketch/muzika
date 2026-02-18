@@ -644,9 +644,9 @@ The next step is to generate the refactored code to address each identified issu
 
 | ID | Priority | Issue | Status | Notes |
 |----|----------|-------|--------|-------|
-| #1 | **P0** | XSS via `dangerouslySetInnerHTML` in `page.tsx:662` | 🔜 Open | Remove `t.raw()`, use plain text rendering |
-| #2 | **P0** | Path traversal in `backend-files/[...path]/route.ts` | 🔜 Open | Reject `..` segments, whitelist extensions |
-| #3 | **P0** | Wildcard CORS `Access-Control-Allow-Origin: *` | 🔜 Open | Implement origin whitelist |
+| #1 | **P0** | XSS via `dangerouslySetInnerHTML` in `layout.tsx` | ✅ Fixed | `page.tsx` already used `t.rich()`. `layout.tsx` SW registration moved to `public/sw-register.js` via `next/script`. |
+| #2 | **P0** | Path traversal in `backend-files/[...path]/route.ts` | ✅ Fixed | `validateFilePath()` in `utils/security/sanitize.ts` — blocks `..`, null bytes, encoded traversal, non-whitelisted extensions. |
+| #3 | **P0** | Wildcard CORS `Access-Control-Allow-Origin: *` | ✅ Fixed | `middleware.ts` implements origin whitelisting via `getAllowedOrigins()` + `isOriginAllowed()`. No wildcard remains. |
 | #4 | P1 | Missing input validation in `python-processing/route.ts` | 🔜 Open | Add Zod schema validation |
 | #5 | P1 | Memory exhaustion with large audio files | 🔜 Open | Stream results to IndexedDB incrementally |
 | #6 | P1 | Worker pool memory leak in `audioExporter.ts` | 🔜 Open | Add try-finally for guaranteed release |

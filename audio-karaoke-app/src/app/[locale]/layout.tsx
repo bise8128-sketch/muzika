@@ -6,15 +6,13 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { MonitoringInit } from "@/components/UI/MonitoringInit";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: 'swap',
 });
-
-// const inter = { variable: "font-inter" }; // Mock variable for compatibility
-
 
 export const metadata: Metadata = {
   title: "DaorsKaraoke | Premium AI Karaoke Experience",
@@ -52,12 +50,14 @@ export default async function RootLayout({
           <MonitoringInit />
           {children}
         </NextIntlClientProvider>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js')})}`
-          }}
-        />
+        {/* 
+          Security fix (P0 #1): Replaced dangerouslySetInnerHTML inline script with
+          next/script src= reference to avoid XSS risk from raw HTML injection.
+          The external file public/sw-register.js contains the same SW registration logic.
+        */}
+        <Script src="/sw-register.js" strategy="lazyOnload" />
       </body>
     </html>
   );
 }
+
