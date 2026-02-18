@@ -3,7 +3,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
-import YouTubeInput from '@/components/YouTubeInput';
 import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
 import { DirectKaraokeUpload } from './DirectKaraokeUpload';
 import { ExtractedMetadata } from '@/types/schema';
@@ -16,7 +15,6 @@ interface AudioUploadProps {
     onAutoStartToggle?: (value: boolean) => void;
     selectedModelId: string;
     onModelChange: (id: string) => void;
-    onServerProcessing?: (url: string, config: { model: string, format: string }) => void;
 }
 
 export const AudioUpload: React.FC<AudioUploadProps> = (props) => {
@@ -34,14 +32,11 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
     onAutoStartToggle,
     selectedModelId,
     onModelChange,
-    onServerProcessing
 }) => {
     const t = useTranslations('AudioUpload');
     const { models } = useModels();
     const [isDragging, setIsDragging] = useState(false);
     const [isKaraokeMode, setIsKaraokeMode] = useState(false);
-    const [processingMode, setProcessingMode] = useState<'client' | 'server'>('client');
-    const [serverFormat, setServerFormat] = useState('mp3');
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,24 +44,19 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
         const config: ValidationConfig = {
             maxFileSize: 50 * 1024 * 1024, // 50MB
             allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/m4a'],
-            // Optional: minFreeStorage could be added here if we had a way to estimate it reliably in the browser for all users
         };
 
         const validator = new FileValidator(config);
-
-        // Clear previous errors
         setError(null);
 
         for (const file of files) {
             const result = await validator.validate(file);
 
             if (!result.isValid) {
-                // Show the first error
                 setError(result.errors[0] || t('errorFormat', { name: file.name }));
                 return false;
             }
 
-            // Show warnings if any (optional, maybe as toast or console)
             if (result.warnings.length > 0) {
                 console.warn(`Validation warnings for ${file.name}:`, result.warnings);
             }
@@ -205,33 +195,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                 )}
             </div>
 
-            {/* OR Divider */}
-            {!isKaraokeMode && (
-                <div className="relative my-10">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-white/10"></div>
-                    </div>
-                    <div className="relative flex justify-center">
-                        <span className="px-4 text-sm font-bold uppercase tracking-widest text-muted-foreground bg-zinc-950">
-                            {t('or')}
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* YouTube Input */}
-            {!isKaraokeMode && (
-                <YouTubeInput
-                    onAudioExtracted={(file, metadata) => {
-                        console.log('YouTube audio extracted:', metadata);
-                        onUpload([file], isKaraokeMode);
-                    }}
-                    mode={processingMode}
-                    disabled={isLoading}
-                    onUrlSubmit={(url) => onServerProcessing?.(url, { model: selectedModelId, format: serverFormat })}
-                />
-            )}
-
             {/* AI Model Selection & Settings */}
             {!isLoading && (
                 <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start animate-in fade-in slide-in-from-top-4 duration-700">
@@ -258,21 +221,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                     </div>
 
                     <div className="flex flex-col justify-end h-full space-y-4">
-                        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10 mb-2">
-                            <button
-                                onClick={() => setProcessingMode('client')}
-                                className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${processingMode === 'client' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
-                            >
-                                CLIENT ENGINE
-                            </button>
-                            <button
-                                onClick={() => setProcessingMode('server')}
-                                className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${processingMode === 'server' ? 'bg-emerald-500 text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
-                            >
-                                PYTHON SERVER
-                            </button>
-                        </div>
-
                         <label className="flex items-center gap-4 cursor-pointer group p-3 rounded-xl hover:bg-white/5 transition-all">
                             <div className="relative">
                                 <input

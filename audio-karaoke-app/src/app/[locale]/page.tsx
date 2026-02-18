@@ -15,7 +15,6 @@ import { DEFAULT_MODEL_ID } from '@/utils/constants';
 import { useSeparation } from '@/hooks/useSeparation';
 import { useBatchSeparation } from '@/hooks/useBatchSeparation';
 import { useModels } from '@/hooks/useModels';
-import { useServerProcessing } from '@/hooks/useServerProcessing';
 import { useHistoryManagement } from '@/hooks/useHistoryManagement';
 import { useAudioExport } from '@/hooks/useAudioExport';
 import { useAppState } from '@/hooks/useAppState';
@@ -106,7 +105,6 @@ export default function Home() {
   // Domain hooks
   const separation = useSeparation();
   const batch = useBatchSeparation();
-  const serverProcessing = useServerProcessing();
   const history = useHistoryManagement();
   const { handleDownload, handleBatchDownload } = useAudioExport();
 
@@ -114,13 +112,10 @@ export default function Home() {
     separationStatus: separation.status,
     separationResult: separation.result,
     separationError: separation.error,
-    serverProcessingResult: serverProcessing.result,
-    serverProcessingError: serverProcessing.error,
     autoStartKaraoke,
     controller,
     onHistoryRefresh: history.loadHistory,
     onResetSeparation: separation.reset,
-    onResetServerProcessing: serverProcessing.reset,
     onClearRestoredResult: history.clearRestoredResult,
     restoredResult: history.restoredResult,
   });
@@ -177,12 +172,6 @@ export default function Home() {
     }
   };
 
-  // Server processing handler
-  const handleServerProcessing = async (url: string, config: { model: string; format: string }) => {
-    send({ type: 'PROCESS_START' });
-    await serverProcessing.handleServerProcessing(url, config);
-  };
-
   const renderContent = () => {
     if (machineState.matches('uploading') || machineState.matches('idle')) {
       return (
@@ -196,7 +185,6 @@ export default function Home() {
           }}
           selectedModelId={selectedModelId}
           onModelChange={setSelectedModelId}
-          onServerProcessing={handleServerProcessing}
           historyItems={history.historyItems}
           onRestore={handleRestore}
           onClearHistory={history.clearHistory}

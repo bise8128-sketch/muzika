@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
 import dynamic from 'next/dynamic';
 import type { HistorySession } from '@/utils/storage/historyStore';
@@ -18,7 +17,6 @@ interface UploadViewProps {
   onAutoStartToggle: (val: boolean) => void;
   selectedModelId: string;
   onModelChange: (id: string) => void;
-  onServerProcessing: (url: string, config: { model: string; format: string }) => void;
   historyItems: HistorySession[];
   onRestore: (fileHash: string) => void;
   onClearHistory: () => void;
@@ -31,12 +29,10 @@ export function UploadView({
   onAutoStartToggle,
   selectedModelId,
   onModelChange,
-  onServerProcessing,
   historyItems,
   onRestore,
   onClearHistory,
 }: UploadViewProps) {
-  const t = useTranslations('HomePage');
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
@@ -47,7 +43,6 @@ export function UploadView({
         onAutoStartToggle={onAutoStartToggle}
         selectedModelId={selectedModelId}
         onModelChange={onModelChange}
-        onServerProcessing={onServerProcessing}
       />
       <div className="mt-16">
         <History

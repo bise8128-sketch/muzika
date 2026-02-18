@@ -10,13 +10,10 @@ interface UseAppStateOptions {
   separationStatus: 'idle' | 'processing' | 'completed' | 'error';
   separationResult: SeparationResult | null;
   separationError: string | null;
-  serverProcessingResult: SeparationResult | null;
-  serverProcessingError: string | null;
   autoStartKaraoke: boolean;
   controller: PlaybackController | null;
   onHistoryRefresh: () => void;
   onResetSeparation: () => void;
-  onResetServerProcessing: () => void;
   onClearRestoredResult: () => void;
   restoredResult: SeparationResult | null;
 }
@@ -26,13 +23,10 @@ export function useAppState(options: UseAppStateOptions) {
     separationStatus,
     separationResult,
     separationError,
-    serverProcessingResult,
-    serverProcessingError,
     autoStartKaraoke,
     controller,
     onHistoryRefresh,
     onResetSeparation,
-    onResetServerProcessing,
     onClearRestoredResult,
     restoredResult,
   } = options;
@@ -60,35 +54,20 @@ export function useAppState(options: UseAppStateOptions) {
     }
   }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh, send]);
 
-  // React to server processing completion
-  useEffect(() => {
-    if (serverProcessingResult) {
-      send({ type: 'PROCESS_COMPLETE' });
-    }
-  }, [serverProcessingResult, send]);
-
-  // React to server processing error
-  useEffect(() => {
-    if (serverProcessingError) {
-      alert(serverProcessingError);
-      send({ type: 'PROCESS_ERROR', error: serverProcessingError });
-    }
-  }, [serverProcessingError, send]);
 
   const handleRestart = useCallback(() => {
     send({ type: 'RESET' });
     onResetSeparation();
     onClearRestoredResult();
-    onResetServerProcessing();
-  }, [onResetSeparation, onClearRestoredResult, onResetServerProcessing, send]);
+  }, [onResetSeparation, onClearRestoredResult, send]);
 
   const handleTryKaraoke = useCallback(() => {
-    const activeResult = separationResult || restoredResult || serverProcessingResult;
+    const activeResult = separationResult || restoredResult;
     if (activeResult && controller) {
       controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
     }
     send({ type: 'START_KARAOKE' });
-  }, [separationResult, restoredResult, serverProcessingResult, controller, send]);
+  }, [separationResult, restoredResult, controller, send]);
 
   // Actions exposed to UI
   const setViewState = useCallback((view: 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch') => {
@@ -101,7 +80,7 @@ export function useAppState(options: UseAppStateOptions) {
   }, [send]);
 
   // The active result is whichever was most recently produced
-  const activeResult = separationResult || restoredResult || serverProcessingResult;
+  const activeResult = separationResult || restoredResult;
 
   // Helper to map machine state to string for UI
   const getMappedState = (): AppState => {
