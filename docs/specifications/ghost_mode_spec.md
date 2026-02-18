@@ -1,6 +1,10 @@
 # Ghost Mode: Audio-Reactive Typography Specification
 
+> [!NOTE]
+> **This is a future feature specification.** Ghost Mode is not yet implemented in the current codebase. This document defines the planned architecture for implementation.
+
 ## 1. Executive Summary
+
 "Ghost Mode" is a high-performance visual effect where lyric typography reacts instantaneously to audio frequency transients. This system uses a direct-coupling architecture to map audio analysis data to visual properties without incurring the overhead of the React render cycle, ensuring 60fps+ performance even on mobile devices.
 
 ## 2. Architecture & Data Flow

@@ -635,3 +635,30 @@ useEffect(() => {
 This audit reveals several security vulnerabilities that require immediate attention, particularly the XSS vulnerability and path traversal issues. The performance concerns, while not immediately critical, will become more pronounced as the application scales. Implementing the recommended fixes will significantly improve the security posture and performance characteristics of the application.
 
 The next step is to generate the refactored code to address each identified issue.
+
+---
+
+## Remediation Progress
+
+> **Last Updated**: February 2026 — Update this table as issues are resolved.
+
+| ID | Priority | Issue | Status | Notes |
+|----|----------|-------|--------|-------|
+| #1 | **P0** | XSS via `dangerouslySetInnerHTML` in `page.tsx:662` | 🔜 Open | Remove `t.raw()`, use plain text rendering |
+| #2 | **P0** | Path traversal in `backend-files/[...path]/route.ts` | 🔜 Open | Reject `..` segments, whitelist extensions |
+| #3 | **P0** | Wildcard CORS `Access-Control-Allow-Origin: *` | 🔜 Open | Implement origin whitelist |
+| #4 | P1 | Missing input validation in `python-processing/route.ts` | 🔜 Open | Add Zod schema validation |
+| #5 | P1 | Memory exhaustion with large audio files | 🔜 Open | Stream results to IndexedDB incrementally |
+| #6 | P1 | Worker pool memory leak in `audioExporter.ts` | 🔜 Open | Add try-finally for guaranteed release |
+| #7 | P1 | Missing rate limiting on expensive API routes | 🔜 Open | Add `next-rate-limit` or Redis-backed limiter |
+| #8 | P1 | Insecure error messages expose internal details | 🔜 Open | Sanitize error messages to user-safe strings |
+| #9 | P1 | YouTube URL validation insufficient | 🔜 Open | Validate via `new URL()` + video ID regex |
+| #10 | P2 | Client-side only file validation | 🔜 Open | Add server-side validation in API routes |
+| #11 | P2 | LRC parser DoS via malicious content | 🔜 Open | Add line count and file size limits |
+| #12 | P2 | Missing Content Security Policy | 🔜 Open | Add CSP headers in `next.config.ts` |
+| #13 | P2 | Batch processing race conditions | 🔜 Open | Use `useReducer` single source of truth |
+| #14 | P2 | AudioContext not closed after use | 🔜 Open | Use try-finally pattern |
+| #18 | Low | `alert()` for error display | 🔜 Open | Replace with toast notifications |
+| #19 | Low | Console logging in production | 🔜 Open | Add environment-based logger |
+| #20 | Low | Missing TypeScript strict checks | 🔜 Open | Enable strict mode in `tsconfig.json` |
+

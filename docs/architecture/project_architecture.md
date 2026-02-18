@@ -1,12 +1,30 @@
 # Progressive Client-Side Audio Processing Architecture
 
+> **Last Reviewed**: February 2026 | **Status**: Implemented ✅
+
 ## Overview
 
-This document outlines the architectural design for a high-performance, client-side audio separation system using ONNX Runtime Web with WebGPU. The core goal is to enable low-latency, progressive audio processing that allows playback to start before the entire file is processed, while minimizing memory usage.
+This document outlines the architectural design for the client-side audio separation pipeline using ONNX Runtime Web + WebGPU. The core design goal is **progressive streaming inference**: playback can start before the entire file is processed, while keeping peak memory usage minimal.
+
+## System Data Flow
+
+```mermaid
+graph TD
+    A["User: File / YouTube URL"] --> B["Main Thread\naudio decode → Float32Array"]
+    B --> C["Web Worker\naudio.worker.ts"]
+    C --> D["ONNX Runtime Web\nWebGPU → WASM fallback"]
+    D --> E["Chunk: Vocals + Instrumentals\nFloat32Array — Transferable"]
+    E --> F["StreamableBufferManager\nMain Thread"]
+    F --> G["AudioContext\nscheduled playback"]
+    F --> H["IndexedDB\noptional cache"]
+    G --> I["KaraokePlayer\nUI + lyrics sync"]
+```
+
 
 ## Core Components
 
 ### 1. Main Thread (UI & Orchestration)
+
 
 - **Responsibility**: User interaction, audio decoding (initial), playback scheduling, and visualization.
 - **Key Components**:
