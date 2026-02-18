@@ -26,7 +26,7 @@
     "@ffmpeg/core": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.1",
-    "@sentry/nextjs": "^10.38.0",
+    "@sentry/nextjs": "^10.39.0",
     "@xstate/react": "^6.0.0",
     "dexie": "^4.2.1",
     "framer-motion": "^12.34.0",
