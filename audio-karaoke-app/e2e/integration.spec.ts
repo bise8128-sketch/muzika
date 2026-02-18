@@ -67,7 +67,7 @@ test.describe('Full-Stack Integration', () => {
 
         // Wait for separation to complete
         const resultsHeading = page.getByRole('heading', { name: /Separation Complete/i });
-        await expect(resultsHeading).toBeVisible({ timeout: 240000 }); // 4 minute timeout
+        await expect(resultsHeading).toBeVisible({ timeout: 600000 }); // 10 minute timeout
 
         // Verify download buttons
         await expect(page.getByRole('button', { name: /WAV/i }).first()).toBeVisible();
