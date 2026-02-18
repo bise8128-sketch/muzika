@@ -1,485 +1,228 @@
-# Development Environment Setup - Korak po Korak
+# Development Environment Setup Guide
 
-## Faza 1: Preduvjeti
+> **Last Updated**: February 2026
 
-### Potreban software
+This guide walks you through setting up the full Muzika development environment — both the Next.js frontend and the Python audio backend.
 
+---
+
+## Prerequisites
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Node.js | 18+ LTS | [nodejs.org](https://nodejs.org/) |
+| npm | 9+ | Bundled with Node.js |
+| Python | 3.8+ | [python.org](https://python.org/) |
+| ffmpeg | any | [ffmpeg.org](https://ffmpeg.org/) — required by yt-dlp and audio processing |
+| Git | any | [git-scm.com](https://git-scm.com/) |
+
+**Verify your installations:**
 ```bash
-Node.js 18+ LTS (https://nodejs.org/)
-npm ili yarn (dolazi s Node.js)
-Git (https://git-scm.com/)
-VS Code (https://code.visualstudio.com/)
-```
-
-### Provjera instalacije
-
-```bash
-node --version    # trebalo bi v18+
-npm --version     # trebalo bi v9+
-git --version     # bilo koja verzija
+node --version    # Should print v18+
+npm --version     # Should print 9+
+python3 --version # Should print 3.8+
+ffmpeg -version   # Should print version info
+git --version     # Any version
 ```
 
 ---
 
-## Faza 2: Inicijalizacija projekta
-
-### Korak 1: Kreiranje Next.js aplikacije
+## Step 1: Clone the Repository
 
 ```bash
-# Opcija A: Korištenje create-next-app (preporučeno)
-npx create-next-app@latest audio-karaoke-app --typescript --tailwind
+git clone https://github.com/your-org/muzika.git
+cd muzika
+```
 
-# Opcija B: Ručna inicijalizacija
-mkdir audio-karaoke-app
+---
+
+## Step 2: Frontend Setup (Next.js)
+
+```bash
 cd audio-karaoke-app
-npm init -y
+npm install
 ```
 
-### Korak 2: Instalacija ključnih zavisnosti
-
+**Verify the install:**
 ```bash
-cd audio-karaoke-app
-
-# Core zavisnosti
-npm install next react react-dom
-
-# AI/ML
-npm install onnxruntime-web
-
-# Lokalna pohrana
-npm install dexie
-
-# State management
-npm install zustand
-
-# Audio processing
-npm install soundtouchjs
-
-# Utility
-npm install ffmpeg.wasm jszip
-
-# Development
-npm install -D typescript @types/react @types/node
-npm install -D tailwindcss postcss autoprefixer
-npm install -D @types/dexie
-
-# Dodatne alate za razvoj
-npm install -D eslint next-eslint-config-prettier prettier
-```
-
-### Korak 3: Konfiguriranje TypeScript
-
-Kreiraj `tsconfig.json`:
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "jsx": "preserve",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "incremental": true,
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
-}
-```
-
-### Korak 4: Konfiguriranje Next.js
-
-Kreiraj `next.config.js`:
-
-```javascript
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  webpack: (config, { isServer }) => {
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-      layers: true,
-    };
-
-    config.output.webassemblyModuleFilename =
-      isServer ? '../static/wasm/[modulehash].wasm' : 'static/wasm/[modulehash].wasm';
-
-    config.module.rules.push({
-      test: /\.wasm$/,
-      type: 'webassembly/async',
-    });
-
-    config.module.rules.push({
-      test: /\.worker\.ts$/,
-      loader: 'worker-loader',
-    });
-
-    return config;
-  },
-};
-
-module.exports = nextConfig;
-```
-
-### Korak 5: Tailwind CSS setup
-
-```bash
-npx tailwindcss init -p
-```
-
-Uredi `tailwind.config.js`:
-
-```javascript
-module.exports = {
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
+npm run build 2>&1 | tail -5  # Should complete with no errors
 ```
 
 ---
 
-## Faza 3: Struktura projekta
-
-### Kreiraj direktorijume
+## Step 3: Python Backend Setup
 
 ```bash
-mkdir -p src/{components,workers,utils,hooks,types,pages,styles}
-
-# Detaljnija struktura
-mkdir -p src/components/{AudioUpload,SeparationEngine,Karaoke,PlayerControls,ModelManager,UI}
-mkdir -p src/workers
-mkdir -p src/utils/{audio,ml,storage}
-mkdir -p src/hooks
-mkdir -p src/types
-mkdir -p public/{models,fonts}
-```
-
-### Primjer strukture datoteka
-
-```
-audio-karaoke-app/
-├── src/
-│   ├── pages/
-│   │   ├── _app.tsx
-│   │   ├── _document.tsx
-│   │   └── index.tsx
-│   ├── components/
-│   │   ├── AudioUpload/
-│   │   │   └── AudioUpload.tsx
-│   │   ├── SeparationEngine/
-│   │   │   └── SeparationEngine.tsx
-│   │   ├── Karaoke/
-│   │   │   └── KaraokePlayer.tsx
-│   │   └── UI/
-│   │       ├── Header.tsx
-│   │       └── Footer.tsx
-│   ├── workers/
-│   │   ├── audioSeparationWorker.ts
-│   │   └── modelLoaderWorker.ts
-│   ├── utils/
-│   │   ├── audio/
-│   │   │   ├── audioProcessor.ts
-│   │   │   └── dsp.ts
-│   │   ├── ml/
-│   │   │   ├── modelManager.ts
-│   │   │   └── inference.ts
-│   │   └── storage/
-│   │       ├── indexedDBStore.ts
-│   │       └── cacheManager.ts
-│   ├── hooks/
-│   │   ├── useAudioContext.ts
-│   │   ├── useSeparation.ts
-│   │   ├── useKaraoke.ts
-│   │   └── useModelLoader.ts
-│   ├── types/
-│   │   ├── audio.ts
-│   │   ├── model.ts
-│   │   └── state.ts
-│   └── styles/
-│       └── globals.css
-├── public/
-│   ├── models/
-│   └── fonts/
-├── package.json
-├── tsconfig.json
-├── next.config.js
-├── tailwind.config.js
-└── .env.local
-```
-
----
-
-## Faza 4: Inicijalni setup datoteke
-
-### `src/pages/_app.tsx`
-
-```typescript
-import type { AppProps } from 'next/app';
-import { useEffect } from 'react';
-import '../styles/globals.css';
-
-export default function App({ Component, pageProps }: AppProps) {
-  useEffect(() => {
-    // Inicijalizacija globalnih servisa
-    console.log('App initialized');
-  }, []);
-
-  return <Component {...pageProps} />;
-}
-```
-
-### `src/pages/index.tsx`
-
-```typescript
-import Head from 'next/head';
-import AudioUpload from '@/components/AudioUpload/AudioUpload';
-import Header from '@/components/UI/Header';
-
-export default function Home() {
-  return (
-    <>
-      <Head>
-        <title>Audio Karaoke Separation</title>
-        <meta name="description" content="Local audio separation and karaoke app" />
-      </Head>
-      <main className="min-h-screen bg-gray-900 text-white">
-        <Header />
-        <AudioUpload />
-      </main>
-    </>
-  );
-}
-```
-
-### `src/types/audio.ts`
-
-```typescript
-export interface AudioBuffer {
-  channelData: Float32Array[];
-  sampleRate: number;
-  duration: number;
-}
-
-export interface SeparationResult {
-  vocals: AudioBuffer;
-  instrumentals: AudioBuffer;
-  timestamp: number;
-}
-
-export interface ProcessingProgress {
-  currentSegment: number;
-  totalSegments: number;
-  percentage: number;
-}
-
-export interface LyricLine {
-  text: string;
-  startTime: number;
-  endTime: number;
-  startColor?: string;
-}
-```
-
-### `src/utils/storage/indexedDBStore.ts`
-
-```typescript
-import Dexie, { Table } from 'dexie';
-
-export interface CachedAudio {
-  id?: number;
-  fileHash: string;
-  fileName: string;
-  vocals: ArrayBuffer;
-  instrumentals: ArrayBuffer;
-  timestamp: number;
-}
-
-export interface CachedModel {
-  id?: number;
-  modelName: string;
-  modelData: ArrayBuffer;
-  version: string;
-  timestamp: number;
-}
-
-export class AudioDB extends Dexie {
-  cachedAudio!: Table<CachedAudio>;
-  cachedModels!: Table<CachedModel>;
-
-  constructor() {
-    super('AudioKaraokeDB');
-    this.version(1).stores({
-      cachedAudio: '++id, fileHash',
-      cachedModels: '++id, modelName',
-    });
-  }
-}
-
-export const db = new AudioDB();
-```
-
----
-
-## Faza 5: Pokretanje razvojnog servera
-
-```bash
-# Pokrenite dev server
-npm run dev
-
-# Trebalo bi da ispiše:
-# > ready - started server on 0.0.0.0:3000, url: http://localhost:3000
-```
-
-Otvori browser na `http://localhost:3000`
-
----
-
-## Faza 5.5: Python Backend Setup (Opciono)
-
-Aplikacija uključuje opcioni Python backend za poboljšano preuzimanje sa YouTube-a i server-side audio procesiranje.
-
-### Brzi Setup
-
-```bash
-# Navigiraj do python-audio-cli direktorijuma
 cd ../python-audio-cli
 
-# Pokreni setup skriptu (kreira venv i instalira zavisnosti)
+# Automatic setup (creates venv + installs all dependencies)
 bash setup.sh
-
-# Vrati se u glavni app
-cd ../audio-karaoke-app
 ```
 
-### Automatsko Pokretanje
+If you prefer manual setup:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-Kada pokrenete `npm run dev`, i Next.js frontend i Python backend će se automatski pokrenuti.
+> **Note**: `ffmpeg` must be installed at the system level (not Python-level) for audio processing to work.
 
-**Napomena**: Ako želite pokrenuti samo Next.js app bez Python backend-a:
+---
 
+## Step 4: Environment Variables
+
+```bash
+cd ../audio-karaoke-app
+cp .env.local.example .env.local
+```
+
+Edit `.env.local`:
+```bash
+NEXT_PUBLIC_PYTHON_SERVICE_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+---
+
+## Step 5: Start the Development Servers
+
+```bash
+cd audio-karaoke-app
+
+# Starts both Next.js (port 3000) and Python backend (port 8000)
+npm run dev
+```
+
+Then open **[http://localhost:3000](http://localhost:3000)** in **Chrome 113+** or **Edge 113+**.
+
+### Frontend only (no Python backend):
 ```bash
 npm run dev:next-only
 ```
 
-### Manualna Kontrola Backend-a
-
+### Python backend only (manual):
 ```bash
-# Pokreni backend manualno
-cd ../python-audio-cli
+cd python-audio-cli
 bash start-backend.sh
-
-# Zaustavi backend
-# Pritisni Ctrl+C u terminalu koji pokreće backend
-```
-
-### Što Backend Pruža
-
-- ✅ Stabilno preuzimanje YouTube audio-a koristeći yt-dlp
-- ✅ Server-side audio procesiranje sa Demucs
-- ✅ Cloud biblioteka za preuzete pjesme
-- ✅ Trajno skladištenje na serveru
-
-### Provjera Backend-a
-
-```bash
-# Provjeri da li backend radi
-curl http://localhost:8000/api/library
-
-# Trebalo bi vratiti JSON sa listom pjesama
+# API available at http://localhost:8000
 ```
 
 ---
 
-## Faza 6: Validacija setup-a
+## Project Structure
 
-### Checklist
-
-- [ ] Node.js instaliran (`node --version` vraća v18+)
-- [ ] npm instaliran (`npm --version` vraća v9+)
-- [ ] Next.js projekt kreiran
-- [ ] Sve zavisnosti instalirane bez greške
-- [ ] Dev server pokrenut bez greške
-- [ ] Browser prikazuje pocetnu stranicu
-- [ ] VS Code pokazuje TypeScript bez grešaka
-- [ ] IndexedDB dostupan u DevTools > Application
+```
+muzika/
+├── audio-karaoke-app/           # Next.js 14 frontend
+│   ├── src/
+│   │   ├── app/                 # App Router: pages, API routes
+│   │   │   ├── [locale]/        # i18n: page.tsx is the main entry
+│   │   │   └── api/             # API routes (backend-proxy, youtube, etc.)
+│   │   ├── components/
+│   │   │   ├── AudioUpload/     # File drag-and-drop, YouTube input
+│   │   │   ├── Karaoke/         # KaraokePlayer, LyricDisplay, VisualizerCanvas
+│   │   │   ├── Library/         # Song library grid and management
+│   │   │   └── UI/              # Shared UI components
+│   │   ├── hooks/               # Custom React hooks (useSeparation, useKaraoke, …)
+│   │   ├── utils/
+│   │   │   ├── audio/           # AudioContext, PlaybackController, audioEngine
+│   │   │   ├── ml/              # ONNX inference, model management
+│   │   │   ├── karaoke/         # LRC parser, lyric sync engine
+│   │   │   └── storage/         # IndexedDB stores (Dexie.js)
+│   │   └── workers/             # Web Workers: audio.worker.ts
+│   ├── e2e/                     # Playwright E2E tests
+│   ├── public/
+│   │   └── wasm/                # ONNX Runtime WASM binaries
+│   ├── next.config.ts
+│   ├── tsconfig.json
+│   └── package.json
+│
+└── python-audio-cli/            # Python FastAPI backend
+    ├── api.py                   # Main FastAPI server
+    ├── separator.py             # HTDemucs separation
+    ├── downloader.py            # yt-dlp YouTube downloader
+    ├── setup.sh                 # One-command setup
+    └── requirements.txt
+```
 
 ---
 
-## Faza 7: Dodatne alate (Opciono)
+## Configuring TypeScript
 
-### ESLint i Prettier
+The `tsconfig.json` in `audio-karaoke-app/` is pre-configured with:
+- **Strict mode** enabled
+- **Path alias** `@/*` maps to `./src/*`
+- **Target**: ES2020 with DOM libs
+
+If you add new path aliases, update both `tsconfig.json` and `next.config.ts`.
+
+---
+
+## Editor Setup (VS Code)
+
+Recommended extensions (`.vscode/extensions.json` should prompt automatically):
+- **ESLint** — real-time linting
+- **Prettier** — auto-formatting on save
+- **TypeScript Hero** — organize imports
+- **Tailwind CSS IntelliSense** — class autocomplete
+
+---
+
+## Running Tests
 
 ```bash
-npm install -D eslint prettier eslint-config-prettier
+# All frontend tests
+cd audio-karaoke-app && npm test
 
-# Kreiraj .eslintrc.json
-echo '{
-  "extends": ["next/core-web-vitals", "prettier"]
-}' > .eslintrc.json
+# All backend tests
+cd python-audio-cli && pytest tests/ -v
 
-# Kreiraj .prettierrc
-echo '{
-  "semi": true,
-  "singleQuote": true,
-  "tabWidth": 2,
-  "trailingComma": "es5"
-}' > .prettierrc
+# E2E browser tests
+cd audio-karaoke-app && npx playwright test
 ```
 
-### Git setup
-
-```bash
-git init
-echo "node_modules/
-.next/
-.env.local
-*.log" > .gitignore
-git add .
-git commit -m "Initial commit"
-```
+→ See **[../../docs/testing/TESTING_GUIDE.md](../../docs/testing/TESTING_GUIDE.md)** for the full 5-stage testing guide.
 
 ---
 
 ## Troubleshooting
 
-### Problem: "WebGPU not available"
+### "WebGPU not available"
+Use **Chrome 113+** or **Edge 113+**. To force-enable in older builds:
+```bash
+google-chrome --enable-features=Vulkan
+```
 
-**Rješenje**: Koristi Chrome 113+ ili Edge 113+. Za razvoj, koristi --enable-features=Vulkan ili --enable-features=Direct3D12.
-
-### Problem: "Out of Memory"
-
-**Rješenje**: Node.js je iscrpio memoriju. Pokrenite s većom alokacijom:
-
+### Out of Memory during `npm run dev`
 ```bash
 NODE_OPTIONS="--max-old-space-size=4096" npm run dev
 ```
 
-### Problem: "Module not found"
+### Python backend fails to start
+```bash
+# Check if port 8000 is already in use
+lsof -i :8000
+kill -9 <PID>
 
-**Rješenje**: Provjerite putanju u `tsconfig.json` paths i `next.config.js` resolve.alias.
+# Re-run setup
+cd python-audio-cli && bash setup.sh
+```
+
+### "Module not found" TypeScript error
+Verify path aliases match between `tsconfig.json` paths and `next.config.ts` webpack aliases.
+
+### WASM files missing (ONNX errors)
+```bash
+cd audio-karaoke-app
+cp node_modules/onnxruntime-web/dist/*.wasm public/wasm/
+```
 
 ---
 
-## Sljedeći koraci
+## Next Steps
 
-1. Kreiraj komponente (AudioUpload, SeparationEngine)
-2. Implementiraj Web Workere
-3. Integrira ONNX Runtime
-4. Testira s test audio datotekama
+Once your environment is running:
+1. Read **[developer_guide.md](developer_guide.md)** for contributing guidelines
+2. Read **[../architecture/project_architecture.md](../architecture/project_architecture.md)** for system design
+3. Check **[../../MUZIKA_ENGINEER_TODO.md](../../MUZIKA_ENGINEER_TODO.md)** for current tasks
