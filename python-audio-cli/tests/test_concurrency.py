@@ -9,7 +9,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api import app, jobs
+from api import app
 
 client = TestClient(app)
 
