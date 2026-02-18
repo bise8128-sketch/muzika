@@ -47,7 +47,7 @@ function isOriginAllowed(origin: string | null, allowedOrigins: string[]): boole
   return false;
 }
 
-export default function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Handle API routes and static files separately (skip intl)
