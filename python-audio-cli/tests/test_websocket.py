@@ -194,6 +194,7 @@ class TestWebSocketDisconnect:
 
             # ws_leave is now disconnected (exited `with` block)
             # ws_stay should receive a leave message
+            time.sleep(0.2)
             leave_msg = ws_stay.receive_json()
             assert leave_msg["type"] == "leave"
             assert leave_msg["payload"]["participantId"] == "user-leaver"
