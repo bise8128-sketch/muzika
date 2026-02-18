@@ -137,6 +137,10 @@ test.describe('Accessibility', () => {
             const type = await input.getAttribute('type');
             if (type === 'file') continue; // File inputs often rely on surrounding context
 
+            if (!hasLabel) {
+                const outerHTML = await input.evaluate(el => el.outerHTML);
+                console.log(`[Accessibility Failure] Input missing label: ${outerHTML}`);
+            }
             expect(hasLabel).toBeTruthy();
         }
     });
