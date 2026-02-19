@@ -70,6 +70,8 @@ describe('getPerformanceScore', () => {
             accuracy: 100,
             timestamp: i * 0.05,
             confidence: 0.95,
+            harmonyInterval: null,
+            harmonyAccuracy: 0,
         }));
         const score = getPerformanceScore(history);
         expect(score.grade).toBe('S');
@@ -85,18 +87,21 @@ describe('getPerformanceScore', () => {
                 detectedPitch: 440, detectedMidi: 69,
                 referencePitch: 440, referenceMidi: 69,
                 centDeviation: 0, accuracy: 90, timestamp: i * 0.05, confidence: 0.9,
+                harmonyInterval: null as const, harmonyAccuracy: 0,
             })),
             // 1 miss
             {
                 detectedPitch: 300, detectedMidi: 62,
                 referencePitch: 440, referenceMidi: 69,
                 centDeviation: -700, accuracy: 0, timestamp: 0.15, confidence: 0.9,
+                harmonyInterval: null as const, harmonyAccuracy: 0,
             },
             // 5 hits
             ...Array.from({ length: 5 }, (_, i) => ({
                 detectedPitch: 440, detectedMidi: 69,
                 referencePitch: 440, referenceMidi: 69,
                 centDeviation: 0, accuracy: 85, timestamp: 0.2 + i * 0.05, confidence: 0.9,
+                harmonyInterval: null as const, harmonyAccuracy: 0,
             })),
         ];
         const score = getPerformanceScore(history);
@@ -110,11 +115,13 @@ describe('getPerformanceScore', () => {
                 detectedPitch: 440, detectedMidi: 69,
                 referencePitch: 0, referenceMidi: 0,
                 centDeviation: 0, accuracy: 0, timestamp: 0, confidence: 0.9,
+                harmonyInterval: null, harmonyAccuracy: 0,
             },
             {
                 detectedPitch: 440, detectedMidi: 69,
                 referencePitch: 440, referenceMidi: 69,
                 centDeviation: 0, accuracy: 95, timestamp: 0.05, confidence: 0.9,
+                harmonyInterval: null, harmonyAccuracy: 0,
             },
         ];
         const score = getPerformanceScore(history);
