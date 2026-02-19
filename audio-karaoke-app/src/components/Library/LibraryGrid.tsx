@@ -9,8 +9,8 @@ import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
-import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
-import { AutoSizer, Size } from 'react-virtualized-auto-sizer';
+import { Grid } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -25,7 +25,6 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     onClosePlayer,
     onAddToQueue
 }) => {
-    const [playingSong, setPlayingSong] = useState<SongEntry | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<FilterType>('all');
     const [sortOption, setSortOption] = useState<SortOption>('date');
@@ -111,7 +110,6 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     };
 
     const handlePlay = (song: SongEntry) => {
-        setPlayingSong(song);
         if (onSongSelect) {
             onSongSelect(song);
         }
@@ -164,7 +162,6 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                 <LibraryPlayer
                     song={selectedSong}
                     onClose={() => {
-                        setPlayingSong(null);
                         if (onClosePlayer) {
                             onClosePlayer();
                         }
@@ -265,11 +262,12 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                     </div>
                 ) : (
                     <AutoSizer>
-                        {({ height, width }: Size) => {
+                        {(size: any) => {
+                            const { height, width } = size;
                             const columnCount = width > 1200 ? 3 : width > 768 ? 2 : 1;
                             const columnWidth = width / columnCount;
                             const rowCount = Math.ceil(filteredSongs.length / columnCount);
-                            const rowHeight = 240; // Estimated height for song card
+                            const rowHeight = 240;
 
                             return (
                                 <Grid
@@ -281,7 +279,8 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                     width={width}
                                     className="scrollbar-hide"
                                 >
-                                    {({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
+                                    {(props: any) => {
+                                        const { columnIndex, rowIndex, style } = props;
                                         const songIndex = rowIndex * columnCount + columnIndex;
                                         const song = filteredSongs[songIndex];
 
@@ -359,10 +358,9 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                             </svg>
                                                             Play Now
                                                         </button>
-
                                                         <button
                                                             onClick={(e) => handleDelete(e, song.id)}
-                                                            className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                                            className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                                             aria-label="Delete song"
                                                         >
                                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
