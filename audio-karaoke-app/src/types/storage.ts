@@ -79,13 +79,25 @@ export interface StorageStats {
     cachedModelsCount: number;
 }
 
+export type SmartPlaylistRuleField = 'title' | 'artist' | 'album' | 'genre' | 'year' | 'duration' | 'createdAt';
+export type SmartPlaylistRuleOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'greater_than' | 'less_than';
+
+export interface SmartPlaylistRule {
+    id: string;
+    field: SmartPlaylistRuleField;
+    operator: SmartPlaylistRuleOperator;
+    value: string | number;
+}
+
 /**
  * Playlist type for organizing songs
  */
 export interface Playlist {
     id?: number;
     name: string;
-    songIds: number[];
+    type: 'manual' | 'smart';
+    songIds: number[]; // Used for manual playlists
+    rules?: SmartPlaylistRule[]; // Used for smart playlists
     createdAt: number;
     updatedAt: number;
     isDefault?: boolean;

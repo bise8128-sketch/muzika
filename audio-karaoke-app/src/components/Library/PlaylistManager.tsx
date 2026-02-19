@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { playlistStorage } from '@/utils/storage/playlistStorage';
 import { songsStorage } from '@/utils/storage/songsStorage';
 import type { Playlist, SongEntry } from '@/types/storage';
+import { SmartPlaylistModal } from './SmartPlaylistModal';
 
 interface PlaylistManagerProps {
     onAddToQueue?: (songIds: number[]) => void;
@@ -14,6 +15,7 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
     const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
     const [playlistSongs, setPlaylistSongs] = useState<SongEntry[]>([]);
     const [isCreating, setIsCreating] = useState(false);
+    const [isCreatingSmart, setIsCreatingSmart] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
@@ -35,8 +37,16 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
 
     const loadPlaylistSongs = async (playlist: Playlist) => {
         setSelectedPlaylist(playlist);
+        
+        let songIds: number[] = [];
+        if (playlist.type === 'smart') {
+            songIds = await playlistStorage.getPlaylistSongs(playlist.id!);
+        } else {
+            songIds = playlist.songIds;
+        }
+
         const songs: SongEntry[] = [];
-        for (const songId of playlist.songIds) {
+        for (const songId of songIds) {
             const song = await songsStorage.getSong(songId);
             if (song) {
                 songs.push(song);
@@ -101,16 +111,32 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
                         {playlists.length} playlist{playlists.length !== 1 ? 's' : ''}
                     </p>
                 </div>
-                <button
-                    onClick={() => setIsCreating(true)}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Playlist
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setIsCreatingSmart(true)}
+                        className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                        title="Create Smart Playlist"
+                    >
+                        <span className="text-lg">✨</span>
+                    </button>
+                    <button
+                        onClick={() => setIsCreating(true)}
+                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Playlist
+                    </button>
+                </div>
             </div>
+
+            {isCreatingSmart && (
+                <SmartPlaylistModal
+                    onClose={() => setIsCreatingSmart(false)}
+                    onSave={loadPlaylists}
+                />
+            )}
 
             {/* Create Playlist Form */}
             {isCreating && (
@@ -174,13 +200,14 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
                             <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
                                     <h4 className={`
-                                        font-semibold truncate
+                                        font-semibold truncate flex items-center gap-2
                                         ${selectedPlaylist?.id === playlist.id ? 'text-primary' : 'text-white'}
                                     `}>
+                                        {playlist.type === 'smart' && <span title="Smart Playlist">✨</span>}
                                         {playlist.name}
                                     </h4>
                                     <p className="text-sm text-muted-foreground">
-                                        {playlist.songIds.length} song{playlist.songIds.length !== 1 ? 's' : ''}
+                                        {playlist.type === 'smart' ? 'Dynamic' : `${playlist.songIds.length} song${playlist.songIds.length !== 1 ? 's' : ''}`}
                                     </p>
                                 </div>
                                 <button
@@ -228,18 +255,20 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
                                                     {song.artist || 'Unknown Artist'}
                                                 </p>
                                             </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRemoveSongFromPlaylist(song.id!);
-                                                }}
-                                                className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                                                aria-label="Remove song"
-                                            >
-                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
+                                            {selectedPlaylist.type !== 'smart' && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRemoveSongFromPlaylist(song.id!);
+                                                    }}
+                                                    className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                                    aria-label="Remove song"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

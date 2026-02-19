@@ -9,8 +9,10 @@ import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
+import { queueStorage } from '@/utils/storage/queueStorage';
 import { List, ListProps } from 'react-window';
 import { AutoSizer, AutoSizerProps } from 'react-virtualized-auto-sizer';
+import { AddToPlaylistModal } from './AddToPlaylistModal';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -31,6 +33,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [selectedSongs, setSelectedSongs] = useState<Set<number>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
     const router = useRouter();
 
     // Use LiveQuery for reactive, performant data fetching
@@ -154,6 +157,19 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
         setIsSelectionMode(false);
     };
 
+    const handlePlayNext = async () => {
+        if (selectedSongs.size === 0) return;
+        await queueStorage.addSongsToQueueNext(Array.from(selectedSongs));
+        setSelectedSongs(new Set());
+        setIsSelectionMode(false);
+    };
+
+    const handleAddToPlaylistComplete = () => {
+        setShowAddToPlaylistModal(false);
+        setSelectedSongs(new Set());
+        setIsSelectionMode(false);
+    };
+
     if (isLoading) return <div className="text-center py-12 text-muted-foreground">Loading library...</div>;
 
     return (
@@ -202,10 +218,22 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                             Add to Queue ({selectedSongs.size})
                                         </button>
                                         <button
+                                            onClick={handlePlayNext}
+                                            className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                                        >
+                                            Play Next
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAddToPlaylistModal(true)}
+                                            className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                                        >
+                                            Add to Playlist
+                                        </button>
+                                        <button
                                             onClick={handleDeleteSelected}
                                             className="px-3 py-1.5 text-sm bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors"
                                         >
-                                            Delete ({selectedSongs.size})
+                                            Delete
                                         </button>
                                     </>
                                 )}

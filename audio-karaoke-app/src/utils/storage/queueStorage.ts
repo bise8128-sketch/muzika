@@ -118,6 +118,27 @@ export class QueueStorage {
     }
 
     /**
+     * Add multiple songs to queue immediately after current song (Play Next)
+     */
+    async addSongsToQueueNext(newSongIds: number[]): Promise<void> {
+        const current = await this.getQueueOrDefault();
+        const songIds = [...current.songIds];
+        
+        // Insert after current index
+        const insertIndex = current.currentIndex + 1;
+        songIds.splice(insertIndex, 0, ...newSongIds);
+
+        await this.saveQueue({
+            songIds,
+            currentIndex: current.currentIndex,
+            shuffleMode: current.shuffleMode,
+            repeatMode: current.repeatMode
+        });
+        
+        console.log(`✅ Added ${newSongIds.length} songs to play next`);
+    }
+
+    /**
      * Remove song from queue by index
      */
     async removeSongFromQueue(index: number): Promise<void> {

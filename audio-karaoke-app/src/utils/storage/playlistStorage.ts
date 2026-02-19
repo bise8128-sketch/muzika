@@ -4,23 +4,32 @@
  */
 
 import { db } from './audioDatabase';
-import type { Playlist } from '@/types/storage';
+import type { Playlist, SmartPlaylistRule, SongEntry } from '@/types/storage';
 
 export class PlaylistStorage {
     /**
      * Create a new playlist
      */
-    async createPlaylist(name: string, songIds: number[] = []): Promise<number> {
+    async createPlaylist(name: string, songIds: number[] = [], type: 'manual' | 'smart' = 'manual', rules: SmartPlaylistRule[] = []): Promise<number> {
         const playlist: Playlist = {
             name,
+            type,
             songIds,
+            rules,
             createdAt: Date.now(),
             updatedAt: Date.now()
         };
 
         const id = await db.playlists.add(playlist);
-        console.log(`✅ Created playlist: ${name}`);
+        console.log(`✅ Created ${type} playlist: ${name}`);
         return id;
+    }
+
+    /**
+     * Create a smart playlist
+     */
+    async createSmartPlaylist(name: string, rules: SmartPlaylistRule[]): Promise<number> {
+        return this.createPlaylist(name, [], 'smart', rules);
     }
 
     /**
@@ -102,7 +111,45 @@ export class PlaylistStorage {
      */
     async getPlaylistSongs(playlistId: number): Promise<number[]> {
         const playlist = await this.getPlaylist(playlistId);
-        return playlist?.songIds || [];
+        if (!playlist) return [];
+
+        if (playlist.type === 'smart' && playlist.rules && playlist.rules.length > 0) {
+            // Fetch all songs and filter
+            // Note: In a larger app, we might want to index fields or use advanced querying,
+            // but for client-side indexedDB with < 10k songs, memory filtering is usually fast enough.
+            const allSongs = await db.songs.toArray();
+            const filteredSongs = allSongs.filter(song => this.evaluateRules(song, playlist.rules!));
+            return filteredSongs.map(s => s.id!);
+        }
+
+        return playlist.songIds || [];
+    }
+
+    private evaluateRules(song: SongEntry, rules: SmartPlaylistRule[]): boolean {
+        // AND logic: all rules must match
+        return rules.every(rule => {
+            const songValue = song[rule.field as keyof SongEntry];
+            if (songValue === undefined || songValue === null) return false;
+
+            const targetValue = rule.value;
+
+            switch (rule.operator) {
+                case 'contains':
+                    return String(songValue).toLowerCase().includes(String(targetValue).toLowerCase());
+                case 'equals':
+                    return String(songValue).toLowerCase() === String(targetValue).toLowerCase();
+                case 'starts_with':
+                    return String(songValue).toLowerCase().startsWith(String(targetValue).toLowerCase());
+                case 'ends_with':
+                    return String(songValue).toLowerCase().endsWith(String(targetValue).toLowerCase());
+                case 'greater_than':
+                    return Number(songValue) > Number(targetValue);
+                case 'less_than':
+                    return Number(songValue) < Number(targetValue);
+                default:
+                    return false;
+            }
+        });
     }
 
     /**
