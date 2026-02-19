@@ -10,11 +10,9 @@ import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
 import { queueStorage } from '@/utils/storage/queueStorage';
-import { List, ListProps } from 'react-window';
-import { AutoSizer, AutoSizerProps } from 'react-virtualized-auto-sizer';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
-
-console.log('[LibraryGrid] List from react-window:', typeof List, List);
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -291,30 +289,28 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                         )}
                     </div>
                 ) : (
-                    <AutoSizer
-                        renderProp={({ height, width }: { height: number | undefined; width: number | undefined }) => {
-                            console.log('[LibraryGrid] AutoSizer renderProp called with:', { height, width });
-                            if (!height || !width) return null;
-                            
-                            const listProps: any = {
-                                rowCount: filteredSongs.length,
-                                rowHeight: 130,
-                                height,
-                                width,
-                                className: "scrollbar-hide",
-                                rowComponent: ({ index, style }: { index: number; style: React.CSSProperties }) => {
+                    <AutoSizer>
+                        {({ height, width }: { height: number; width: number }) => (
+                            <List
+                                height={height}
+                                width={width}
+                                itemCount={filteredSongs.length}
+                                itemSize={130}
+                                className="scrollbar-hide"
+                            >
+                                {({ index, style }: ListChildComponentProps) => {
                                     const song = filteredSongs[index];
-
                                     if (!song) return null;
 
                                     return (
-                                        <div style={style}>
+                                        <div style={style} className="px-2"> {/* Add padding for spacing between rows if needed, but react-window handles position */}
                                             <div
                                                 onClick={() => handlePlay(song)}
                                                 className={`
-                                                    group relative bg-white/5 hover:bg-white/10 border rounded-2xl p-4 flex items-center gap-4 transition-all cursor-pointer overflow-hidden
+                                                    group relative bg-white/5 hover:bg-white/10 border rounded-2xl p-4 flex items-center gap-4 transition-all cursor-pointer overflow-hidden mb-2
                                                     ${selectedSongs.has(song.id!) ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-primary/50'}
                                                 `}
+                                                style={{ height: 120 }} // Leave some space for margins
                                             >
                                                 {/* Selection Checkbox */}
                                                 {isSelectionMode && (
@@ -383,12 +379,10 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                             </div>
                                         </div>
                                     );
-                                }
-                            };
-                            
-                            return <List {...listProps} />;
-                        }}
-                    />
+                                }}
+                            </List>
+                        )}
+                    </AutoSizer>
                 )}
             </div>
             
