@@ -9,7 +9,6 @@ import {
     Trash2, 
     Download, 
     Video, 
-    Music,
     Loader2
 } from 'lucide-react';
 
@@ -24,6 +23,8 @@ interface KaraokeControlsProps {
         pause: () => void;
         seek: (time: number) => void;
         setVolume: (v: number, trackIndex?: number) => void;
+        pitch: number;
+        setPitch: (pitch: number) => void;
     };
     recorder: {
         isRecording: boolean;
@@ -81,6 +82,8 @@ export const KaraokeControls: React.FC<KaraokeControlsProps> = ({
                 onPause={playback.pause}
                 onSeek={playback.seek}
                 onBalanceChange={onBalanceChange}
+                pitch={playback.pitch}
+                onPitchChange={playback.setPitch}
             />
 
             {/* Sub Controls: Recording & Export */}

@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { LRCData } from '@/types/karaoke';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Music, Volume2, Settings2 } from 'lucide-react';
+import { PitchControl } from '../Karaoke/Controls/PitchControl';
 
 interface PlayerControlsProps {
     isPlaying: boolean;
@@ -20,6 +21,8 @@ interface PlayerControlsProps {
     onPause: () => void;
     onSeek: (time: number) => void;
     onBalanceChange?: (balance: number) => void;
+    pitch: number;
+    onPitchChange: (pitch: number) => void;
 }
 
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
@@ -33,6 +36,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onPause,
     onSeek,
     onBalanceChange,
+    pitch = 0,
+    onPitchChange = () => {}
 }) => {
     const t = useTranslations('PlayerControls');
     const [previewTime, setPreviewTime] = useState<number | null>(null);
@@ -169,6 +174,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         </div>
                         <p className="text-sm font-bold text-white/90">{lyrics?.metadata?.title || t('track')}</p>
                     </div>
+                </div>
+
+                <div className="hidden md:block">
+                    <PitchControl pitch={pitch} onPitchChange={onPitchChange} />
                 </div>
 
                 {/* Mixing Mixer */}

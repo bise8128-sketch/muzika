@@ -255,7 +255,11 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             />
 
             <KaraokeControls
-                playback={playback}
+                playback={{
+                    ...playback,
+                    pitch,
+                    setPitch: handlePitchChange
+                }}
                 recorder={recorder}
                 lyrics={lyrics}
                 isExporting={isExportingVideo}
