@@ -136,12 +136,20 @@ export class PlaylistStorage {
             switch (rule.operator) {
                 case 'contains':
                     return String(songValue).toLowerCase().includes(String(targetValue).toLowerCase());
+                case 'not_contains':
+                    return !String(songValue).toLowerCase().includes(String(targetValue).toLowerCase());
                 case 'equals':
                     return String(songValue).toLowerCase() === String(targetValue).toLowerCase();
+                case 'is_not':
+                    return String(songValue).toLowerCase() !== String(targetValue).toLowerCase();
                 case 'starts_with':
                     return String(songValue).toLowerCase().startsWith(String(targetValue).toLowerCase());
+                case 'not_starts_with':
+                    return !String(songValue).toLowerCase().startsWith(String(targetValue).toLowerCase());
                 case 'ends_with':
                     return String(songValue).toLowerCase().endsWith(String(targetValue).toLowerCase());
+                case 'not_ends_with':
+                    return !String(songValue).toLowerCase().endsWith(String(targetValue).toLowerCase());
                 case 'greater_than':
                     return Number(songValue) > Number(targetValue);
                 case 'less_than':

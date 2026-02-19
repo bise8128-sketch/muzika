@@ -19,6 +19,8 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
+    const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+
     useEffect(() => {
         loadPlaylists();
     }, []);
@@ -28,6 +30,15 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
         try {
             const allPlaylists = await playlistStorage.getAllPlaylists();
             setPlaylists(allPlaylists);
+            
+            // Re-sync selected playlist if it exists
+            if (selectedPlaylist) {
+                const updatedSelected = allPlaylists.find(p => p.id === selectedPlaylist.id);
+                if (updatedSelected) {
+                    setSelectedPlaylist(updatedSelected);
+                    await loadPlaylistSongs(updatedSelected);
+                }
+            }
         } catch (error) {
             console.error('Failed to load playlists:', error);
         } finally {
@@ -39,20 +50,24 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
         setSelectedPlaylist(playlist);
         
         let songIds: number[] = [];
-        if (playlist.type === 'smart') {
-            songIds = await playlistStorage.getPlaylistSongs(playlist.id!);
-        } else {
-            songIds = playlist.songIds;
-        }
-
-        const songs: SongEntry[] = [];
-        for (const songId of songIds) {
-            const song = await songsStorage.getSong(songId);
-            if (song) {
-                songs.push(song);
+        try {
+            if (playlist.type === 'smart') {
+                songIds = await playlistStorage.getPlaylistSongs(playlist.id!);
+            } else {
+                songIds = playlist.songIds;
             }
+
+            const songs: SongEntry[] = [];
+            for (const songId of songIds) {
+                const song = await songsStorage.getSong(songId);
+                if (song) {
+                    songs.push(song);
+                }
+            }
+            setPlaylistSongs(songs);
+        } catch (error) {
+            console.error('Failed to load playlist songs:', error);
         }
-        setPlaylistSongs(songs);
     };
 
     const handleCreatePlaylist = async () => {
@@ -81,6 +96,11 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
         } catch (error) {
             console.error('Failed to delete playlist:', error);
         }
+    };
+
+    const handleEditSmartPlaylist = (playlist: Playlist) => {
+        setEditingPlaylist(playlist);
+        setIsCreatingSmart(true);
     };
 
     const handleRemoveSongFromPlaylist = async (songId: number) => {
@@ -113,7 +133,10 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
                 </div>
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setIsCreatingSmart(true)}
+                        onClick={() => {
+                            setEditingPlaylist(null);
+                            setIsCreatingSmart(true);
+                        }}
                         className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
                         title="Create Smart Playlist"
                     >
@@ -133,8 +156,12 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
 
             {isCreatingSmart && (
                 <SmartPlaylistModal
-                    onClose={() => setIsCreatingSmart(false)}
+                    onClose={() => {
+                        setIsCreatingSmart(false);
+                        setEditingPlaylist(null);
+                    }}
                     onSave={loadPlaylists}
+                    existingPlaylist={editingPlaylist || undefined}
                 />
             )}
 
@@ -210,18 +237,34 @@ export const PlaylistManager: React.FC<PlaylistManagerProps> = ({ onAddToQueue }
                                         {playlist.type === 'smart' ? 'Dynamic' : `${playlist.songIds.length} song${playlist.songIds.length !== 1 ? 's' : ''}`}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeletePlaylist(playlist.id!);
-                                    }}
-                                    className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                    aria-label="Delete playlist"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {playlist.type === 'smart' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditSmartPlaylist(playlist);
+                                            }}
+                                            className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                                            aria-label="Edit smart playlist"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeletePlaylist(playlist.id!);
+                                        }}
+                                        className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                        aria-label="Delete playlist"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Selected Playlist Songs */}

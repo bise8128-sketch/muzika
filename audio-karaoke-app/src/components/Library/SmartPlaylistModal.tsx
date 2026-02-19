@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { SmartPlaylistRule, SmartPlaylistRuleField, SmartPlaylistRuleOperator } from '@/types/storage';
+import React, { useState, useEffect } from 'react';
+import { Playlist, SmartPlaylistRule, SmartPlaylistRuleField, SmartPlaylistRuleOperator } from '@/types/storage';
 import { playlistStorage } from '@/utils/storage/playlistStorage';
 
 interface SmartPlaylistModalProps {
     onClose: () => void;
     onSave: () => void;
+    existingPlaylist?: Playlist;
 }
 
 const FIELDS: { label: string; value: SmartPlaylistRuleField }[] = [
@@ -18,18 +19,32 @@ const FIELDS: { label: string; value: SmartPlaylistRuleField }[] = [
 
 const OPERATORS: { label: string; value: SmartPlaylistRuleOperator }[] = [
     { label: 'Contains', value: 'contains' },
+    { label: 'Does not contain', value: 'not_contains' },
     { label: 'Equals', value: 'equals' },
+    { label: 'Is not', value: 'is_not' },
     { label: 'Starts with', value: 'starts_with' },
+    { label: 'Does not start with', value: 'not_starts_with' },
     { label: 'Ends with', value: 'ends_with' },
+    { label: 'Does not end with', value: 'not_ends_with' },
     { label: 'Greater than', value: 'greater_than' },
     { label: 'Less than', value: 'less_than' },
 ];
 
-export const SmartPlaylistModal: React.FC<SmartPlaylistModalProps> = ({ onClose, onSave }) => {
+export const SmartPlaylistModal: React.FC<SmartPlaylistModalProps> = ({ onClose, onSave, existingPlaylist }) => {
+    const isEditing = !!existingPlaylist;
     const [name, setName] = useState('');
     const [rules, setRules] = useState<SmartPlaylistRule[]>([
         { id: '1', field: 'title', operator: 'contains', value: '' }
     ]);
+
+    useEffect(() => {
+        if (existingPlaylist) {
+            setName(existingPlaylist.name);
+            if (existingPlaylist.rules && existingPlaylist.rules.length > 0) {
+                setRules(existingPlaylist.rules);
+            }
+        }
+    }, [existingPlaylist]);
 
     const handleAddRule = () => {
         setRules([
@@ -48,16 +63,30 @@ export const SmartPlaylistModal: React.FC<SmartPlaylistModalProps> = ({ onClose,
 
     const handleSave = async () => {
         if (!name.trim()) return;
-        await playlistStorage.createSmartPlaylist(name, rules);
-        onSave();
-        onClose();
+        
+        try {
+            if (isEditing && existingPlaylist?.id) {
+                await playlistStorage.updatePlaylist(existingPlaylist.id, {
+                    name: name.trim(),
+                    rules
+                });
+            } else {
+                await playlistStorage.createSmartPlaylist(name.trim(), rules);
+            }
+            onSave();
+            onClose();
+        } catch (error) {
+            console.error('Failed to save smart playlist:', error);
+        }
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
             <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-2xl p-6 shadow-2xl">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Create Smart Playlist</h2>
+                    <h2 className="text-2xl font-bold">
+                        {isEditing ? 'Edit Smart Playlist' : 'Create Smart Playlist'}
+                    </h2>
                     <button onClick={onClose} className="text-muted-foreground hover:text-white">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -143,7 +172,7 @@ export const SmartPlaylistModal: React.FC<SmartPlaylistModalProps> = ({ onClose,
                         disabled={!name.trim()}
                         className="px-6 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Create Playlist
+                        {isEditing ? 'Save Changes' : 'Create Playlist'}
                     </button>
                 </div>
             </div>

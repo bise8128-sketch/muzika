@@ -80,7 +80,7 @@ export interface StorageStats {
 }
 
 export type SmartPlaylistRuleField = 'title' | 'artist' | 'album' | 'genre' | 'year' | 'duration' | 'createdAt';
-export type SmartPlaylistRuleOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'greater_than' | 'less_than';
+export type SmartPlaylistRuleOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'greater_than' | 'less_than' | 'not_contains' | 'is_not' | 'not_starts_with' | 'not_ends_with';
 
 export interface SmartPlaylistRule {
     id: string;
