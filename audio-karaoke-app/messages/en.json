@@ -174,7 +174,9 @@
         "track": "Separated audio track",
         "instrumental": "Instrumental",
         "mix": "Mix (Vocals ↔ Instrumental)",
-        "vocals": "Vocals"
+        "vocals": "Vocals",
+        "key": "Key",
+        "resetPitch": "Reset Pitch"
     },
     "BackendStatus": {
         "backend": "Backend: {status}"
