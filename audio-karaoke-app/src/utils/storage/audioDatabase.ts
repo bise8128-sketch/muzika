@@ -132,9 +132,16 @@ export const db = new Proxy({} as AudioKaraokeDB, {
                 if (process.env.NODE_ENV === 'development') {
                     console.warn('[AudioKaraokeDB] Accessed during SSR - returning mock database');
                 }
-                return createMockDB()[prop];
+                const mock = createMockDB();
+                return mock[prop];
             }
         }
-        return (dbInstance as any)[prop];
+
+        const value = (dbInstance as any)[prop];
+        // Bind methods to the instance to ensure 'this' context is preserved
+        if (typeof value === 'function') {
+            return value.bind(dbInstance);
+        }
+        return value;
     }
 });

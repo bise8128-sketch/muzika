@@ -9,8 +9,8 @@ import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
-import { FixedSizeGrid as Grid } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
+import AutoSizer, { Size } from 'react-virtualized-auto-sizer';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -265,7 +265,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                     </div>
                 ) : (
                     <AutoSizer>
-                        {({ height, width }) => {
+                        {({ height, width }: Size) => {
                             const columnCount = width > 1200 ? 3 : width > 768 ? 2 : 1;
                             const columnWidth = width / columnCount;
                             const rowCount = Math.ceil(filteredSongs.length / columnCount);
@@ -281,7 +281,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                     width={width}
                                     className="scrollbar-hide"
                                 >
-                                    {({ columnIndex, rowIndex, style }) => {
+                                    {({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
                                         const songIndex = rowIndex * columnCount + columnIndex;
                                         const song = filteredSongs[songIndex];
 
