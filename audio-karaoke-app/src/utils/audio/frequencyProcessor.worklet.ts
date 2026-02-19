@@ -62,6 +62,8 @@ class FrequencyProcessor extends AudioWorkletProcessor {
     private framesSinceLastPost: number = 0;
     private postInterval: number = 6; // ~60fps with 128 samples/block approx
 
+    private visualizerPort: MessagePort | null = null;
+
     constructor() {
         super();
         
@@ -88,6 +90,8 @@ class FrequencyProcessor extends AudioWorkletProcessor {
                 if (event.data.smoothingTimeConstant !== undefined) {
                     this.smoothingTimeConstant = event.data.smoothingTimeConstant;
                 }
+            } else if (event.data.type === 'connect_visualizer') {
+                this.visualizerPort = event.data.port;
             }
         };
     }
@@ -175,6 +179,14 @@ class FrequencyProcessor extends AudioWorkletProcessor {
             type: 'frequency_data',
             data: this.frequencyData // We can send the view, it will be copied or structured cloned
         });
+
+        // Also post to visualizer worker if connected
+        if (this.visualizerPort) {
+            this.visualizerPort.postMessage({
+                type: 'frequency_data',
+                data: this.frequencyData // Structured clone makes a copy, effectively safe
+            });
+        }
     }
 
     // In-place FFT

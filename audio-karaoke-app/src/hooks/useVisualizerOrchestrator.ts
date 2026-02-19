@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { VisualSettings } from '@/types/karaoke';
 import { getWorkletManager } from '@/utils/audio/audioContext';
-import { PlaybackController } from '@/utils/audio/playbackController';
+import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 
 interface UseVisualizerOrchestratorProps {
     controller: PlaybackController;
@@ -21,42 +21,59 @@ export const useVisualizerOrchestrator = ({
 }: UseVisualizerOrchestratorProps) => {
     const visualizerRef = useRef<AudioVisualizer | null>(null);
     const [visualizerInstance, setVisualizerInstance] = useState<AudioVisualizer | null>(null);
+    const hasTransferredCanvas = useRef(false);
 
     useEffect(() => {
         if (!visualizerRef.current) {
             visualizerRef.current = new AudioVisualizer();
             setVisualizerInstance(visualizerRef.current);
         }
+        
+        // Pass Config
         visualizerRef.current.setAutoQuality(visualSettings.autoQuality);
+        visualizerRef.current.setConfig({
+             theme: {}, // We can pass theme colors here
+             quality: visualSettings.autoQuality ? 'high' : 'high'
+        });
 
-        if (canvasRef.current) {
+        if (canvasRef.current && !hasTransferredCanvas.current) {
+            visualizerRef.current.transferControlToOffscreen(canvasRef.current);
+            hasTransferredCanvas.current = true;
             visualizerRef.current.start();
-            
-            const { visualizationMode } = visualSettings;
-            switch (visualizationMode) {
-                case 'waveform':
-                    visualizerRef.current.drawWaveform(canvasRef.current);
-                    break;
-                case '3d-landscape':
-                    visualizerRef.current.draw3DLandscape(canvasRef.current);
-                    break;
-                case 'spectrogram':
-                    visualizerRef.current.drawSpectrogram(canvasRef.current);
-                    break;
-                case 'fluid':
-                    visualizerRef.current.drawFluid(canvasRef.current);
-                    break;
-                case 'bars':
-                default:
-                    visualizerRef.current.drawSpectrum(canvasRef.current);
-                    break;
-            }
         }
 
+        // Set Mode
+        visualizerRef.current.setMode(visualSettings.visualizationMode);
+
         return () => {
-            visualizerRef.current?.stop();
+             // We don't stop strictly on every render, but we could if component unmounts.
+             // Cleanup is handled by ref or parent unmounting usually.
         };
-    }, [visualSettings.visualizationMode, visualSettings.autoQuality, canvasRef]);
+    }, [visualSettings.visualizationMode, visualSettings.autoQuality, canvasRef]); 
+    // Note: canvasRef should be stable. If it changes, we might have issues transferring again.
+
+    // Resize Observer
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        
+        const handleResize = () => {
+             if (canvasRef.current && visualizerRef.current) {
+                 // For OffscreenCanvas, we just send message. 
+                 // But wait, if transferred, we can't touch canvas properties on main thread easily?
+                 // Actually width/height on placeholder canvas DO update layout, but backing store needs update?
+                 // Standard is: Main thread canvas resizes -> We send new size to worker -> Worker updates OffscreenCanvas width/height.
+                 const { clientWidth, clientHeight } = canvasRef.current;
+                 visualizerRef.current.resize(clientWidth, clientHeight);
+             }
+        };
+        
+        // Initial size
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [canvasRef]);
+
 
     useEffect(() => {
         const workletManager = getWorkletManager();
