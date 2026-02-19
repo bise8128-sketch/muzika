@@ -58,7 +58,6 @@ export class FileSystemService {
             const fileHandle = await currentDir.getFileHandle(filename, { create: true });
             
             // Create a writable stream and write data
-            // @ts-ignore - allow createWritable for older TS definitions if needed, though standard now
             const writable = await fileHandle.createWritable();
             await writable.write(data);
             await writable.close();

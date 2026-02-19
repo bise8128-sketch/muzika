@@ -6,6 +6,7 @@ import { usePlaybackQueue } from '@/hooks/usePlaybackQueue';
 import { StudioController } from '@/components/Karaoke/StudioController';
 import { QueuePanel } from './QueuePanel';
 import { SongEntry } from '@/types/storage';
+import { fileSystem } from '@/utils/storage/fileSystem';
 
 interface LibraryPlayerProps {
     song: SongEntry;
@@ -17,6 +18,7 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
     const [isLoading, setIsLoading] = useState(true);
     const [showQueue, setShowQueue] = useState(false);
     const [currentPlayingSong, setCurrentPlayingSong] = useState<SongEntry>(song);
+    const [loadedBuffers, setLoadedBuffers] = useState<{ vocals?: ArrayBuffer, instrumentals?: ArrayBuffer }>({});
     const {
         queue,
         songs: queueSongs,
@@ -41,31 +43,41 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
         const loadAudio = async () => {
             setIsLoading(true);
             try {
-                // engine.load handles decoding
-                // For now, load instrumental data (which is full backing track for karaoke)
-                let bufferToLoad: ArrayBuffer | Uint8Array | undefined = currentPlayingSong.instrumentalData;
+                let instBuffer: ArrayBuffer | undefined = currentPlayingSong.instrumentalData;
+                let vocalBuffer: ArrayBuffer | undefined = currentPlayingSong.vocalData;
 
-                // Handle server-side songs (no instrumentalData yet)
-                if (!bufferToLoad && currentPlayingSong.id === -1 && currentPlayingSong.originalHash) {
+                // Load from OPFS if available
+                if (currentPlayingSong.instrumentalPath) {
+                    const blob = await fileSystem.getFile(currentPlayingSong.instrumentalPath);
+                    instBuffer = await blob.arrayBuffer();
+                }
+                
+                if (currentPlayingSong.vocalPath) {
+                    const blob = await fileSystem.getFile(currentPlayingSong.vocalPath);
+                    vocalBuffer = await blob.arrayBuffer();
+                }
+
+                // Handle server-side songs fallback
+                if (!instBuffer && currentPlayingSong.id === -1 && currentPlayingSong.originalHash) {
                     const response = await fetch(`/api/backend-files/downloads/${currentPlayingSong.originalHash}`);
                     if (response.ok) {
                         const blob = await response.blob();
-                        bufferToLoad = await blob.arrayBuffer();
+                        instBuffer = await blob.arrayBuffer();
                     }
                 }
 
-                if (bufferToLoad) {
-                    console.log('[LibraryPlayer] Loading buffer:', {
-                        type: Object.prototype.toString.call(bufferToLoad),
-                        byteLength: bufferToLoad.byteLength,
-                        isView: ArrayBuffer.isView(bufferToLoad)
+                if (instBuffer) {
+                    console.log('[LibraryPlayer] Loading instrumental buffer:', {
+                        byteLength: instBuffer.byteLength
                     });
                     
-                    if (bufferToLoad.byteLength === 0) {
-                        console.warn('[LibraryPlayer] Buffer is empty!');
-                    }
-
-                    await engine.load(bufferToLoad);
+                    await engine.load(instBuffer);
+                    
+                    // We store buffers in state to pass them to StudioController for "re-saving"
+                    setLoadedBuffers({
+                        instrumentals: instBuffer,
+                        vocals: vocalBuffer
+                    });
                 } else {
                     console.warn('[LibraryPlayer] No buffer to load');
                 }
@@ -248,8 +260,8 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
                                 engine={engine}
                                 originalHash={currentPlayingSong.originalHash}
                                 fileName={currentPlayingSong.title}
-                                vocals={currentPlayingSong.vocalData}
-                                instrumentals={currentPlayingSong.instrumentalData}
+                                vocals={loadedBuffers.vocals}
+                                instrumentals={loadedBuffers.instrumentals}
                                 duration={currentPlayingSong.duration}
                             />
                         </div>

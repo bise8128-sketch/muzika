@@ -9,6 +9,7 @@ import type { SongEntry } from '@/types/storage';
 import { audioCache } from './audioCache';
 import * as mm from 'music-metadata-browser';
 import { ExtractedMetadata } from '@/types/schema';
+import { fileSystem } from './fileSystem';
 
 export class SongsStorage {
     /**
@@ -24,21 +25,26 @@ export class SongsStorage {
         versionName: string,
         duration: number = 0
     ): Promise<number> {
+        // Save tracks to OPFS
+        const folder = `songs/${originalHash}_${Date.now()}`;
+        const instrumentalPath = await fileSystem.saveFile(`${folder}/instrumental.wav`, instrumentals);
+        const vocalPath = await fileSystem.saveFile(`${folder}/vocals.wav`, vocals);
+
         const songData: SongEntry = {
             type: 'ai_separated',
-            title: fileName, // Default title, user can update later
+            title: fileName, 
             versionName,
             originalHash,
             pitchAdjustment: pitch,
             tempoMultiplier: tempo,
-            instrumentalData: instrumentals,
-            vocalData: vocals,
+            instrumentalPath,
+            vocalPath,
             duration,
             createdAt: Date.now()
         };
 
         const id = await db.songs.add(songData);
-        console.log(`✅ Saved AI song version: ${versionName}`);
+        console.log(`✅ Saved AI song version to OPFS: ${versionName}`);
         return id;
     }
 
@@ -76,6 +82,10 @@ export class SongsStorage {
         }
 
         const fileHash = await audioCache.hashFile(file);
+        
+        // Save to OPFS
+        const timestamp = Date.now();
+        const instrumentalPath = await fileSystem.saveFile(`songs/${fileHash}_${timestamp}/original.wav`, arrayBuffer);
 
         const newEntry: SongEntry = {
             type: 'direct_karaoke',
@@ -85,16 +95,16 @@ export class SongsStorage {
             genre: metadata.common.genre,
             year: metadata.common.year,
             versionName: 'Original Upload',
-            instrumentalData: arrayBuffer,
+            instrumentalPath,
             originalHash: fileHash,
             pitchAdjustment: 0,
             tempoMultiplier: 1.0,
             duration: metadata.format.duration || 0,
-            createdAt: Date.now()
+            createdAt: timestamp
         };
 
         const id = await db.songs.add(newEntry);
-        console.log(`✅ Saved direct karaoke: ${newEntry.title}`);
+        console.log(`✅ Saved direct karaoke to OPFS: ${newEntry.title}`);
         return id;
     }
 
@@ -122,23 +132,73 @@ export class SongsStorage {
     /**
      * Delete a saved song
      */
-    async deleteSong(id: number): Promise<void> {
-        await db.songs.delete(id);
-        console.log(`❌ Deleted saved song ID: ${id}`);
-    }
-
-    /**
-     * Update a saved song's details
-     */
-    async updateSongDetails(id: number, details: Partial<Pick<SongEntry, 'title' | 'artist' | 'versionName'>>): Promise<void> {
-        await db.songs.update(id, details);
-    }
-
-    /**
-     * Update last played timestamp
-     */
     async updateLastPlayed(id: number): Promise<void> {
         await db.songs.update(id, { lastPlayedAt: Date.now() });
+    }
+
+    /**
+     * Clean up files when deleting a song
+     */
+    async deleteSong(id: number): Promise<void> {
+        const song = await this.getSong(id);
+        if (song) {
+            if (song.instrumentalPath) await fileSystem.deleteFile(song.instrumentalPath);
+            if (song.vocalPath) await fileSystem.deleteFile(song.vocalPath);
+        }
+        await db.songs.delete(id);
+        console.log(`❌ Deleted saved song ID: ${id} and associated files`);
+    }
+
+    /**
+     * Migrate existing songs from IndexedDB buffers to OPFS files
+     */
+    async migrateToOpfs(): Promise<{ migrated: number, failed: number }> {
+        const songs = await db.songs.toArray();
+        let migrated = 0;
+        let failed = 0;
+
+        for (const song of songs) {
+            // Already migrated or not needing migration
+            if (song.instrumentalPath) continue;
+            
+            // Legacy entries should have buffers
+            if (!song.instrumentalData) continue;
+
+            try {
+                const folder = `songs/${song.originalHash}_${song.createdAt}_migrated`;
+                
+                const instrumentalPath = await fileSystem.saveFile(
+                    `${folder}/instrumental.wav`, 
+                    song.instrumentalData
+                );
+                
+                let vocalPath;
+                if (song.vocalData) {
+                    vocalPath = await fileSystem.saveFile(
+                        `${folder}/vocals.wav`, 
+                        song.vocalData
+                    );
+                }
+
+                // Update DB entry, removing buffers and adding paths
+                await db.songs.update(song.id!, {
+                    instrumentalPath,
+                    vocalPath,
+                    instrumentalData: undefined,
+                    vocalData: undefined
+                });
+
+                migrated++;
+            } catch (error) {
+                console.error(`❌ Migration failed for song ${song.id}:`, error);
+                failed++;
+            }
+        }
+
+        if (migrated > 0) {
+            console.log(`📦 Storage Migration Complete: ${migrated} songs moved to OPFS.`);
+        }
+        return { migrated, failed };
     }
 }
 
