@@ -7,6 +7,7 @@ import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
 import { BrowserFileSource } from '@/utils/io/BrowserFileSource';
 import { ProgressTracker } from '@/utils/progress/ProgressTracker';
 import { WorkerPool } from '@/utils/worker/WorkerPool';
+import { StorageManager } from '@/utils/storage/StorageManager';
 
 export interface SeparationOptions {
     modelInfo: ModelInfo;
@@ -317,15 +318,18 @@ async function separateAudioInternal(
                 const vocalsBuffer = serializeBuffer(finalBuffers.vocals);
                 const instrumentalsBuffer = serializeBuffer(finalBuffers.instrumentals);
 
-                await audioCache.cacheAudioResult(
-                    fileHash,
-                    file.name,
-                    file.size,
-                    vocalsBuffer,
-                    instrumentalsBuffer,
-                    segmenter.totalDuration || 0,
-                    ctx.sampleRate,
-                    modelInfo.id
+                await StorageManager.runWithRetry(
+                    () => audioCache.cacheAudioResult(
+                        fileHash,
+                        file.name,
+                        file.size,
+                        vocalsBuffer,
+                        instrumentalsBuffer,
+                        segmenter!.totalDuration || 0,
+                        ctx.sampleRate,
+                        modelInfo.id
+                    ),
+                    `Caching audio results for ${file.name}`
                 );
             } catch (cacheError) {
                 console.warn('[separateAudio] Failed to cache results:', cacheError);

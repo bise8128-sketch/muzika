@@ -194,6 +194,37 @@ export class ModelStorage {
         };
     }
 
+    /**
+     * LRU eviction policy for models - Remove oldest entries if threshold is exceeded
+     */
+    async evictOldestIfNeeded(maxModels: number = 5, maxSizeGB: number = 2): Promise<void> {
+        if (!isBrowser()) return;
+
+        try {
+            const models = await db.models.orderBy('downloadedAt').toArray();
+            const stats = await this.getStorageStats();
+            
+            let currentCount = models.length;
+            let currentSizeGB = stats.modelsSize / (1024 * 1024 * 1024);
+
+            if (currentCount <= maxModels && currentSizeGB <= maxSizeGB) return;
+
+            console.log(`[ModelStorage] Threshold reached. Count: ${currentCount}/${maxModels}, Size: ${currentSizeGB.toFixed(2)}GB/${maxSizeGB}GB. Evicting oldest models...`);
+
+            // Evict until both sensors are happy
+            for (const model of models) {
+                if (currentCount <= maxModels && currentSizeGB <= maxSizeGB) break;
+
+                await this.deleteModel(model.modelId);
+                currentCount--;
+                currentSizeGB -= (model.size / (1024 * 1024 * 1024));
+                console.log(`[ModelStorage] Evicted model: ${model.name}`);
+            }
+        } catch (error) {
+            console.error('[ModelStorage] Eviction failed:', error);
+        }
+    }
+
     private formatSize(bytes: number): string {
         if (bytes === 0) return '0 B';
         const k = 1024;

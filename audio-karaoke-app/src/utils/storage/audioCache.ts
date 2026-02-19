@@ -274,7 +274,33 @@ export class AudioCache {
      * LRU eviction policy - Remove oldest entries if quota is exceeded
      */
     async evictOldestIfNeeded(maxSizeGB: number = 1): Promise<void> {
-        // ... (existing implementation)
+        if (!isBrowser()) return;
+
+        try {
+            const stats = await this.getCacheStats();
+            let currentSizeGB = stats.totalSizeGB;
+
+            if (currentSizeGB <= maxSizeGB) return;
+
+            console.log(`[AudioCache] Quota threshold reached (${currentSizeGB.toFixed(2)}GB > ${maxSizeGB}GB). Evicting oldest entries...`);
+
+            // Sort by processedAt ascending (oldest first)
+            const allEntries = await db.cachedAudio.orderBy('processedAt').toArray();
+            const targetSizeGB = maxSizeGB * 0.7; // Evict until we reach 70% of max to avoid constant eviction
+
+            for (const entry of allEntries) {
+                if (currentSizeGB <= targetSizeGB) break;
+
+                const entrySizeGB = (entry.vocals.byteLength + entry.instrumentals.byteLength) / (1024 * 1024 * 1024);
+                await db.cachedAudio.delete(entry.id!);
+                currentSizeGB -= entrySizeGB;
+                console.log(`[AudioCache] Evicted: ${entry.fileName} (${(entrySizeGB * 1024).toFixed(1)}MB)`);
+            }
+
+            console.log(`[AudioCache] Eviction complete. Current size: ${currentSizeGB.toFixed(2)}GB`);
+        } catch (error) {
+            console.error('[AudioCache] Eviction failed:', error);
+        }
     }
 
     /**

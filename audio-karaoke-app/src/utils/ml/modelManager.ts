@@ -1,5 +1,6 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { modelStorage } from '@/utils/storage/modelStorage';
+import { StorageManager } from '@/utils/storage/StorageManager';
 import { downloadModel } from './modelDownloader';
 import { setupONNX, validateSessionProvider } from './onnxSetup';
 import { InferenceEngine } from './inference';
@@ -41,6 +42,10 @@ export async function loadModel(
 
     // Setup ONNX options (WebGPU vs WASM)
     console.log(`[modelManager] Setting up ONNX for model ${modelInfo.id}...`);
+    
+    // Proactively check storage health before heavy processing/loading
+    await StorageManager.checkStorageHealth();
+    
     const options = await setupONNX();
 
     // Create InferenceSession
