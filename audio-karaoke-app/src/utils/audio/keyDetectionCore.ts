@@ -152,22 +152,26 @@ export function correlateChromaToKey(chroma: Float32Array): KeyInfo {
         return { tonic: 'C', scale: 'major', confidence: 0 };
     }
 
-    let bestKey = { tonic: 'C', scale: 'major' as const, correlation: -Infinity };
+    let bestTonic = 'C';
+    let bestScale: 'major' | 'minor' = 'major';
+    let bestCorrelation = -Infinity;
 
     for (const scale of ['major', 'minor'] as const) {
         const profile = KK_PROFILES[scale];
         for (let root = 0; root < 12; root++) {
             const correlation = pearsonCorrelation(chroma, profile, root);
-            if (correlation > bestKey.correlation) {
-                bestKey = { tonic: NOTE_NAMES[root], scale, correlation };
+            if (correlation > bestCorrelation) {
+                bestTonic = NOTE_NAMES[root];
+                bestScale = scale;
+                bestCorrelation = correlation;
             }
         }
     }
 
     return {
-        tonic: bestKey.tonic,
-        scale: bestKey.scale,
-        confidence: Math.max(0, bestKey.correlation),
+        tonic: bestTonic,
+        scale: bestScale,
+        confidence: Math.max(0, bestCorrelation),
     };
 }
 
