@@ -22,6 +22,7 @@ import { useKaraokeExport } from '@/hooks/useKaraokeExport';
 import { useKaraokeEffects } from '@/hooks/useKaraokeEffects';
 import { useKaraokeEngine } from '@/hooks/useKaraokeEngine';
 import { useVisualizerOrchestrator } from '@/hooks/useVisualizerOrchestrator';
+import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 
 // Sub-components
 import { VisualizerContainer } from './Visualizer/VisualizerContainer';

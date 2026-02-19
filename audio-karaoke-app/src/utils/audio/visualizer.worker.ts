@@ -24,7 +24,7 @@ let animationId: number | null = null;
 // State needed for rendering
 let frequencyData: Uint8Array = new Uint8Array(1024); // Default size, will resize on first data
 let timeDomainData: Uint8Array = new Uint8Array(1024); // If we get it
-const history: Uint8Array[] = [];
+const historyBuffer: Uint8Array[] = [];
 let maxHistoryLength = 200;
 
 let config: VisualizerConfig = {
@@ -180,7 +180,7 @@ function draw3DLandscape() {
 
     updateHistory();
 
-    const rows = history.length;
+    const rows = historyBuffer.length;
     // Downsample for performance
     const cols = frequencyData.length / (config.quality === 'low' ? 8 : 4);
     const rowStep = canvas.height / (config.quality === 'low' ? 40 : 60);
@@ -189,7 +189,7 @@ function draw3DLandscape() {
     ctx.lineWidth = 1;
 
     for (let i = rows - 1; i >= 0; i--) {
-        const data = history[i];
+        const data = historyBuffer[i];
         const z = i * rowStep;
         const opacity = 1 - (i / rows);
         
@@ -218,12 +218,12 @@ function drawSpectrogram() {
 
     updateHistory();
 
-    const rows = history.length;
+    const rows = historyBuffer.length;
     const stepX = canvas.width / rows;
     const yIncr = config.quality === 'low' ? 8 : 4;
 
     for (let i = 0; i < rows; i++) {
-        const data = history[i];
+        const data = historyBuffer[i];
         const x = canvas.width - (i * stepX);
         
         for (let j = 0; j < canvas.height; j += yIncr) {
@@ -243,7 +243,7 @@ function drawFluid() {
     // Simplistic fluid implementation for now
     // The original maintained particle state.
     // We need to maintain particle state here too.
-    if (!self.particles) {
+    if (!particles) {
         initParticles();
     }
     
@@ -260,17 +260,15 @@ interface Particle {
     color: string;
 }
 
-declare global {
-    var particles: Particle[];
-}
+let particles: Particle[] | null = null;
 
 function initParticles() {
     const particleCount = config.quality === 'low' ? 50 : 100;
-    self.particles = [];
+    particles = [];
     if (!canvas) return;
 
     for(let i=0; i<particleCount; i++) {
-        self.particles.push({
+        particles.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
             vx: 0,
@@ -282,7 +280,7 @@ function initParticles() {
 }
 
 function updateAndDrawParticles() {
-    if (!ctx || !canvas) return;
+    if (!ctx || !canvas || !particles) return;
     
     // Fade out
     ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
@@ -295,9 +293,9 @@ function updateAndDrawParticles() {
     energy = energy / frequencyData.length;
     const speedMultiplier = 1 + (energy / 255) * 5;
 
-    self.particles.forEach((p, i) => {
+    particles.forEach((p: Particle, i: number) => {
         // Map frequency bin to particle
-        const freqIndex = Math.floor((i / self.particles.length) * (frequencyData.length / 2));
+        const freqIndex = Math.floor((i / particles!.length) * (frequencyData.length / 2));
         const freqValue = frequencyData[freqIndex] || 0;
         
         const angle = (freqIndex / frequencyData.length) * Math.PI * 4 + performance.now() * 0.001;
@@ -331,8 +329,8 @@ function updateAndDrawParticles() {
 function updateHistory() {
     // Clone current data for history
     const snapshot = new Uint8Array(frequencyData);
-    history.unshift(snapshot);
-    if (history.length > maxHistoryLength) {
-        history.pop();
+    historyBuffer.unshift(snapshot);
+    if (historyBuffer.length > maxHistoryLength) {
+        historyBuffer.pop();
     }
 }
