@@ -9,8 +9,8 @@ import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
-import { Grid } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { List, ListProps } from 'react-window';
+import { AutoSizer, AutoSizerProps } from 'react-virtualized-auto-sizer';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -261,68 +261,56 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                         )}
                     </div>
                 ) : (
-                    <AutoSizer>
-                        {(size: any) => {
-                            const { height, width } = size;
-                            const columnCount = width > 1200 ? 3 : width > 768 ? 2 : 1;
-                            const columnWidth = width / columnCount;
-                            const rowCount = Math.ceil(filteredSongs.length / columnCount);
-                            const rowHeight = 240;
+                    <AutoSizer
+                        renderProp={({ height, width }: { height: number | undefined; width: number | undefined }) => {
+                            if (!height || !width) return null;
+                            
+                            const listProps: any = {
+                                rowCount: filteredSongs.length,
+                                rowHeight: 130,
+                                height,
+                                width,
+                                className: "scrollbar-hide",
+                                rowComponent: ({ index, style }: { index: number; style: React.CSSProperties }) => {
+                                    const song = filteredSongs[index];
 
-                            return (
-                                <Grid
-                                    columnCount={columnCount}
-                                    columnWidth={columnWidth}
-                                    height={height}
-                                    rowCount={rowCount}
-                                    rowHeight={rowHeight}
-                                    width={width}
-                                    className="scrollbar-hide"
-                                >
-                                    {(props: any) => {
-                                        const { columnIndex, rowIndex, style } = props;
-                                        const songIndex = rowIndex * columnCount + columnIndex;
-                                        const song = filteredSongs[songIndex];
+                                    if (!song) return null;
 
-                                        if (!song) return null;
-
-                                        return (
-                                            <div style={{
-                                                ...style,
-                                                padding: '12px' // Spacing between grid items
-                                            }}>
-                                                <div
-                                                    onClick={() => handlePlay(song)}
-                                                    className={`
-                                                        group relative h-full bg-white/5 hover:bg-white/10 border rounded-2xl p-5 flex flex-col gap-3 transition-all cursor-pointer overflow-hidden
-                                                        ${selectedSongs.has(song.id!) ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-primary/50'}
-                                                    `}
-                                                >
-                                                    {/* Selection Checkbox */}
-                                                    {isSelectionMode && (
-                                                        <div
-                                                            onClick={(e) => handleSelectSong(e, song.id!)}
-                                                            className="absolute top-3 right-3 z-10"
-                                                        >
-                                                            <div className={`
-                                                                w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                                                                ${selectedSongs.has(song.id!)
-                                                                    ? 'bg-primary border-primary'
-                                                                    : 'border-white/30 hover:border-primary'
-                                                                }
-                                                            `}>
-                                                                {selectedSongs.has(song.id!) && (
-                                                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                    </svg>
-                                                                )}
-                                                            </div>
+                                    return (
+                                        <div style={style}>
+                                            <div
+                                                onClick={() => handlePlay(song)}
+                                                className={`
+                                                    group relative bg-white/5 hover:bg-white/10 border rounded-2xl p-4 flex items-center gap-4 transition-all cursor-pointer overflow-hidden
+                                                    ${selectedSongs.has(song.id!) ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-primary/50'}
+                                                `}
+                                            >
+                                                {/* Selection Checkbox */}
+                                                {isSelectionMode && (
+                                                    <div
+                                                        onClick={(e) => handleSelectSong(e, song.id!)}
+                                                        className="absolute top-3 right-3 z-10"
+                                                    >
+                                                        <div className={`
+                                                            w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                                                            ${selectedSongs.has(song.id!)
+                                                                ? 'bg-primary border-primary'
+                                                                : 'border-white/30 hover:border-primary'
+                                                            }
+                                                        `}>
+                                                            {selectedSongs.has(song.id!) && (
+                                                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                </svg>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                )}
 
-                                                    <div className="flex justify-between items-start pr-8">
+                                                <div className="flex-1 min-w-0 flex flex-col gap-1">
+                                                    <div className="flex justify-between items-start">
                                                         <div className="flex-1 min-w-0">
-                                                            <h3 className="font-bold text-lg truncate pr-2 group-hover:text-primary transition-colors">
+                                                            <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
                                                                 {song.title}
                                                             </h3>
                                                             <p className="text-sm text-muted-foreground truncate">
@@ -337,7 +325,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                                         <div className="flex items-center gap-1">
                                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -348,34 +336,28 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                             {new Date(song.createdAt).toLocaleDateString()}
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
-                                                        <button
-                                                            className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-1.5a1 1 0 000-1.664l-3-1.5z" clipRule="evenodd" />
-                                                            </svg>
-                                                            Play Now
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => handleDelete(e, song.id)}
-                                                            className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                                                            aria-label="Delete song"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={(e) => handleDelete(e, song.id)}
+                                                        className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                                        aria-label="Delete song"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             </div>
-                                        );
-                                    }}
-                                </Grid>
-                            );
+                                        </div>
+                                    );
+                                }
+                            };
+                            
+                            return <List {...listProps} />;
                         }}
-                    </AutoSizer>
+                    />
                 )}
             </div>
         </div>
