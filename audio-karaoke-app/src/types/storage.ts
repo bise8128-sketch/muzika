@@ -43,9 +43,13 @@ export interface SongEntry {
     bpm?: number;
     key?: string;
 
-    // Audio Data
-    instrumentalData: ArrayBuffer;
-    vocalData?: ArrayBuffer;  // Optional for direct karaoke
+    // Audio Data - Hybrid Storage Support
+    instrumentalPath?: string; // Path to OPFS file
+    vocalPath?: string;       // Path to OPFS file
+    
+    // Legacy / Buffer Data (Deprecated for new entries)
+    instrumentalData?: ArrayBuffer;
+    vocalData?: ArrayBuffer;
 
     // Metadata & Settings
     originalHash: string;

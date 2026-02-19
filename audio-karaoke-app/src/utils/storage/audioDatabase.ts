@@ -30,6 +30,18 @@ export class AudioKaraokeDB extends Dexie {
             queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
         });
 
+        // Version 6: Hybrid storage support (OPFS paths)
+        // Note: Schema doesn't change much for Dexie as it just ignores extra fields,
+        // but this version bump triggers the upgrade path if we wanted to run migration here.
+        this.version(6).stores({
+            models: '++id, modelId, name, version, downloadedAt',
+            cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
+            processingLogs: '++id, fileHash, status, startedAt',
+            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt',
+            playlists: '++id, name, createdAt, updatedAt',
+            queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
+        });
+
         // Keep previous versions for migration history if needed
         this.version(4).stores({
             models: '++id, modelId, name, version, downloadedAt',
@@ -43,7 +55,7 @@ export class AudioKaraokeDB extends Dexie {
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
             processingLogs: '++id, fileHash, status, startedAt',
             songs: '++id, originalHash, customName, savedAt'
-        }).upgrade(trans => {
+        }).upgrade(_trans => {
             // Basic migration if needed, but since structure changed significantly, we might just let it be or clear.
             // For now, no explicit data migration logic here as types are incompatible.
         });
@@ -86,7 +98,7 @@ export class AudioKaraokeDB extends Dexie {
         });
 
         songs.forEach(song => {
-            totalSize += song.instrumentalData.byteLength + (song.vocalData?.byteLength || 0);
+            totalSize += (song.instrumentalData?.byteLength || 0) + (song.vocalData?.byteLength || 0);
         });
 
         return totalSize;
