@@ -2,10 +2,48 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Smart Playlists and Bulk Actions', () => {
     test.beforeEach(async ({ page }) => {
-        // Navigate to the library page. Assuming default locale is 'en' or handled.
-        // We go to /library because that's where LibraryGrid and PlaylistManager are.
         await page.goto('/library');
-        // Wait for potential redirection or locale handling
+        
+        // Seed database with mock songs
+        await page.evaluate(async () => {
+            const dbName = 'AudioKaraokeDB';
+            const request = indexedDB.open(dbName);
+            
+            await new Promise((resolve, reject) => {
+                request.onsuccess = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    if (!db.objectStoreNames.contains('songs')) {
+                         // DB might not be initialized yet if app hasn't fully loaded Dexie. 
+                         // But we visited /library, so it should be.
+                         resolve(null); 
+                         return;
+                    }
+
+                    const transaction = db.transaction(['songs'], 'readwrite');
+                    const store = transaction.objectStore('songs');
+                    const countRequest = store.count();
+                    
+                    countRequest.onsuccess = () => {
+                        if (countRequest.result === 0) {
+                            const songs = [
+                                { title: 'Song A', artist: 'Artist A', type: 'karaoke', createdAt: Date.now(), duration: 180, originalHash: 'hash1' },
+                                { title: 'Song B', artist: 'Artist B', type: 'karaoke', createdAt: Date.now(), duration: 200, originalHash: 'hash2' },
+                                { title: 'Song C', artist: 'Artist C', type: 'karaoke', createdAt: Date.now(), duration: 220, originalHash: 'hash3' },
+                            ];
+                            for (const song of songs) {
+                                store.add(song);
+                            }
+                        }
+                    };
+                    
+                    transaction.oncomplete = () => resolve(null);
+                    transaction.onerror = () => reject(transaction.error);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        });
+
+        await page.reload(); 
         await page.waitForTimeout(1000); 
     });
 
@@ -54,9 +92,10 @@ test.describe('Smart Playlists and Bulk Actions', () => {
         await page.click('text=Show Playlists');
         await page.click('text=My Manual Playlist');
         
-        await expect(page.locator('text=Songs')).toBeVisible();
-        // Should have 2 delete buttons (one for each song)
-        // Note: these are 'Remove song from playlist' buttons, likely distinct from 'Delete song' buttons
+        // Verify songs section header exists (more specific selector)
+        // Look for the "Songs" header inside the properties panel or just verify the button exists
+        // The PlaylistManager renders: <span ...>Songs</span>
+        await expect(page.locator('span:has-text("Songs")').first()).toBeVisible();
         await expect(page.locator('button[aria-label="Remove song"]')).toHaveCount(2); 
     });
 
@@ -91,7 +130,8 @@ test.describe('Smart Playlists and Bulk Actions', () => {
         await page.waitForTimeout(500);
         
         // Verify we see songs. How many? Unknown, but verify container is present.
-        const songContainer = page.locator('text=Songs');
+        // Verify we see songs.
+        const songContainer = page.locator('span:has-text("Songs")').first();
         await expect(songContainer).toBeVisible();
     });
 });
