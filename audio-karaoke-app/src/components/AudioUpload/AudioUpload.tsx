@@ -7,9 +7,11 @@ import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidato
 import { DirectKaraokeUpload } from './DirectKaraokeUpload';
 import { ExtractedMetadata } from '@/types/schema';
 import { ErrorBoundary } from '@/components/UI/ErrorBoundary';
+import { validateYouTubeUrl } from '@/utils/security/sanitize';
 
 interface AudioUploadProps {
     onUpload: (files: File[], isKaraokeMode?: boolean, metadata?: ExtractedMetadata[]) => void;
+    onUrlSubmit?: (url: string) => void;
     isLoading?: boolean;
     autoStartKaraoke?: boolean;
     onAutoStartToggle?: (value: boolean) => void;
@@ -25,8 +27,11 @@ export const AudioUpload: React.FC<AudioUploadProps> = (props) => {
     );
 };
 
+const YOUTUBE_URL_PATTERN = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)/i;
+
 const AudioUploadContent: React.FC<AudioUploadProps> = ({
     onUpload,
+    onUrlSubmit,
     isLoading,
     autoStartKaraoke = false,
     onAutoStartToggle,
@@ -38,6 +43,8 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
     const [isDragging, setIsDragging] = useState(false);
     const [isKaraokeMode, setIsKaraokeMode] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [urlInput, setUrlInput] = useState('');
+    const [urlError, setUrlError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const validateFiles = useCallback(async (files: File[]): Promise<boolean> => {
@@ -75,6 +82,21 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
         setIsDragging(false);
     }, []);
 
+    const handleUrlSubmit = useCallback((url: string) => {
+        const trimmed = url.trim();
+        if (!trimmed) return;
+
+        const validation = validateYouTubeUrl(trimmed);
+        if (!validation.valid) {
+            setUrlError(t('invalidYoutubeUrl'));
+            return;
+        }
+
+        setUrlError(null);
+        setUrlInput('');
+        onUrlSubmit?.(trimmed);
+    }, [onUrlSubmit, t]);
+
     const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
@@ -85,8 +107,15 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
             if (isValid) {
                 onUpload(files, isKaraokeMode);
             }
+            return;
         }
-    }, [onUpload, isKaraokeMode, validateFiles]);
+
+        // No files — check for dropped URL text
+        const droppedText = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
+        if (droppedText && YOUTUBE_URL_PATTERN.test(droppedText.trim())) {
+            handleUrlSubmit(droppedText);
+        }
+    }, [onUpload, isKaraokeMode, validateFiles, handleUrlSubmit]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files ? Array.from(e.target.files) : [];
@@ -185,6 +214,7 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">MP3</span>
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">WAV</span>
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">FLAC</span>
+                                <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">YouTube URL</span>
                             </div>
                         </div>
 
@@ -194,6 +224,54 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* YouTube URL Paste Input */}
+            {!isKaraokeMode && onUrlSubmit && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                        <div className="flex-1 h-px bg-white/10"></div>
+                        <span className="uppercase tracking-widest font-bold">{t('or')}</span>
+                        <div className="flex-1 h-px bg-white/10"></div>
+                    </div>
+                    <div className="flex gap-2">
+                        <input
+                            type="url"
+                            value={urlInput}
+                            onChange={(e) => {
+                                setUrlInput(e.target.value);
+                                setUrlError(null);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleUrlSubmit(urlInput);
+                                }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder={t('urlPlaceholder')}
+                            data-testid="youtube-url-input"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 transition-all"
+                        />
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleUrlSubmit(urlInput);
+                            }}
+                            disabled={!urlInput.trim() || isLoading}
+                            data-testid="youtube-url-submit"
+                            className="px-5 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-red-400 text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z" />
+                            </svg>
+                        </button>
+                    </div>
+                    {urlError && (
+                        <p className="mt-2 text-xs text-destructive animate-in fade-in">{urlError}</p>
+                    )}
+                </div>
+            )}
 
             {/* AI Model Selection & Settings */}
             {!isLoading && (

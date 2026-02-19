@@ -1,3 +1,4 @@
+import re
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -49,6 +50,10 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize separator: {e}")
     separator = None
+
+YOUTUBE_URL_REGEX = re.compile(
+    r'^https?://(www\.)?(youtube\.com/(watch\?v=|embed/|v/|shorts/)|youtu\.be/)[a-zA-Z0-9_-]{11}'
+)
 
 class DownloadRequest(BaseModel):
     url: str
@@ -144,6 +149,9 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/api/download")
 async def download_audio(request: DownloadRequest):
+    # Validate YouTube URL server-side
+    if not YOUTUBE_URL_REGEX.match(request.url.strip()):
+        raise HTTPException(status_code=400, detail="Invalid YouTube URL")
     try:
         logger.info(f"Received download request for: {request.url}")
         file_path = downloader.download(request.url, format=request.format)

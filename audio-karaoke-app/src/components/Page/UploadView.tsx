@@ -12,6 +12,7 @@ const History = dynamic(() => import('@/components/UI/History').then(mod => mod.
 
 interface UploadViewProps {
   onUpload: (files: File[], isKaraokeMode?: boolean, metadata?: ExtractedMetadata[]) => void;
+  onUrlSubmit?: (url: string) => void;
   isLoading: boolean;
   autoStartKaraoke: boolean;
   onAutoStartToggle: (val: boolean) => void;
@@ -24,6 +25,7 @@ interface UploadViewProps {
 
 export function UploadView({
   onUpload,
+  onUrlSubmit,
   isLoading,
   autoStartKaraoke,
   onAutoStartToggle,
@@ -38,6 +40,7 @@ export function UploadView({
     <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
       <AudioUpload
         onUpload={onUpload}
+        onUrlSubmit={onUrlSubmit}
         isLoading={isLoading}
         autoStartKaraoke={autoStartKaraoke}
         onAutoStartToggle={onAutoStartToggle}

@@ -18,6 +18,7 @@ import { useModels } from '@/hooks/useModels';
 import { useHistoryManagement } from '@/hooks/useHistoryManagement';
 import { useAudioExport } from '@/hooks/useAudioExport';
 import { useAppState } from '@/hooks/useAppState';
+import { apiClient } from '@/api/ApiClient';
 
 // Views
 import { UploadView } from '@/components/Page/UploadView';
@@ -162,6 +163,23 @@ export default function Home() {
     }
   };
 
+  // YouTube URL handler — routes directly to Python backend
+  const handleUrlSubmit = async (url: string) => {
+    const modelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModelId);
+    if (!modelInfo) {
+      alert('Selected model not found!');
+      return;
+    }
+
+    try {
+      send({ type: 'PROCESS_START' });
+      await apiClient.startProcessing({ url, model: selectedModelId, format: 'mp3' });
+    } catch (e) {
+      console.error('YouTube download/separation failed:', e);
+      send({ type: 'UPLOAD_ERROR', error: String(e) });
+    }
+  };
+
   // Restore handler
   const handleRestore = async (fileHash: string) => {
     try {
@@ -177,6 +195,7 @@ export default function Home() {
       return (
         <UploadView
           onUpload={handleUpload}
+          onUrlSubmit={handleUrlSubmit}
           isLoading={machineState.matches('uploading') || separation.status === 'processing'}
           autoStartKaraoke={autoStartKaraoke}
           onAutoStartToggle={(val) => {

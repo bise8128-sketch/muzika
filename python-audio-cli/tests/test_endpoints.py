@@ -133,6 +133,37 @@ class TestDownload:
         response = client.post("/api/download", json={})
         assert response.status_code == 422
 
+    def test_download_rejects_non_youtube_url(self):
+        """Non-YouTube URLs should be rejected with 400."""
+        response = client.post(
+            "/api/download",
+            json={"url": "https://evil.com/malware.mp3", "format": "mp3"},
+        )
+        assert response.status_code == 400
+        assert "Invalid YouTube URL" in response.json()["detail"]
+
+    def test_download_rejects_empty_url_string(self):
+        """Empty string URL should be rejected with 400."""
+        response = client.post(
+            "/api/download",
+            json={"url": "", "format": "mp3"},
+        )
+        assert response.status_code == 400
+
+    @patch("api.downloader")
+    def test_download_accepts_youtube_shorts(self, mock_downloader):
+        """YouTube Shorts URLs should be accepted."""
+        mock_downloader.download.return_value = "output/downloads/short-video.mp3"
+
+        response = client.post(
+            "/api/download",
+            json={"url": "https://www.youtube.com/shorts/dQw4w9WgXcQ", "format": "mp3"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+
 
 # ─── Separation ─────────────────────────────────────────────────────────
 
