@@ -1,14 +1,15 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Upload, 
-    Edit3, 
-    Maximize2, 
-    Target, 
-    Users, 
-    Settings, 
-    Mic2, 
-    X
+    Upload,
+    Edit3,
+    Maximize2,
+    Target,
+    Users,
+    Settings,
+    Mic2,
+    X,
+    Music,
 } from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { VoicePreset, VoiceTransformSettings } from '@/types/audio';
@@ -21,6 +22,7 @@ import { PracticePanel } from '../PracticePanel';
 import { RoomLobby } from '../../Room/RoomLobby';
 import { RoomView } from '../../Room/RoomView';
 import { SettingsPanel } from '../../UI/SettingsPanel';
+import { AutoKeyPanel } from '../AutoKeyPanel';
 import { useTranslations } from 'next-intl';
 
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
@@ -41,6 +43,7 @@ interface VisualizerContainerProps {
     showRoom: boolean;
     showVoiceFx: boolean;
     showSettings: boolean;
+    showAutoKey: boolean;
     isVisualSettingsOpen: boolean;
     recorder: {
         isRecording: boolean;
@@ -56,6 +59,7 @@ interface VisualizerContainerProps {
     };
     practiceProps: any;
     roomProps: any;
+    autoKeyProps: any;
 
     onCanvasReady: (canvas: HTMLCanvasElement) => void;
     onLRCUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -64,6 +68,7 @@ interface VisualizerContainerProps {
     onTogglePractice: () => void;
     onToggleRoom: () => void;
     onToggleVoiceFx: () => void;
+    onToggleAutoKey: () => void;
     onToggleSettings: () => void;
     onToggleEditor: (show: boolean) => void;
     onSaveLRC: (data: LRCData) => void;
@@ -72,6 +77,7 @@ interface VisualizerContainerProps {
     onCloseVoiceFx: () => void;
     onClosePractice: () => void;
     onCloseRoom: () => void;
+    onCloseAutoKey: () => void;
 }
 
 export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
@@ -90,11 +96,13 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
     showRoom,
     showVoiceFx,
     showSettings,
+    showAutoKey,
     isVisualSettingsOpen,
     recorder,
     voiceFxProps,
     practiceProps,
     roomProps,
+    autoKeyProps,
     onCanvasReady,
     onLRCUpload,
     onThemeChange,
@@ -102,6 +110,7 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
     onTogglePractice,
     onToggleRoom,
     onToggleVoiceFx,
+    onToggleAutoKey,
     onToggleSettings,
     onToggleEditor,
     onSaveLRC,
@@ -109,7 +118,8 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
     onCloseVisualSettings,
     onCloseVoiceFx,
     onClosePractice,
-    onCloseRoom
+    onCloseRoom,
+    onCloseAutoKey
 }) => {
     const t = useTranslations('KaraokePlayer');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -282,6 +292,12 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
                         label="Voice FX" 
                     />
                     <ToolbarButton 
+                        icon={<Music className="w-4 h-4" />} 
+                        active={showAutoKey} 
+                        onClick={onToggleAutoKey} 
+                        label="Auto-Key" 
+                    />
+                    <ToolbarButton 
                         icon={<Settings className="w-4 h-4" />} 
                         active={isVisualSettingsOpen} 
                         onClick={() => onVisualSettingsChange({ ...visualSettings })} 
@@ -334,6 +350,11 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
                         ) : (
                             <RoomView {...roomProps} onLeave={roomProps.onLeave} />
                         )}
+                    </PanelWrapper>
+                )}
+                {showAutoKey && (
+                    <PanelWrapper key="autokey" onClose={onCloseAutoKey}>
+                        <AutoKeyPanel {...autoKeyProps} onClose={onCloseAutoKey} />
                     </PanelWrapper>
                 )}
             </AnimatePresence>

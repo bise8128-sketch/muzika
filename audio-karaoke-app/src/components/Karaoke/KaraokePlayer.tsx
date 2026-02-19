@@ -12,8 +12,8 @@ import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
-import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
+import { useAutoKey } from '@/hooks/useAutoKey';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
 
 // Custom Hooks
@@ -61,6 +61,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [showPractice, setShowPractice] = useState(false);
     const [showRoom, setShowRoom] = useState(false);
     const [showVoiceFx, setShowVoiceFx] = useState(false);
+    const [showAutoKey, setShowAutoKey] = useState(false);
     const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
 
@@ -111,6 +112,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const usePracticeHook = usePractice(controller);
     const useRoomHook = useKaraokeRoom(controller);
     const useVoiceHook = useVoiceTransform();
+    const useAutoKeyHook = useAutoKey(controller);
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -203,6 +205,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 showPractice={showPractice}
                 showRoom={showRoom}
                 showVoiceFx={showVoiceFx}
+                showAutoKey={showAutoKey}
                 showSettings={showSettings}
                 isVisualSettingsOpen={isVisualSettingsOpen}
                 recorder={recorder}
@@ -214,6 +217,15 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     onPresetChange: useVoiceHook.setPreset,
                     onSettingsChange: useVoiceHook.updateSettings,
                     onToggleMonitoring: useVoiceHook.toggleMonitoring
+                }}
+                autoKeyProps={{
+                    isAnalyzing: useAutoKeyHook.isAnalyzing,
+                    detectedKey: useAutoKeyHook.detectedKey,
+                    vocalRange: useAutoKeyHook.vocalRange,
+                    suggestedShift: useAutoKeyHook.suggestedShift,
+                    onAnalyze: useAutoKeyHook.analyzeTrack,
+                    onApply: useAutoKeyHook.applyShift,
+                    onRangeChange: useAutoKeyHook.updateVocalRange
                 }}
                 practiceProps={{
                     ...usePracticeHook,
@@ -241,6 +253,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                     if (!useVoiceHook.isInitialized) await useVoiceHook.initProcessor();
                     setShowVoiceFx(!showVoiceFx);
                 }}
+                onToggleAutoKey={() => setShowAutoKey(!showAutoKey)}
                 onToggleSettings={() => setShowSettings(!showSettings)}
                 onToggleEditor={setShowEditor}
                 onSaveLRC={(data) => {
@@ -252,6 +265,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onCloseVoiceFx={() => setShowVoiceFx(false)}
                 onClosePractice={() => setShowPractice(false)}
                 onCloseRoom={() => setShowRoom(false)}
+                onCloseAutoKey={() => setShowAutoKey(false)}
             />
 
             <KaraokeControls
