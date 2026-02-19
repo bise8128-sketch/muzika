@@ -47,6 +47,27 @@ export class StorageManager {
     }
 
     /**
+     * Get aggregated storage statistics for the UI.
+     */
+    static async getStats() {
+        return await modelStorage.getStorageStats();
+    }
+
+    /**
+     * Clear all cached audio stems.
+     */
+    static async clearAudioCache(): Promise<void> {
+        await audioCache.clearAudioCache();
+    }
+
+    /**
+     * Clear all downloaded models.
+     */
+    static async clearModelStorage(): Promise<void> {
+        await modelStorage.clearAllModels();
+    }
+
+    /**
      * Utility to run a storage-intensive operation with retry on QuotaExceededError
      */
     static async runWithRetry<T>(operation: () => Promise<T>, label: string = 'Operation'): Promise<T> {

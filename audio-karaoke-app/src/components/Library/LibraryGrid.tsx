@@ -11,7 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
 import { queueStorage } from '@/utils/storage/queueStorage';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 
 interface LibraryGridProps {
