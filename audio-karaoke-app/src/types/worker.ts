@@ -10,7 +10,10 @@ export type WorkerMessageType =
     | 'SYNC_TIME'
     | 'UPDATE_SETTINGS'
     | 'LYRIC_UPDATE'
-    | 'CDG_READY';
+    | 'CDG_READY'
+    // Key Detection Worker Messages
+    | 'ANALYZE_KEY'
+    | 'KEY_RESULT';
 
 export interface WorkerRequest {
     type: WorkerMessageType;
