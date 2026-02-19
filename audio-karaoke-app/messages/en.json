@@ -178,6 +178,18 @@
         "key": "Key",
         "resetPitch": "Reset Pitch"
     },
+    "HarmonyGuide": {
+        "title": "Harmony Guide",
+        "subtitle": "Sing harmonies for bonus points",
+        "tryThird": "Try a 3rd",
+        "tryFifth": "Try a 5th",
+        "harmonyHit": "Harmony!",
+        "perfectHarmony": "Perfect {interval}!",
+        "bonus": "+{points} bonus",
+        "enable": "Enable Harmony Mode",
+        "harmonyHits": "harmony hits",
+        "harmonyBonus": "Harmony Bonus"
+    },
     "BackendStatus": {
         "backend": "Backend: {status}"
     }

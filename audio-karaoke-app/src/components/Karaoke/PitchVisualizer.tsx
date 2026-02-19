@@ -10,6 +10,7 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import type { PitchAnalysisResult, PerformanceScore, PerformanceGrade } from '@/types/audio';
+import type { HarmonySuggestion } from '@/utils/audio/harmonyGuide';
 import { useTranslations } from 'next-intl';
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ interface PitchVisualizerProps {
     currentPitch: number;
     overallScore: PerformanceScore | null;
     isListening: boolean;
+    harmonySuggestions?: HarmonySuggestion[];
 }
 
 export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
@@ -91,6 +93,7 @@ export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
     currentPitch,
     overallScore,
     isListening,
+    harmonySuggestions,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -175,7 +178,36 @@ export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
             ctx.lineTo(x1, y1);
             ctx.stroke();
         });
-    }, [visibleData]);
+
+        // Draw harmony target lines (gold dashed) when suggestions are present
+        if (harmonySuggestions && harmonySuggestions.length > 0) {
+            ctx.setLineDash([6, 4]);
+            ctx.lineWidth = 1.5;
+
+            for (const suggestion of harmonySuggestions) {
+                const harmonyMidi = suggestion.midiNote;
+                if (harmonyMidi < MIDI_MIN || harmonyMidi > MIDI_MIN + MIDI_RANGE) continue;
+
+                const y = h - ((harmonyMidi - MIDI_MIN) / MIDI_RANGE) * h;
+
+                // Gold color with slight variation per interval
+                const alpha = suggestion.interval === '3rd' ? 0.5 : suggestion.interval === '5th' ? 0.4 : 0.3;
+                ctx.strokeStyle = `rgba(251, 191, 36, ${alpha})`;
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = `rgba(251, 191, 36, ${alpha + 0.2})`;
+                ctx.font = '9px monospace';
+                ctx.fillText(`${suggestion.interval} (${suggestion.noteName})`, 4, y - 3);
+            }
+
+            ctx.setLineDash([]);
+        }
+    }, [visibleData, harmonySuggestions]);
 
     return (
         <div className="relative rounded-2xl bg-linear-to-b from-white/8 to-white/3 border border-white/10 overflow-hidden">

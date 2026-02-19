@@ -14,6 +14,7 @@ import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
 import { useAutoKey } from '@/hooks/useAutoKey';
+import { useHarmonyGuide } from '@/hooks/useHarmonyGuide';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
 
 // Custom Hooks
@@ -28,6 +29,7 @@ import { KaraokeControls } from './Controls/KaraokeControls';
 import { EffectsPanel } from './EffectsPanel';
 import { StemIsolationPanel } from './StemIsolationPanel';
 import { PitchVisualizer } from './PitchVisualizer';
+import { HarmonyGuidePanel } from './HarmonyGuidePanel';
 import { LyricTheme } from './LyricDisplay';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { PlayerHeader } from './PlayerHeader';
@@ -51,7 +53,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
     const playback = usePlayback(controller);
     const recorder = useVoiceRecorder();
-    const pitchAnalysis = usePitchAnalysis(controller);
+    const useAutoKeyHook = useAutoKey(controller);
+    const harmonyGuide = useHarmonyGuide(useAutoKeyHook.detectedKey);
+    const pitchAnalysis = usePitchAnalysis(controller, harmonyGuide.activeKeyInfo);
     
     // UI State
     const [showEditor, setShowEditor] = useState(false);
@@ -62,6 +66,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [showRoom, setShowRoom] = useState(false);
     const [showVoiceFx, setShowVoiceFx] = useState(false);
     const [showAutoKey, setShowAutoKey] = useState(false);
+    const [showHarmonyGuide, setShowHarmonyGuide] = useState(false);
     const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
 
@@ -112,7 +117,6 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const usePracticeHook = usePractice(controller);
     const useRoomHook = useKaraokeRoom(controller);
     const useVoiceHook = useVoiceTransform();
-    const useAutoKeyHook = useAutoKey(controller);
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -358,6 +362,41 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         currentPitch={pitchAnalysis.currentPitch}
                         overallScore={pitchAnalysis.overallScore}
                         isListening={pitchAnalysis.isListening}
+                        harmonySuggestions={harmonyGuide.harmonyEnabled ? harmonyGuide.getSuggestions(
+                            pitchAnalysis.pitchHistory.length > 0
+                                ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
+                                : 0
+                        ) : undefined}
+                    />
+                )}
+            </div>
+
+            {/* Harmony Guide */}
+            <div className="space-y-2">
+                <button
+                    onClick={() => setShowHarmonyGuide(!showHarmonyGuide)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                        showHarmonyGuide
+                            ? 'bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/40'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                    }`}
+                >
+                    🎶 Harmony Guide
+                </button>
+                {showHarmonyGuide && (
+                    <HarmonyGuidePanel
+                        detectedKey={useAutoKeyHook.detectedKey}
+                        harmonyEnabled={harmonyGuide.harmonyEnabled}
+                        onToggleHarmony={harmonyGuide.setHarmonyEnabled}
+                        suggestions={harmonyGuide.getSuggestions(
+                            pitchAnalysis.pitchHistory.length > 0
+                                ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
+                                : 0
+                        )}
+                        lastMatch={harmonyGuide.lastMatch}
+                        totalHarmonyHits={harmonyGuide.totalHarmonyHits}
+                        harmonyBonus={pitchAnalysis.overallScore?.harmonyBonus ?? 0}
+                        onClose={() => setShowHarmonyGuide(false)}
                     />
                 )}
             </div>
