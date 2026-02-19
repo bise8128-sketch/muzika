@@ -10,7 +10,9 @@ import type {
     PerformanceScore,
     PerformanceGrade,
 } from '../../types/audio';
+import type { KeyInfo } from './keyDetection';
 import { PitchCorrector } from './pitchCorrection';
+import { isHarmonyMatch } from './harmonyGuide';
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -84,12 +86,17 @@ export function getReferencePitchAtTime(
 /**
  * Analyse a single frame of microphone and reference audio.
  * Returns a PitchAnalysisResult or null if detection fails.
+ *
+ * When `keyInfo` is provided and harmony mode is active, the engine
+ * checks whether the user is singing a valid harmony interval even
+ * when the melody accuracy is low.
  */
 export function analyzeFrame(
     micBuffer: Float32Array,
     refPitch: { pitch: number; midi: number } | null,
     sampleRate: number,
     timestamp: number,
+    keyInfo?: KeyInfo | null,
 ): PitchAnalysisResult | null {
     const micResult = PitchCorrector.detectPitch(micBuffer, sampleRate);
 
@@ -112,11 +119,31 @@ export function analyzeFrame(
             accuracy: 0,
             timestamp,
             confidence: micResult.confidence,
+            harmonyInterval: null,
+            harmonyAccuracy: 0,
         };
     }
 
     const cents = centDeviation(detectedMidi, refPitch.midi);
     const acc = calculateAccuracy(detectedMidi, refPitch.midi);
+
+    // ── Harmony detection ───────────────────────────────────────
+    let harmonyInterval: '3rd' | '5th' | 'octave' | null = null;
+    let harmonyAccuracy = 0;
+
+    if (keyInfo && acc < 70) {
+        // User isn't hitting the melody — check for valid harmony
+        const match = isHarmonyMatch(
+            detectedMidi,
+            refPitch.midi,
+            keyInfo.tonic,
+            keyInfo.scale,
+        );
+        if (match.isHarmony) {
+            harmonyInterval = match.matchedInterval;
+            harmonyAccuracy = match.accuracy;
+        }
+    }
 
     return {
         detectedPitch,
@@ -127,6 +154,8 @@ export function analyzeFrame(
         accuracy: acc,
         timestamp,
         confidence: micResult.confidence,
+        harmonyInterval,
+        harmonyAccuracy,
     };
 }
 
@@ -142,6 +171,8 @@ export function getPerformanceScore(history: PitchAnalysisResult[]): Performance
             totalNotes: 0,
             longestStreak: 0,
             history: [],
+            harmonyHits: 0,
+            harmonyBonus: 0,
         };
     }
 
@@ -150,15 +181,29 @@ export function getPerformanceScore(history: PitchAnalysisResult[]): Performance
     const totalNotes = scored.length;
     const notesHit = scored.filter(h => h.accuracy >= 70).length;
 
-    // Average accuracy
-    const sumAccuracy = scored.reduce((sum, h) => sum + h.accuracy, 0);
-    const overallAccuracy = totalNotes > 0 ? Math.round(sumAccuracy / totalNotes) : 0;
+    // ── Harmony stats ───────────────────────────────────────────
+    const harmonyHits = scored.filter(
+        h => h.harmonyInterval !== null && h.harmonyAccuracy >= 60
+    ).length;
 
-    // Longest streak of "hit" notes (accuracy >= 70)
+    // Harmony bonus: up to +20 extra points based on harmony hit ratio
+    // (at least 10% of notes must be harmonies to get meaningful bonus)
+    const harmonyRatio = totalNotes > 0 ? harmonyHits / totalNotes : 0;
+    const harmonyBonus = Math.min(20, Math.round(harmonyRatio * 100));
+
+    // Average accuracy (melody)
+    const sumAccuracy = scored.reduce((sum, h) => sum + h.accuracy, 0);
+    const baseAccuracy = totalNotes > 0 ? Math.round(sumAccuracy / totalNotes) : 0;
+
+    // Final accuracy includes harmony bonus, capped at 100
+    const overallAccuracy = Math.min(100, baseAccuracy + harmonyBonus);
+
+    // Longest streak of "hit" notes (accuracy >= 70 OR valid harmony)
     let longestStreak = 0;
     let currentStreak = 0;
     for (const h of scored) {
-        if (h.accuracy >= 70) {
+        const isHit = h.accuracy >= 70 || (h.harmonyInterval !== null && h.harmonyAccuracy >= 60);
+        if (isHit) {
             currentStreak++;
             longestStreak = Math.max(longestStreak, currentStreak);
         } else {
@@ -176,5 +221,7 @@ export function getPerformanceScore(history: PitchAnalysisResult[]): Performance
         totalNotes,
         longestStreak,
         history,
+        harmonyHits,
+        harmonyBonus,
     };
 }

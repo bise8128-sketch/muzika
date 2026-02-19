@@ -182,6 +182,8 @@ export interface PitchAnalysisResult {
     accuracy: number;         // 0 to 100%
     timestamp: number;        // Seconds
     confidence: number;       // 0 to 1
+    harmonyInterval: '3rd' | '5th' | 'octave' | null;  // null = singing melody
+    harmonyAccuracy: number;                            // 0–100 if harmony
 }
 
 export type PerformanceGrade = 'S' | 'A' | 'B' | 'C' | 'D';
@@ -193,6 +195,8 @@ export interface PerformanceScore {
     totalNotes: number;
     longestStreak: number;
     history: PitchAnalysisResult[];
+    harmonyHits: number;        // Total harmony notes hit
+    harmonyBonus: number;       // Extra points from harmony (0–20)
 }
 
 // ─── Practice Mode Types ────────────────────────────────────────────

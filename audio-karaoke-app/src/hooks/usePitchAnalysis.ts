@@ -11,6 +11,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
+import type { KeyInfo } from '@/utils/audio/keyDetection';
 import {
     analyzeFrame,
     getReferencePitchAtTime,
@@ -28,7 +29,7 @@ interface PitchAnalysisState {
     error: string | null;
 }
 
-export function usePitchAnalysis(controller: PlaybackController) {
+export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyInfo | null) {
     const [state, setState] = useState<PitchAnalysisState>({
         isListening: false,
         currentPitch: 0,
@@ -113,6 +114,7 @@ export function usePitchAnalysis(controller: PlaybackController) {
                     refPitch,
                     audioContextRef.current?.sampleRate ?? 44100,
                     currentTime,
+                    keyInfo,
                 );
 
                 if (result) {
@@ -134,7 +136,7 @@ export function usePitchAnalysis(controller: PlaybackController) {
             const message = err instanceof Error ? err.message : 'Microphone access denied';
             setState(prev => ({ ...prev, error: message }));
         }
-    }, [controller]);
+    }, [controller, keyInfo]);
 
     // Stop analysis
     const stopAnalysis = useCallback(() => {
