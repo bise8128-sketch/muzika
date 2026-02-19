@@ -10,6 +10,7 @@ import logging
 import torch
 from downloader import AudioDownloader
 from separator import AudioSeparator
+from pitch_shifter import PitchShifter
 from utils import setup_logging
 import asyncio
 import uuid
@@ -41,6 +42,7 @@ app.add_middleware(
 OUTPUT_DIR = "output"
 DOWNLOADS_DIR = os.path.join(OUTPUT_DIR, "downloads")
 STEMS_DIR = os.path.join(OUTPUT_DIR, "stems")
+PROCESSED_DIR = os.path.join(OUTPUT_DIR, "processed")
 
 downloader = AudioDownloader(output_dir=DOWNLOADS_DIR)
 # Initialize separator lazily or globally depending on memory usage preference. 
@@ -50,6 +52,12 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize separator: {e}")
     separator = None
+
+try:
+    pitch_shifter = PitchShifter(output_dir=PROCESSED_DIR)
+except Exception as e:
+    logger.error(f"Failed to initialize pitch shifter: {e}")
+    pitch_shifter = None
 
 YOUTUBE_URL_REGEX = re.compile(
     r'^https?://(www\.)?(youtube\.com/(watch\?v=|embed/|v/|shorts/)|youtu\.be/)[a-zA-Z0-9_-]{11}'
@@ -62,6 +70,10 @@ class DownloadRequest(BaseModel):
 class SeparateRequest(BaseModel):
     filename: str
     model: str = "htdemucs"
+
+class PitchShiftRequest(BaseModel):
+    filename: str
+    semitones: float
 
 class JobStatus(BaseModel):
     job_id: str
@@ -204,6 +216,68 @@ async def separate_audio(request: SeparateRequest, background_tasks: BackgroundT
     set_job(job_id, job_data)
     
     background_tasks.add_task(run_separation_job, job_id, secure_filename(request.filename), request.model)
+    return job_data
+
+
+async def run_pitch_shift_job(job_id: str, filename: str, semitones: float):
+    # No lock needed for pitch shifting usually, as it's CPU bound and parallelizable
+    # compared to GPU memory constraints of separation.
+    try:
+        update_job(job_id, status="processing")
+        file_path = os.path.join(DOWNLOADS_DIR, filename)
+        
+        if not os.path.exists(file_path):
+             # Try checking processed dir too, to allow chaining
+            file_path = os.path.join(PROCESSED_DIR, filename)
+            if not os.path.exists(file_path):
+                raise FileNotFoundError("File not found")
+
+        logger.info(f"Starting pitch shift for: {file_path} by {semitones} semitones")
+        
+        # Determine output filename
+        base_name = os.path.splitext(filename)[0]
+        # Clean previous suffixes to avoid accumulation
+        base_name = re.sub(r'_pitch_[-]?\d+(\.\d+)?', '', base_name)
+        output_filename = f"{base_name}_pitch_{semitones}.wav"
+        
+        output_path = await run_in_threadpool(
+            pitch_shifter.shift_pitch, 
+            file_path, 
+            semitones, 
+            output_filename=output_filename
+        )
+        
+        relative_path = os.path.relpath(output_path, OUTPUT_DIR)
+        
+        update_job(job_id, result={"path": relative_path}, status="completed")
+        logger.info(f"Job {job_id} completed")
+    except Exception as e:
+        logger.error(f"Job {job_id} failed: {e}")
+        update_job(job_id, status="failed", error=str(e))
+
+@app.post("/api/process/pitch", response_model=JobStatus)
+async def pitch_shift_audio(request: PitchShiftRequest, background_tasks: BackgroundTasks):
+    if pitch_shifter is None:
+        raise HTTPException(status_code=503, detail="Pitch shifter not initialized")
+
+    # Verify original file exists in downloads or processed
+    filename = secure_filename(request.filename)
+    path_in_downloads = os.path.join(DOWNLOADS_DIR, filename)
+    path_in_processed = os.path.join(PROCESSED_DIR, filename)
+    
+    if not os.path.exists(path_in_downloads) and not os.path.exists(path_in_processed):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    job_id = str(uuid.uuid4())
+    job_data = {
+        "job_id": job_id,
+        "status": "pending",
+        "result": None,
+        "error": None
+    }
+    set_job(job_id, job_data)
+    
+    background_tasks.add_task(run_pitch_shift_job, job_id, filename, request.semitones)
     return job_data
 
 @app.get("/api/jobs/{job_id}", response_model=JobStatus)
