@@ -10,38 +10,54 @@ describe('keyDetection.worker', () => {
     let postMessageSpy: jest.Mock;
     let consoleErrorSpy: jest.Mock;
     let mockAnalyzeKeyFromPCM: jest.Mock;
+    let originalSelf: any;
 
     beforeEach(() => {
         // Reset mocks
-        jest.resetModules(); // Important to clear the require cache
+        jest.resetModules();
         jest.clearAllMocks();
         
         postMessageSpy = jest.fn();
         consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         mockAnalyzeKeyFromPCM = jest.fn();
 
-        // Mock global scope BEFORE requiring the worker
-        (global as any).self = {
-            postMessage: postMessageSpy,
-            onmessage: null,
-            onerror: null,
-        };
+        // Save original self
+        originalSelf = global.self;
 
-        // Mock the dependency using doMock to affect the next require
+        // Force-replace self with our mock
+        // JSDOM's self is configurable, so we can redefine it
+        Object.defineProperty(global, 'self', {
+            writable: true,
+            value: {
+                postMessage: postMessageSpy,
+                onmessage: null,
+                onerror: null,
+                addEventListener: jest.fn(),
+                removeEventListener: jest.fn()
+            }
+        });
+
+        // Mock the dependency
         jest.doMock('../../utils/audio/keyDetectionCore', () => ({
             analyzeKeyFromPCM: mockAnalyzeKeyFromPCM,
         }));
 
         // Load the worker code
-        // We use isolateModules to ensure it executes top-level code (setting onmessage)
         jest.isolateModules(() => {
             require('../keyDetection.worker');
         });
 
-        workerHandler = (global as any).self.onmessage;
+        workerHandler = (global.self as any).onmessage;
     });
 
     afterEach(() => {
+        // Restore original self
+        if (originalSelf) {
+            Object.defineProperty(global, 'self', {
+                writable: true,
+                value: originalSelf
+            });
+        }
         consoleErrorSpy.mockRestore();
     });
 
