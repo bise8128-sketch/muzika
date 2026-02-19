@@ -388,6 +388,14 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                     />
                 )}
             </div>
+            
+            {showAddToPlaylistModal && (
+                <AddToPlaylistModal
+                    songIds={Array.from(selectedSongs)}
+                    onClose={() => setShowAddToPlaylistModal(false)}
+                    onComplete={handleAddToPlaylistComplete}
+                />
+            )}
         </div>
     );
 };
