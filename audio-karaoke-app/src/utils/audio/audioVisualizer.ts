@@ -20,6 +20,12 @@ export class AudioVisualizer {
     private performanceMetrics: { cpuUsage: number; latency: number; bufferUnderruns: number } | null = null;
     public onFrame?: (metrics: { bass: number; mid: number; treble: number; energy: number }) => void;
 
+    // AudioWorklet for FFT
+    private workletNode: AudioWorkletNode | null = null;
+    private workletFrequencyData: Uint8Array | null = null;
+    private currentSource: AudioNode | null = null;
+    private useWorklet: boolean = false;
+
     constructor(fftSize: number = 2048) {
         this.audioContext = getAudioContext();
         this.analyser = this.audioContext.createAnalyser();
@@ -29,6 +35,62 @@ export class AudioVisualizer {
         const bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(bufferLength);
         this.frequencyArray = new Uint8Array(bufferLength);
+        
+        // Initialize Worklet
+        this.setupWorklet();
+    }
+
+    private async setupWorklet(): Promise<void> {
+        try {
+            if (!this.audioContext) return;
+            
+            // Load the worklet module
+            const workletUrl = new URL('./frequencyProcessor.worklet.ts', import.meta.url);
+            await this.audioContext.audioWorklet.addModule(workletUrl);
+
+            this.workletNode = new AudioWorkletNode(this.audioContext, 'frequency-processor', {
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                outputChannelCount: [1] // Mono output
+            });
+
+            this.workletNode.port.onmessage = (event) => {
+                if (event.data.type === 'frequency_data') {
+                    // event.data.data is the Uint8Array
+                    // We can just store it directly or copy it
+                    // Since it comes from a message, it's a copy or transfer
+                    this.workletFrequencyData = event.data.data;
+                }
+            };
+
+            // Connect to destination to keep the processing chain alive (even if we just pass through)
+            // Or typically we don't need to connect output if we just want data, 
+            // BUT Chrome sometimes garbage collects or stops processing unconnected nodes.
+            // Connect to a Gain(0) to be safe? Or just handle in process()
+            // The processor passes through audio, so we can chain it? 
+            // Ideally visualizer is a "tap" and shouldn't affect the audio path.
+            // So we connect source -> worklet -> gain(0) -> destination?
+            // Existing implementation: setSource connects source -> analyser.
+            // Analyser is a passive node (usually passes through).
+            // We will do source -> worklet. Worklet won't connect to destination to avoid double audio.
+            // We need to ensure logic runs. Chrome requires connection to destination for worklet to run?
+            // Yes, usually.
+            const silence = this.audioContext.createGain();
+            silence.gain.value = 0;
+            this.workletNode.connect(silence);
+            silence.connect(this.audioContext.destination);
+
+            this.useWorklet = true;
+
+            // If we already have a source, connect it
+            if (this.currentSource) {
+                this.currentSource.connect(this.workletNode);
+            }
+
+        } catch (e) {
+            console.error("Failed to load FrequencyProcessor worklet, falling back to AnalyserNode", e);
+            this.useWorklet = false;
+        }
     }
 
     /**
@@ -62,7 +124,11 @@ export class AudioVisualizer {
      * @param source - AudioNode to visualize
      */
     setSource(source: AudioNode): void {
+        this.currentSource = source;
         source.connect(this.analyser);
+        if (this.workletNode) {
+            source.connect(this.workletNode);
+        }
     }
 
     /**
@@ -87,6 +153,21 @@ export class AudioVisualizer {
      * Draw waveform visualization
      * @param canvas - Canvas element to draw on
      */
+    /**
+     * Helper to get frequency data from Worklet or Analyser
+     */
+    private getFrequencyData(targetArray: Uint8Array): void {
+        if (this.useWorklet && this.workletFrequencyData) {
+            // Worklet data might be different size, but usually we match FFT size
+            // If worklet buffer is larger, we take what fits.
+            // If smaller, we fill what we have.
+            const len = Math.min(targetArray.length, this.workletFrequencyData.length);
+            targetArray.set(this.workletFrequencyData.subarray(0, len));
+        } else {
+            this.analyser.getByteFrequencyData(targetArray as unknown as Uint8Array<ArrayBuffer>);
+        }
+    }
+
     drawWaveform(canvas: HTMLCanvasElement): void {
         if (!this.isRunning) return;
 
@@ -102,7 +183,7 @@ export class AudioVisualizer {
 
             // Process audio features (Ghost Mode)
             if (this.onFrame) {
-                this.analyser.getByteFrequencyData(this.frequencyArray as unknown as Uint8Array<ArrayBuffer>);
+                this.getFrequencyData(this.frequencyArray);
                 this.processAudioFeatures(this.frequencyArray);
             }
 
@@ -153,7 +234,8 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get frequency data
-            this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+            // Get frequency data
+            this.getFrequencyData(this.dataArray);
 
             // Process audio features (Ghost Mode)
             if (this.onFrame) {
@@ -343,7 +425,8 @@ export class AudioVisualizer {
             this.animationId = requestAnimationFrame(draw);
 
             // Get frequency data
-            this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+            // Get frequency data
+            this.getFrequencyData(this.dataArray);
             
             // Process audio features (Ghost Mode)
             if (this.onFrame) {
@@ -413,7 +496,7 @@ export class AudioVisualizer {
     }
 
     private updateHistory(): void {
-        this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+        this.getFrequencyData(this.dataArray);
         this.history.unshift(new Uint8Array(this.dataArray));
         if (this.history.length > this.maxHistoryLength) {
             this.history.pop();
@@ -461,7 +544,7 @@ export class AudioVisualizer {
 
             // Get both time and frequency data
             this.analyser.getByteTimeDomainData(timeDataArray as unknown as Uint8Array<ArrayBuffer>);
-            this.analyser.getByteFrequencyData(freqDataArray as unknown as Uint8Array<ArrayBuffer>);
+            this.getFrequencyData(freqDataArray);
 
             // Draw waveform
             waveCtx.fillStyle = 'rgb(20, 20, 20)';
@@ -522,8 +605,8 @@ export class AudioVisualizer {
     }
 
     /**
-    getFrequencyData(): Uint8Array {
-        this.analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
+    getFrequencyData_Public(): Uint8Array {
+        this.getFrequencyData(this.dataArray);
         return this.dataArray;
     }
 
@@ -556,5 +639,9 @@ export class AudioVisualizer {
     dispose(): void {
         this.stop();
         this.analyser.disconnect();
+        if (this.workletNode) {
+            this.workletNode.disconnect();
+            this.workletNode.port.close();
+        }
     }
 }
