@@ -142,3 +142,74 @@ describe('analyzeFrame', () => {
         expect(typeof analyzeFrame).toBe('function');
     });
 });
+
+describe('getPerformanceScore — harmony integration', () => {
+    const makeResult = (
+        accuracy: number,
+        harmonyInterval: '3rd' | '5th' | 'octave' | null = null,
+        harmonyAccuracy: number = 0,
+    ): PitchAnalysisResult => ({
+        detectedPitch: 440,
+        detectedMidi: 69,
+        referencePitch: 440,
+        referenceMidi: 69,
+        centDeviation: 0,
+        accuracy,
+        timestamp: 0,
+        confidence: 0.9,
+        harmonyInterval,
+        harmonyAccuracy,
+    });
+
+    it('should include harmonyHits and harmonyBonus in empty result', () => {
+        const score = getPerformanceScore([]);
+        expect(score.harmonyHits).toBe(0);
+        expect(score.harmonyBonus).toBe(0);
+    });
+
+    it('should count harmony hits when harmonyAccuracy >= 60', () => {
+        const history: PitchAnalysisResult[] = [
+            makeResult(30, '3rd', 80), // harmony hit
+            makeResult(90),             // melody hit
+            makeResult(20, '5th', 50),  // below threshold, no harmony hit
+            makeResult(40, '5th', 70), // harmony hit
+        ];
+        const score = getPerformanceScore(history);
+        expect(score.harmonyHits).toBe(2);
+    });
+
+    it('should calculate harmony bonus based on ratio (capped at 20)', () => {
+        // 4 notes, 2 harmony hits → 50% → bonus = 50, capped to 20
+        const history: PitchAnalysisResult[] = [
+            makeResult(30, '3rd', 80),
+            makeResult(90),
+            makeResult(40, '5th', 70),
+            makeResult(20, '3rd', 90),
+        ];
+        const score = getPerformanceScore(history);
+        // 3 harmony hits out of 4 → 75% → bonus = min(20, 75) = 20
+        expect(score.harmonyBonus).toBeLessThanOrEqual(20);
+        expect(score.harmonyBonus).toBeGreaterThan(0);
+    });
+
+    it('should count harmony hits toward longest streak', () => {
+        const history: PitchAnalysisResult[] = [
+            makeResult(90),             // melody hit
+            makeResult(30, '3rd', 80),  // harmony hit (counts for streak)
+            makeResult(85),             // melody hit
+        ];
+        const score = getPerformanceScore(history);
+        expect(score.longestStreak).toBe(3); // all three should be a streak
+    });
+
+    it('should not break streak for harmony that is below threshold', () => {
+        const history: PitchAnalysisResult[] = [
+            makeResult(90),             // hit
+            makeResult(30, '3rd', 40),  // harmony below threshold → miss
+            makeResult(85),             // hit
+        ];
+        const score = getPerformanceScore(history);
+        expect(score.longestStreak).toBe(1); // streak broken
+    });
+});
+
