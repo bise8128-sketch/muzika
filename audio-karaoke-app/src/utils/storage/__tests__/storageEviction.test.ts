@@ -2,35 +2,33 @@ import { audioCache } from '../audioCache';
 import { db } from '../audioDatabase';
 import { StorageManager } from '../StorageManager';
 
-// Mock Dexie database
-jest.mock('../audioDatabase', () => ({
-    db: {
-        cachedAudio: {
-            where: jest.fn().mockReturnThis(),
-            equals: jest.fn().mockReturnThis(),
-            first: jest.fn(),
-            add: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-            count: jest.fn(),
-            toArray: jest.fn(),
-            orderBy: jest.fn().mockReturnThis(),
-            clear: jest.fn(),
+// Comprehensive mock for Dexie database
+jest.mock('../audioDatabase', () => {
+    const tableMock = {
+        where: jest.fn().mockReturnThis(),
+        equals: jest.fn().mockReturnThis(),
+        first: jest.fn(),
+        add: jest.fn(),
+        update: jest.fn().mockResolvedValue(1),
+        delete: jest.fn().mockResolvedValue(undefined),
+        count: jest.fn(),
+        toArray: jest.fn(),
+        orderBy: jest.fn().mockReturnThis(),
+        clear: jest.fn().mockResolvedValue(undefined),
+        bulkPut: jest.fn().mockResolvedValue(undefined),
+    };
+    return {
+        db: {
+            cachedAudio: tableMock,
+            models: tableMock,
+            processingLogs: tableMock,
+            songs: tableMock,
+            playlists: tableMock,
+            queue: tableMock,
+            transaction: jest.fn(async (mode, tables, cb) => await cb()),
         },
-        models: {
-            where: jest.fn().mockReturnThis(),
-            equals: jest.fn().mockReturnThis(),
-            first: jest.fn(),
-            add: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-            toArray: jest.fn(),
-            orderBy: jest.fn().mockReturnThis(),
-            clear: jest.fn(),
-        },
-        transaction: jest.fn((mode, tables, cb) => cb()),
-    },
-}));
+    };
+});
 
 describe('Storage Management', () => {
     beforeEach(() => {
@@ -41,6 +39,10 @@ describe('Storage Management', () => {
                 estimate: jest.fn().mockResolvedValue({ usage: 0, quota: 1000 }),
             },
         } as any;
+        
+        // Ensure isBrowser returns true
+        global.window = {} as any;
+        global.indexedDB = {} as any;
     });
 
     describe('AudioCache Eviction', () => {
