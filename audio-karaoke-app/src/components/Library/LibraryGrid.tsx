@@ -10,7 +10,7 @@ import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
 import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
-import AutoSizer, { Size } from 'react-virtualized-auto-sizer';
+import { AutoSizer, Size } from 'react-virtualized-auto-sizer';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
