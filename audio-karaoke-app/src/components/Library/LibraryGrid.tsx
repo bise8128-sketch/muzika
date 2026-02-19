@@ -14,6 +14,8 @@ import { List, ListProps } from 'react-window';
 import { AutoSizer, AutoSizerProps } from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 
+console.log('[LibraryGrid] List from react-window:', typeof List, List);
+
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
     selectedSong?: SongEntry | null;
@@ -291,6 +293,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                 ) : (
                     <AutoSizer
                         renderProp={({ height, width }: { height: number | undefined; width: number | undefined }) => {
+                            console.log('[LibraryGrid] AutoSizer renderProp called with:', { height, width });
                             if (!height || !width) return null;
                             
                             const listProps: any = {
