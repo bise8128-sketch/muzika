@@ -120,11 +120,11 @@ class TestDownload:
 
     @patch("api.downloader")
     def test_download_failure_returns_500(self, mock_downloader):
-        mock_downloader.download.side_effect = Exception("Download failed: invalid URL")
+        mock_downloader.download.side_effect = Exception("Download failed: video unavailable")
 
         response = client.post(
             "/api/download",
-            json={"url": "https://invalid-url.example.com", "format": "mp3"},
+            json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "format": "mp3"},
         )
 
         assert response.status_code == 500

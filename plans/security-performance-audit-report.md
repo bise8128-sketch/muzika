@@ -80,7 +80,7 @@ const url = `${PYTHON_SERVICE_URL}/files/${filePath}`;
 response.headers.set('Access-Control-Allow-Origin', '*');
 ```
 
-**Also in:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:114`](../audio-karaoke-app/src/app/api/extract-youtube/route.ts)
+**Also in:** `audio-karaoke-app/src/app/api/extract-youtube/route.ts:114` (Deleted)
 
 **Impact:** 
 - Any website can make cross-origin requests to your API
@@ -265,7 +265,7 @@ const publicErrors: Record<string, string> = {
 
 ### 9. YouTube URL Validation Insufficient
 
-**Location:** [`audio-karaoke-app/src/app/api/extract-youtube/route.ts:18-25`](../audio-karaoke-app/src/app/api/extract-youtube/route.ts)
+**Location:** `audio-karaoke-app/src/app/api/extract-youtube/route.ts:18-25` (Deleted)
 
 **Code:**
 ```typescript
