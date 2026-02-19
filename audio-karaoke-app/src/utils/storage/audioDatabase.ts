@@ -55,7 +55,7 @@ export class AudioKaraokeDB extends Dexie {
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
             processingLogs: '++id, fileHash, status, startedAt',
             songs: '++id, originalHash, customName, savedAt'
-        }).upgrade(_trans => {
+        }).upgrade(() => {
             // Basic migration if needed, but since structure changed significantly, we might just let it be or clear.
             // For now, no explicit data migration logic here as types are incompatible.
         });

@@ -7,6 +7,10 @@ import { useRouter } from '@/i18n/routing';
 import { LibraryPlayer } from './LibraryPlayer';
 import { SearchBar } from './SearchBar';
 import { FilterControls } from './FilterControls';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/utils/storage/audioDatabase';
+import { FixedSizeGrid as Grid } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -21,8 +25,6 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     onClosePlayer,
     onAddToQueue
 }) => {
-    const [allSongs, setAllSongs] = useState<SongEntry[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [playingSong, setPlayingSong] = useState<SongEntry | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<FilterType>('all');
@@ -32,20 +34,25 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const router = useRouter();
 
-    const loadSongs = async () => {
-        setIsLoading(true);
-        try {
-            const songs = await songsStorage.getAllSongs();
-            setAllSongs(songs);
-        } catch (e) {
-            console.error("Failed to load songs", e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // Use LiveQuery for reactive, performant data fetching
+    const allSongs = useLiveQuery(
+        () => db.songs.orderBy('createdAt').reverse().toArray(),
+        [],
+        [] as SongEntry[]
+    );
 
+    const isLoading = allSongs === undefined;
+
+    // Trigger migration on mount
     useEffect(() => {
-        loadSongs();
+        const runMigration = async () => {
+            try {
+                await songsStorage.migrateToOpfs();
+            } catch (e) {
+                console.error("Migration failed", e);
+            }
+        };
+        runMigration();
     }, []);
 
     // Filter, search, and sort songs
@@ -99,7 +106,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
         if (!id) return;
         if (confirm('Are you sure you want to delete this song?')) {
             await songsStorage.deleteSong(id);
-            loadSongs();
+            // No need for loadSongs() anymore as useLiveQuery is reactive!
         }
     };
 
@@ -137,7 +144,6 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
             }
             setSelectedSongs(new Set());
             setIsSelectionMode(false);
-            loadSongs();
         }
     };
 
@@ -235,10 +241,10 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                 {filterType !== 'all' && ` (${filterType === 'ai_separated' ? 'AI Separated' : 'Direct Karaoke'})`}
             </div>
 
-            {/* Song Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSongs.length === 0 && (
-                    <div className="col-span-full flex flex-col items-center justify-center p-12 bg-white/5 rounded-3xl border border-white/10 text-center">
+            {/* Song Grid - Virtualized */}
+            <div className="h-[calc(100vh-250px)] w-full overflow-hidden">
+                {filteredSongs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-12 bg-white/5 rounded-3xl border border-white/10 text-center">
                         <div className="w-16 h-16 mb-4 rounded-full bg-white/10 flex items-center justify-center text-3xl">
                             🎵
                         </div>
@@ -257,90 +263,122 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                             </button>
                         )}
                     </div>
+                ) : (
+                    <AutoSizer>
+                        {({ height, width }) => {
+                            const columnCount = width > 1200 ? 3 : width > 768 ? 2 : 1;
+                            const columnWidth = width / columnCount;
+                            const rowCount = Math.ceil(filteredSongs.length / columnCount);
+                            const rowHeight = 240; // Estimated height for song card
+
+                            return (
+                                <Grid
+                                    columnCount={columnCount}
+                                    columnWidth={columnWidth}
+                                    height={height}
+                                    rowCount={rowCount}
+                                    rowHeight={rowHeight}
+                                    width={width}
+                                    className="scrollbar-hide"
+                                >
+                                    {({ columnIndex, rowIndex, style }) => {
+                                        const songIndex = rowIndex * columnCount + columnIndex;
+                                        const song = filteredSongs[songIndex];
+
+                                        if (!song) return null;
+
+                                        return (
+                                            <div style={{
+                                                ...style,
+                                                padding: '12px' // Spacing between grid items
+                                            }}>
+                                                <div
+                                                    onClick={() => handlePlay(song)}
+                                                    className={`
+                                                        group relative h-full bg-white/5 hover:bg-white/10 border rounded-2xl p-5 flex flex-col gap-3 transition-all cursor-pointer overflow-hidden
+                                                        ${selectedSongs.has(song.id!) ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-primary/50'}
+                                                    `}
+                                                >
+                                                    {/* Selection Checkbox */}
+                                                    {isSelectionMode && (
+                                                        <div
+                                                            onClick={(e) => handleSelectSong(e, song.id!)}
+                                                            className="absolute top-3 right-3 z-10"
+                                                        >
+                                                            <div className={`
+                                                                w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                                                                ${selectedSongs.has(song.id!)
+                                                                    ? 'bg-primary border-primary'
+                                                                    : 'border-white/30 hover:border-primary'
+                                                                }
+                                                            `}>
+                                                                {selectedSongs.has(song.id!) && (
+                                                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex justify-between items-start pr-8">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-bold text-lg truncate pr-2 group-hover:text-primary transition-colors">
+                                                                {song.title}
+                                                            </h3>
+                                                            <p className="text-sm text-muted-foreground truncate">
+                                                                {song.artist || 'Unknown Artist'}
+                                                            </p>
+                                                        </div>
+                                                        <div className={`
+                                                            px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
+                                                            ${song.type === 'ai_separated' ? 'bg-purple-500/20 text-purple-300' : 'bg-emerald-500/20 text-emerald-300'}
+                                                        `}>
+                                                            {song.type === 'ai_separated' ? 'AI' : 'KARAOKE'}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}
+                                                        </div>
+                                                        <div>
+                                                            {new Date(song.createdAt).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                                                        <button
+                                                            className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-1.5a1 1 0 000-1.664l-3-1.5z" clipRule="evenodd" />
+                                                            </svg>
+                                                            Play Now
+                                                        </button>
+
+                                                        <button
+                                                            onClick={(e) => handleDelete(e, song.id)}
+                                                            className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                                            aria-label="Delete song"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                </Grid>
+                            );
+                        }}
+                    </AutoSizer>
                 )}
-
-                {filteredSongs.map(song => (
-                    <div
-                        key={song.id}
-                        onClick={() => handlePlay(song)}
-                        className={`
-                            group relative bg-white/5 hover:bg-white/10 border rounded-2xl p-5 flex flex-col gap-3 transition-all cursor-pointer overflow-hidden
-                            ${selectedSongs.has(song.id!) ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-primary/50'}
-                        `}
-                    >
-                        {/* Selection Checkbox */}
-                        {isSelectionMode && (
-                            <div
-                                onClick={(e) => handleSelectSong(e, song.id!)}
-                                className="absolute top-3 right-3 z-10"
-                            >
-                                <div className={`
-                                    w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                                    ${selectedSongs.has(song.id!)
-                                        ? 'bg-primary border-primary'
-                                        : 'border-white/30 hover:border-primary'
-                                    }
-                                `}>
-                                    {selectedSongs.has(song.id!) && (
-                                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex justify-between items-start pr-8">
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-lg truncate pr-2 group-hover:text-primary transition-colors">
-                                    {song.title}
-                                </h3>
-                                <p className="text-sm text-muted-foreground truncate">
-                                    {song.artist || 'Unknown Artist'}
-                                </p>
-                            </div>
-                            <div className={`
-                                px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
-                                ${song.type === 'ai_separated' ? 'bg-purple-500/20 text-purple-300' : 'bg-emerald-500/20 text-emerald-300'}
-                            `}>
-                                {song.type === 'ai_separated' ? 'AI' : 'KARAOKE'}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                            <div className="flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}
-                            </div>
-                            <div>
-                                {new Date(song.createdAt).toLocaleDateString()}
-                            </div>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                            <button
-                                className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1"
-                            >
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-1.5a1 1 0 000-1.664l-3-1.5z" clipRule="evenodd" />
-                                </svg>
-                                Play Now
-                            </button>
-
-                            <button
-                                onClick={(e) => handleDelete(e, song.id)}
-                                className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                                aria-label="Delete song"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                ))}
             </div>
         </div>
     );
