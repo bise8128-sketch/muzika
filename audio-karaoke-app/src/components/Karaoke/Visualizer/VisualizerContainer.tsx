@@ -64,6 +64,13 @@ interface VisualizerContainerProps {
     onClosePractice: () => void;
     onCloseRoom: () => void;
     onCloseAutoKey: () => void;
+
+    // Recording Mix API
+    isRecordingMix: boolean;
+    recordedMixBlob: Blob | null;
+    onStartRecordingMix: () => void;
+    onStopRecordingMix: () => void;
+    onClearMixRecording: () => void;
 }
 
 export const VisualizerContainer: React.FC<VisualizerContainerProps> = (props) => {
@@ -127,6 +134,11 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = (props) =
                 showAutoKey={props.showAutoKey}
                 isVisualSettingsOpen={props.isVisualSettingsOpen}
                 visualSettings={props.visualSettings}
+                isRecordingMix={props.isRecordingMix}
+                recordedMixBlob={props.recordedMixBlob}
+                onStartRecordingMix={props.onStartRecordingMix}
+                onStopRecordingMix={props.onStopRecordingMix}
+                onClearMixRecording={props.onClearMixRecording}
                 onThemeChange={props.onThemeChange}
                 onTogglePractice={props.onTogglePractice}
                 onToggleRoom={props.onToggleRoom}
@@ -152,21 +164,20 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = (props) =
                 onCloseAutoKey={props.onCloseAutoKey}
             />
 
-            {/* Recording Indicator */}
             <AnimatePresence>
-                {props.recorder.isRecording && (
+                {(props.recorder.isRecording || props.isRecordingMix) && (
                     <motion.div 
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className="absolute top-6 left-6 flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-full border border-red-500/30 font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                        className="absolute top-6 left-6 flex items-center gap-2 bg-red-500/20 text-red-500 px-4 py-2 rounded-full border border-red-500/30 font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.2)] z-50 pointer-events-none"
                     >
                         <motion.div 
                             animate={{ scale: [1, 1.4, 1] }}
                             transition={{ repeat: Infinity, duration: 1.5 }}
                             className="w-2 h-2 bg-red-500 rounded-full" 
                         />
-                        {t('recording')}
+                        {props.isRecordingMix ? t('recordingSession') || 'RECORDING SESSION' : t('recording')}
                     </motion.div>
                 )}
             </AnimatePresence>

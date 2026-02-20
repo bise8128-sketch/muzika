@@ -23,6 +23,11 @@ interface KaraokeToolbarProps {
     onToggleStageMode: (enabled: boolean) => void;
     onVisualSettingsChange: (settings: VisualSettings) => void;
     visualSettings: VisualSettings;
+    isRecordingMix: boolean;
+    recordedMixBlob: Blob | null;
+    onStartRecordingMix: () => void;
+    onStopRecordingMix: () => void;
+    onClearMixRecording: () => void;
 }
 
 const ToolbarButton: React.FC<{ icon: React.ReactNode; active?: boolean; onClick: () => void; label: string }> = ({ icon, active, onClick, label }) => (
@@ -57,7 +62,12 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
     onToggleEditor,
     onToggleStageMode,
     onVisualSettingsChange,
-    visualSettings
+    visualSettings,
+    isRecordingMix,
+    recordedMixBlob,
+    onStartRecordingMix,
+    onStopRecordingMix,
+    onClearMixRecording
 }) => {
     if ((!lyrics && !cdgData) || showEditor) return null;
 
@@ -108,6 +118,41 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
                 onClick={onToggleAutoKey} 
                 label="Auto-Key" 
             />
+
+            {/* Recording Controls */}
+            {recordedMixBlob ? (
+                <div className="flex bg-white/5 rounded-xl p-1 gap-1 items-center">
+                    <button
+                        onClick={() => {
+                            const url = window.URL.createObjectURL(recordedMixBlob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `karaoke_session_${Date.now()}.webm`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-white bg-green-500/80 hover:bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all"
+                    >
+                        Save
+                    </button>
+                    <button
+                        onClick={onClearMixRecording}
+                        className="px-2 py-1.5 rounded-lg text-xs font-black uppercase text-red-400 hover:text-white hover:bg-red-500/80 transition-all"
+                    >
+                        Clear
+                    </button>
+                </div>
+            ) : (
+                <ToolbarButton 
+                    icon={isRecordingMix ? <div className="w-3 h-3 bg-red-500 rounded-sm animate-pulse" /> : <div className="w-3 h-3 bg-red-500 rounded-full" />} 
+                    active={isRecordingMix} 
+                    onClick={isRecordingMix ? onStopRecordingMix : onStartRecordingMix} 
+                    label="Record Session" 
+                />
+            )}
+
+            <div className="w-[1px] h-8 bg-white/10 self-center" />
+
             <ToolbarButton 
                 icon={<Settings className="w-4 h-4" />} 
                 active={isVisualSettingsOpen} 
