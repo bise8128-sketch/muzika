@@ -19,7 +19,7 @@ export function useModels() {
             try {
                 const data = await apiClient.getModels(signal);
                 if (!signal.aborted) {
-                    setModels(data.models);
+                    setModels(data.models as any);
                 }
             } catch (err) {
                 if (signal.aborted) return;
