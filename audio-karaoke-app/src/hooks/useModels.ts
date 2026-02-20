@@ -11,15 +11,21 @@ export function useModels() {
     const [recommendedModelId, setRecommendedModelId] = useState<string | null>(null);
 
     useEffect(() => {
+        const abortController = new AbortController();
+        const { signal } = abortController;
+
         async function fetchModels() {
             try {
-                const response = await fetch('/api/models');
+                const response = await fetch('/api/models', { signal });
                 if (!response.ok) {
                     throw new Error('Failed to fetch models');
                 }
                 const data = await response.json();
-                setModels(data.models);
+                if (!signal.aborted) {
+                    setModels(data.models);
+                }
             } catch (err) {
+                if (signal.aborted) return;
                 console.error('Error fetching models:', err);
                 // Note: If you see "getaddrinfo ENOTFOUND", it means the server cannot reach external model repositories.
                 // Models must be downloaded from the internet. Please check your network connection.
@@ -44,6 +50,10 @@ export function useModels() {
 
         fetchModels();
         determineRecommendation();
+
+        return () => {
+            abortController.abort();
+        };
     }, []);
 
     return { models, isLoading, error, recommendedModelId };
