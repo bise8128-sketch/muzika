@@ -6,8 +6,70 @@ import { audioCache } from '@/utils/storage/audioCache';
 import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
 import { BrowserFileSource } from '@/utils/io/BrowserFileSource';
 import { ProgressTracker } from '@/utils/progress/ProgressTracker';
-import { WorkerPool } from '@/utils/worker/WorkerPool';
 import { StorageManager } from '@/utils/storage/StorageManager';
+
+/**
+ * A lightweight wrapper around a single Web Worker for stateful session messaging.
+ * Unlike WorkerPool, this pins ALL messages to one worker instance, which is required
+ * by audio.worker.ts since `activeSession` state is per-worker.
+ */
+class SessionWorker {
+    private worker: Worker;
+    private pendingResolve: ((value: unknown) => void) | null = null;
+    private pendingReject: ((reason: Error) => void) | null = null;
+    private progressHandler: ((progress: number) => void) | null = null;
+
+    constructor() {
+        this.worker = new Worker(
+            new URL('./audio.worker.ts', import.meta.url),
+            { type: 'module' }
+        );
+        this.worker.onmessage = (e: MessageEvent) => this.handleMessage(e);
+        this.worker.onerror = (e: ErrorEvent) => this.handleError(e);
+    }
+
+    private handleMessage(event: MessageEvent): void {
+        const { type, payload } = event.data;
+        if (type === 'ERROR' || type === 'FAILED') {
+            this.pendingReject?.(new Error(payload?.message || 'Unknown worker error'));
+            this.pendingResolve = null;
+            this.pendingReject = null;
+        } else if (type === 'PROGRESS') {
+            const value = typeof payload === 'number'
+                ? payload
+                : (payload?.percentage ?? payload?.progress);
+            if (typeof value === 'number') this.progressHandler?.(value);
+        } else {
+            this.pendingResolve?.(payload);
+            this.pendingResolve = null;
+            this.pendingReject = null;
+        }
+    }
+
+    private handleError(e: ErrorEvent): void {
+        this.pendingReject?.(new Error(`Worker error: ${e.message}`));
+        this.pendingResolve = null;
+        this.pendingReject = null;
+    }
+
+    send<TResult>(
+        type: string,
+        payload: unknown,
+        transferables: Transferable[] = [],
+        onProgress?: (p: number) => void
+    ): Promise<TResult> {
+        this.progressHandler = onProgress ?? null;
+        return new Promise<TResult>((resolve, reject) => {
+            this.pendingResolve = resolve as (v: unknown) => void;
+            this.pendingReject = reject;
+            this.worker.postMessage({ type, payload }, transferables);
+        });
+    }
+
+    terminate(): void {
+        this.worker.terminate();
+    }
+}
 
 export interface SeparationOptions {
     modelInfo: ModelInfo;
@@ -30,26 +92,18 @@ export async function separateAudio(
     file: File,
     options: SeparationOptions
 ): Promise<SeparationResult> {
-    const hardwareConcurrency = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4;
-    const maxWorkers = Math.min(hardwareConcurrency, 4); // Limit to 4 to avoid overhead/resource contention
-    
-    const workerPool = new WorkerPool({
-        workerFactory: () => new Worker(new URL('./audio.worker.ts', import.meta.url), { type: 'module' }),
-        maxWorkers
-    });
-
+    const sessionWorker = new SessionWorker();
     try {
-        const result = await separateAudioInternal(file, options, workerPool);
-        return result;
+        return await separateAudioInternal(file, options, sessionWorker);
     } finally {
-        workerPool.terminate();
+        sessionWorker.terminate();
     }
 }
 
 async function separateAudioInternal(
     file: File,
     options: SeparationOptions,
-    workerPool: WorkerPool
+    sessionWorker: SessionWorker
 ): Promise<SeparationResult> {
     console.log('[separateAudioInternal] Executing fresh version');
     if (typeof window === 'undefined') {
@@ -166,10 +220,9 @@ async function separateAudioInternal(
 
         console.log('[separateAudio] Initializing worker session...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const initResult = await workerPool.addTask<any, { sessionId: string; backend?: 'webgpu' | 'wasm' | 'server' }>(
-            'INIT_STREAM_SESSION', 
-            { modelInfo, sessionId }, 
-            'HIGH'
+        const initResult = await sessionWorker.send<{ sessionId: string; backend?: 'webgpu' | 'wasm' | 'server' }>(
+            'INIT_STREAM_SESSION',
+            { modelInfo, sessionId }
         );
         
         const executionBackend = initResult.backend || 'wasm';
@@ -212,13 +265,7 @@ async function separateAudioInternal(
 
             console.log(`[separateAudio] Dispatching chunk ${currentIdx} to pool`);
             
-            const taskPromise = workerPool.addTask<{ 
-                chunk: Float32Array; 
-                chunkIndex: number; 
-                sessionId: string; 
-                channels: number; 
-                sampleRate: number 
-            }, { 
+            const taskPromise = sessionWorker.send<{ 
                 vocals: Float32Array; 
                 instrumentals: Float32Array; 
                 chunkIndex: number 
@@ -231,7 +278,6 @@ async function separateAudioInternal(
                     channels: channelCount,
                     sampleRate
                 },
-                'NORMAL',
                 (typeof SharedArrayBuffer !== 'undefined' && interleaved.buffer instanceof SharedArrayBuffer)
                     ? []
                     : [interleaved.buffer]
@@ -287,7 +333,7 @@ async function separateAudioInternal(
         }
 
         await Promise.all(processingPromises);
-        await workerPool.addTask('END_STREAM_SESSION', { sessionId }, 'NORMAL');
+        await sessionWorker.send('END_STREAM_SESSION', { sessionId });
 
         const finalBuffers = bufferManager.getAllAudioBuffers();
 
