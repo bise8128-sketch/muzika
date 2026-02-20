@@ -13,6 +13,7 @@ import type {
   ProcessingResponse,
   JobStatusResponse,
   ModelsResponse,
+  LibraryResponse,
 } from './types';
 import { ApiError } from './types';
 
@@ -126,6 +127,11 @@ export class ApiClient {
   /** Fetch available models */
   async getModels(signal?: AbortSignal): Promise<ModelsResponse> {
     return this.request<ModelsResponse>('/api/models', { method: 'GET' }, signal);
+  }
+
+  /** Fetch server library */
+  async getLibrary(signal?: AbortSignal): Promise<LibraryResponse> {
+    return this.request<LibraryResponse>('/api/backend-library', { method: 'GET' }, signal);
   }
 }
 

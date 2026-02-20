@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { ModelInfo } from '@/types/model';
 import { AVAILABLE_MODELS as FALLBACK_MODELS } from '@/constants/models';
 import { checkONNXSupport } from '@/utils/ml/onnxSetup';
+import { apiClient } from '@/api/ApiClient';
 
 export function useModels() {
     const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
@@ -16,11 +17,7 @@ export function useModels() {
 
         async function fetchModels() {
             try {
-                const response = await fetch('/api/models', { signal });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch models');
-                }
-                const data = await response.json();
+                const data = await apiClient.getModels(signal);
                 if (!signal.aborted) {
                     setModels(data.models);
                 }

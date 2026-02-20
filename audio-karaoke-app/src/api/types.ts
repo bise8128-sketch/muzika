@@ -51,6 +51,18 @@ export interface ModelsResponse {
   models: ModelInfo[];
 }
 
+// --- Library ---
+
+export interface SongEntry {
+  filename: string;
+  path: string;
+  stems: Record<string, string>;
+}
+
+export interface LibraryResponse {
+  songs: SongEntry[];
+}
+
 // --- Errors ---
 
 export class ApiError extends Error {
