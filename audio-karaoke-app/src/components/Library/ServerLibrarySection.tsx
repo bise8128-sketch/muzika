@@ -49,7 +49,7 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
             instrumentalData: undefined,
             createdAt: Date.now(),
             stems: song.stems // Keep stems for processing
-        } as any);
+        } as unknown as any);
     };
 
     const handleProcess = (e: React.MouseEvent, song: SongEntry) => {
