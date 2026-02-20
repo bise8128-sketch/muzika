@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n/routing';
 
 import { PlaybackController } from '@/utils/audio/playbackController';
@@ -11,8 +11,8 @@ import { useBatchSeparation } from '@/hooks/useBatchSeparation';
 import { useModels } from '@/hooks/useModels';
 import { useHistoryManagement } from '@/hooks/useHistoryManagement';
 import { useAudioExport } from '@/hooks/useAudioExport';
+import { useServerProcessing } from '@/hooks/useServerProcessing';
 import { useAppState } from '@/hooks/useAppState';
-import { apiClient } from '@/api/ApiClient';
 import { ExtractedMetadata } from '@/types/schema';
 
 export function usePageOrchestrator() {
@@ -21,13 +21,20 @@ export function usePageOrchestrator() {
 
   // PlaybackController
   const [controller, setController] = useState<PlaybackController | null>(null);
-  useEffect(() => {
-    setController(new PlaybackController());
-  }, []);
   
   useEffect(() => {
-    return () => { if (controller) controller.dispose(); };
-  }, [controller]);
+    let mounted = true;
+    const c = new PlaybackController();
+    
+    if (mounted) {
+      setController(c);
+    }
+    
+    return () => { 
+      mounted = false;
+      if (c) c.dispose(); 
+    };
+  }, []);
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -42,18 +49,35 @@ export function usePageOrchestrator() {
 
   // Domain hooks
   const separation = useSeparation();
+  const serverProcessing = useServerProcessing();
   const batch = useBatchSeparation();
   const history = useHistoryManagement();
   const { handleDownload, handleBatchDownload } = useAudioExport();
 
+  // Unified Processing State
+  const isProcessing = separation.status === 'processing' || serverProcessing.isPolling;
+  const isError = separation.status === 'error' || !!serverProcessing.error;
+  const errorMessage = separation.error || serverProcessing.error;
+  const processingResult = separation.result || serverProcessing.result;
+
+  const unifiedStatus = useMemo(() => {
+    if (isProcessing) return 'processing';
+    if (isError) return 'error';
+    if (processingResult) return 'completed';
+    return 'idle';
+  }, [isProcessing, isError, processingResult]);
+
   const { state, machineState, send, activeResult, handleRestart, handleTryKaraoke } = useAppState({
-    separationStatus: separation.status,
-    separationResult: separation.result,
-    separationError: separation.error,
+    separationStatus: unifiedStatus,
+    separationResult: processingResult,
+    separationError: errorMessage,
     autoStartKaraoke,
     controller,
     onHistoryRefresh: history.loadHistory,
-    onResetSeparation: separation.reset,
+    onResetSeparation: () => {
+      separation.reset();
+      serverProcessing.reset();
+    },
     onClearRestoredResult: history.clearRestoredResult,
     restoredResult: history.restoredResult,
   });
@@ -66,13 +90,8 @@ export function usePageOrchestrator() {
       return;
     }
 
-    try {
-      send({ type: 'PROCESS_START' });
-      await apiClient.startProcessing({ url, model: selectedModelId, format: 'mp3' });
-    } catch (e) {
-      console.error('YouTube download/separation failed:', e);
-      send({ type: 'UPLOAD_ERROR', error: String(e) });
-    }
+    send({ type: 'PROCESS_START' });
+    await serverProcessing.handleServerProcessing(url, { model: selectedModelId, format: 'mp3' });
   };
 
   const handleUpload = async (files: File[], isKaraokeMode: boolean = false, metadata?: ExtractedMetadata[]) => {
@@ -134,6 +153,16 @@ export function usePageOrchestrator() {
   const handleExitKaraoke = () => send({ type: 'EXIT_KARAOKE' });
   const handleViewModels = () => send({ type: 'VIEW_MODELS' });
 
+  // Expose specific separation state for UI
+  // Note: We expose a composite separation object that accounts for server state where relevant
+  const compositeSeparation = {
+    ...separation,
+    status: unifiedStatus,
+    progress: serverProcessing.isPolling ? 0 : separation.progress, // Server doesn't report granular progress yet
+    message: serverProcessing.isPolling ? (serverProcessing.serverLogs || 'Processing on server...') : separation.message,
+    executionBackend: serverProcessing.isPolling || serverProcessing.result ? 'server' : separation.executionBackend,
+  };
+
   return {
     state,
     machineState,
@@ -156,7 +185,7 @@ export function usePageOrchestrator() {
     handleUpload,
     handleUrlSubmit,
     handleRestore,
-    separation,
+    separation: compositeSeparation, // Expose composite object
     batch,
     history,
     handleDownload,
@@ -164,3 +193,5 @@ export function usePageOrchestrator() {
     controller,
   };
 }
+
+
