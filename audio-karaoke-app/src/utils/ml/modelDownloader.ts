@@ -1,6 +1,6 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
-import { modelStorage } from '@/utils/storage/modelStorage';
 import { StorageManager } from '@/utils/storage/StorageManager';
+import { calculateSHA256 } from '@/utils/crypto';
 
 /**
  * Downloads a model file from a URL with progress tracking.
@@ -80,6 +80,19 @@ export async function downloadModel(
     }
 
     const modelData = combined.buffer;
+
+    // Verify SHA256 checksum if provided
+    if (modelInfo.sha256) {
+        // Calculate hash
+        const calculatedHash = await calculateSHA256(modelData);
+        
+        // Compare with expected hash (case-insensitive)
+        if (calculatedHash.toLowerCase() !== modelInfo.sha256.toLowerCase()) {
+            throw new Error(`SHA256 checksum mismatch for model ${modelInfo.name}. Expected ${modelInfo.sha256}, got ${calculatedHash}. The file may be corrupted.`);
+        }
+        
+        console.log(`[modelDownloader] SHA256 verification successful for ${modelInfo.name}`);
+    }
 
     // Save to storage
     await StorageManager.runWithRetry(

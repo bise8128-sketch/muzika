@@ -31,6 +31,7 @@ export interface ModelInfo {
     config?: ModelConfig; // Architecture specific config
     url?: string;
     fallbackUrl?: string;
+    sha256?: string;
     description?: string;
     downloadedAt?: number;
     isGpuSupported?: boolean;
