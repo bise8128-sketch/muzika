@@ -31,6 +31,23 @@ async function setupMocks(page: import('@playwright/test').Page, {
       localStorage.setItem('muzika_onboarding_completed', 'true');
     } catch { /* cross-origin frame */ }
 
+    const RealAC = (window as any).AudioContext || (window as any).webkitAudioContext;
+    let dummyBuffer: any = null;
+    if (RealAC) {
+      try {
+        const tempCtx = new RealAC();
+        dummyBuffer = tempCtx.createBuffer(2, 44100 * 2, 44100);
+        tempCtx.close();
+      } catch { /* fallback */ }
+    }
+    if (!dummyBuffer) {
+      dummyBuffer = {
+        length: 88200, duration: 2, sampleRate: 44100, numberOfChannels: 2,
+        getChannelData: () => new Float32Array(88200),
+        copyToChannel: () => {}, copyFromChannel: () => {},
+      };
+    }
+
     const MockAudioContext = class {
       state = 'running';
       sampleRate = 44100;
@@ -63,6 +80,9 @@ async function setupMocks(page: import('@playwright/test').Page, {
       }
       createMediaElementSource() { return { connect: () => {}, disconnect: () => {} }; }
       createBuffer(channels: number, length: number, sampleRate: number) {
+        if (dummyBuffer.constructor.name === 'AudioBuffer') {
+           return dummyBuffer; // return real one if we have it
+        }
         return {
           numberOfChannels: channels, length, sampleRate,
           duration: length / sampleRate,
@@ -71,10 +91,7 @@ async function setupMocks(page: import('@playwright/test').Page, {
       }
       destination = {};
       decodeAudioData() {
-        return Promise.resolve({
-          length: 44100 * 10, numberOfChannels: 2, sampleRate: 44100,
-          duration: 10, getChannelData: () => new Float32Array(44100 * 10),
-        });
+        return Promise.resolve(dummyBuffer);
       }
     };
 
@@ -428,14 +445,12 @@ test.describe('Group 3: Results & Stem Downloads', () => {
   });
 
   // T16 — Audio player or canvas present
+  // T16 — Stems results show audio control/visualiser
   test('T16: audio element or waveform canvas is rendered for stems', async ({ page }) => {
-    const player = page.locator('audio').or(
-      page.locator('canvas')
-    ).or(
-      page.locator('[data-testid*="waveform"], [data-testid*="player"]')
-    );
-    // Give a generous timeout for dynamic components to load
-    await expect(player.first()).toBeAttached({ timeout: 15_000 });
+    await uploadAndWaitForResults(page);
+    // The actual UI uses a custom ComparisonPlayer with a range input and "Sync Comparison" title
+    await expect(page.getByText(/Sync Comparison/i)).toBeVisible();
+    await expect(page.locator('input[type="range"]')).toBeAttached();
   });
 });
 
