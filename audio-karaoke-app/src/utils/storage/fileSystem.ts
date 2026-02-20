@@ -13,8 +13,12 @@ export class FileSystemService {
      */
     async init() {
         if (this.initialized) return;
+        if (typeof window === 'undefined') return;
 
         try {
+            if (!navigator.storage || !navigator.storage.getDirectory) {
+                throw new Error('OPFS not supported');
+            }
             this.root = await navigator.storage.getDirectory();
             this.initialized = true;
             console.log('✅ Connected to OPFS');

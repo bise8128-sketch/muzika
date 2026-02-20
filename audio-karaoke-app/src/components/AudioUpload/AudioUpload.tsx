@@ -54,8 +54,13 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
 
     const validateFiles = useCallback(async (files: File[]): Promise<boolean> => {
         const config: ValidationConfig = {
-            maxFileSize: 50 * 1024 * 1024, // 50MB
+            maxFileSize: 100 * 1024 * 1024, // Increased to 100MB
             allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/m4a'],
+            minFreeStorage: 200 * 1024 * 1024, // Require at least 200MB free
+            audioConstraints: {
+                minDuration: 1, // 1 second
+                maxDuration: 1200, // 20 minutes
+            }
         };
 
         const validator = new FileValidator(config);
