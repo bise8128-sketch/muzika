@@ -293,8 +293,8 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                     <AutoSizer renderProp={({ height, width }: { height: number | undefined; width: number | undefined }) => (
                             <List
                                 style={{ height: height!, width: width! }}
-                                itemCount={filteredSongs.length}
-                                itemSize={130}
+                                rowCount={filteredSongs.length}
+                                rowHeight={130}
                                 className="scrollbar-hide"
                                 rowComponent={({ index, style }: RowComponentProps) => {
                                     const song = filteredSongs[index];
