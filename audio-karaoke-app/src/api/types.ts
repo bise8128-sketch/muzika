@@ -1,3 +1,5 @@
+import { ModelInfo } from '@/types/model';
+
 /**
  * Shared API request/response types for the Muzika API client.
  */
@@ -38,15 +40,6 @@ export interface JobStatusResponse {
 }
 
 // --- Models ---
-
-export interface ModelInfo {
-  id: string;
-  name: string;
-  description?: string;
-  size: number;
-  type: string;
-  version: string;
-}
 
 export interface ModelsResponse {
   models: ModelInfo[];
