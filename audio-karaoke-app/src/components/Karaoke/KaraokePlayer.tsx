@@ -9,6 +9,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
+import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
@@ -312,6 +313,11 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onClosePractice={() => setShowPractice(false)}
                 onCloseRoom={() => setShowRoom(false)}
                 onCloseAutoKey={() => setShowAutoKey(false)}
+                isRecordingMix={mixRecorder.isRecordingMix}
+                recordedMixBlob={mixRecorder.recordedMixBlob}
+                onStartRecordingMix={mixRecorder.startRecordingMix}
+                onStopRecordingMix={mixRecorder.stopRecordingMix}
+                onClearMixRecording={mixRecorder.clearMixRecording}
             />
 
             <KaraokeControls

@@ -186,6 +186,13 @@ export interface PitchAnalysisResult {
     harmonyAccuracy: number;                            // 0–100 if harmony
 }
 
+export interface PitchTarget {
+    startTime: number;        // Start time of the lyric word/syllable (seconds)
+    endTime: number;          // End time of the lyric word/syllable (seconds)
+    referenceMidi: number;    // The expected MIDI note for this target
+    text: string;             // The lyric text
+}
+
 export type PerformanceGrade = 'S' | 'A' | 'B' | 'C' | 'D';
 
 export interface PerformanceScore {
