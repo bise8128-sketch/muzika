@@ -480,9 +480,9 @@ function updateHistory() {
 }
 
 function drawSingStar() {
-    if (!ctx || !canvas) return;
-
     const context = ctx;
+    if (!context || !canvas) return;
+
     const w = canvas.width;
     const h = canvas.height;
 

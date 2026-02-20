@@ -241,9 +241,9 @@ export class AudioVisualizer {
     }
 
     // Legacy methods placeholders if needed, but we should remove usages
-    drawWaveform(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('waveform')"); }
-    drawSpectrum(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('bars')"); }
-    draw3DLandscape(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('3d-landscape')"); }
-    drawSpectrogram(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('spectrogram')"); }
-    drawFluid(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('fluid')"); }
+    drawWaveform(): void { console.warn("Deprecated: Use setMode('waveform')"); }
+    drawSpectrum(): void { console.warn("Deprecated: Use setMode('bars')"); }
+    draw3DLandscape(): void { console.warn("Deprecated: Use setMode('3d-landscape')"); }
+    drawSpectrogram(): void { console.warn("Deprecated: Use setMode('spectrogram')"); }
+    drawFluid(): void { console.warn("Deprecated: Use setMode('fluid')"); }
 }
