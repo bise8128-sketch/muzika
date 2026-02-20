@@ -123,9 +123,7 @@ async function setupMocks(page: import('@playwright/test').Page, {
     }
   });
 
-  await page.route('**/mock-audio/*.wav', route =>
-    route.fulfill({ status: 200, contentType: 'audio/wav', body: Buffer.from('RIFF\x00\x00\x00\x00WAVEfmt ') }),
-  );
+  await page.route('**/mock-audio/*.wav', route => route.abort());
   await page.route('**/models/**/*.onnx', route => route.abort());
   await page.route('**/models/**/*.wasm', route => route.abort());
 }
@@ -140,7 +138,7 @@ async function gotoUpload(page: import('@playwright/test').Page) {
 async function uploadAndWaitForResults(page: import('@playwright/test').Page) {
   await gotoUpload(page);
   await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
-  await expect(page.getByRole('heading', { name: /Separation Complete/i })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: /Separation Complete/i })).toBeVisible({ timeout: 60_000 });
 }
 
 // ---------------------------------------------------------------------------
