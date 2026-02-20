@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
 import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
@@ -45,7 +45,12 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState('');
     const [urlError, setUrlError] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const validateFiles = useCallback(async (files: File[]): Promise<boolean> => {
         const config: ValidationConfig = {
@@ -179,7 +184,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                             ref={fileInputRef}
                             type="file"
                             id="audio-upload-input"
-                            data-testid="audio-upload-input"
                             accept="audio/*"
                             multiple
                             onChange={handleFileChange}
@@ -214,7 +218,9 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">MP3</span>
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">WAV</span>
                                 <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-muted-foreground">FLAC</span>
-                                <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">YouTube URL</span>
+                                {mounted && (
+                                    <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">YouTube URL</span>
+                                )}
                             </div>
                         </div>
 
