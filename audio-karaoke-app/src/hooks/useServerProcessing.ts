@@ -1,13 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SeparationResult } from '@/types/audio';
-
-interface ServerProcessingState {
-  serverJobId: string | null;
-  serverLogs: string;
-  isPolling: boolean;
-  result: SeparationResult | null;
-  error: string | null;
-}
+import { apiClient } from '@/api/ApiClient';
 
 export function useServerProcessing() {
   const [serverJobId, setServerJobId] = useState<string | null>(null);
@@ -18,8 +11,8 @@ export function useServerProcessing() {
   const processingAbortCtrl = useRef<AbortController | null>(null);
 
   // Poll for server job status
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     const abortCtrl = new AbortController();
     const { signal } = abortCtrl;
 
@@ -29,25 +22,24 @@ export function useServerProcessing() {
 
     const checkStatus = async () => {
       try {
-        const res = await fetch(`/api/python-processing?jobId=${serverJobId}`, { signal });
-        if (!res.ok || signal.aborted) return;
-
-        const data = await res.json();
+        const data = await apiClient.getJobStatus(serverJobId, signal);
         if (signal.aborted) return;
 
         if (data.status === 'completed') {
-          clearInterval(interval);
+          if (intervalRef.current) clearInterval(intervalRef.current);
 
           try {
-            const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+            const AudioContextClass = typeof window !== 'undefined' 
+              ? (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext) 
+              : null;
             if (!AudioContextClass) {
               throw new Error("AudioContext not supported");
             }
             const ctx = new AudioContextClass();
 
             const [vocalsBuffer, instrumentalBuffer, originalBuffer] = await Promise.all([
-              data.stems.vocals ? fetch(data.stems.vocals, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
-              data.stems.other ? fetch(data.stems.other, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
+              data.stems?.vocals ? fetch(data.stems.vocals, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
+              data.stems?.other ? fetch(data.stems.other, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null,
               data.original ? fetch(data.original, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)) : null
             ]);
 
@@ -55,7 +47,7 @@ export function useServerProcessing() {
 
             let finalInstrumental = instrumentalBuffer;
 
-            if (data.stems.drums && data.stems.bass && data.stems.other) {
+            if (data.stems?.drums && data.stems?.bass && data.stems?.other) {
               const fetchAndDecode = (url: string) => fetch(url, { signal }).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
               const [drums, bass, other] = await Promise.all([
                 fetchAndDecode(data.stems.drums),
@@ -103,7 +95,7 @@ export function useServerProcessing() {
           }
 
         } else if (data.status === 'error') {
-          clearInterval(interval);
+          if (intervalRef.current) clearInterval(intervalRef.current);
           if (!signal.aborted) {
             setError(`Server Error: ${data.error}`);
             setIsPolling(false);
@@ -116,11 +108,11 @@ export function useServerProcessing() {
       }
     };
 
-    interval = setInterval(checkStatus, 2000);
+    intervalRef.current = setInterval(checkStatus, 2000);
     checkStatus(); // Initial check
 
     return () => {
-      clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       abortCtrl.abort();
     };
   }, [serverJobId]);
@@ -145,19 +137,8 @@ export function useServerProcessing() {
     try {
       setError(null);
       setResult(null);
-      const res = await fetch('/api/python-processing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, ...config }),
-        signal
-      });
+      const data = await apiClient.startProcessing({ url, ...config }, signal);
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Server request failed');
-      }
-
-      const data = await res.json();
       if (!signal.aborted) {
         setServerJobId(data.jobId);
       }
@@ -170,16 +151,6 @@ export function useServerProcessing() {
         processingAbortCtrl.current = null;
       }
     }
-  }, []);
-
-  const cancel = useCallback(() => {
-    if (processingAbortCtrl.current) {
-      processingAbortCtrl.current.abort();
-      processingAbortCtrl.current = null;
-    }
-    setServerJobId(null);
-    setIsPolling(false);
-    setError(null);
   }, []);
 
   const reset = useCallback(() => {
