@@ -2,15 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-
-interface SongEntry {
-    filename: string;
-    path: string;
-    stems: Record<string, string>;
-}
+import { apiClient } from '@/api/ApiClient';
+import { SongEntry } from '@/api/types';
 
 interface ServerLibrarySectionProps {
-    onSelect: (song: any) => void;
+    onSelect: (song: unknown) => void;
 }
 
 export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSelect }) => {
@@ -19,14 +15,14 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        const abortController = new AbortController();
         const fetchSongs = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/backend-library');
-                if (!response.ok) throw new Error('Failed to fetch server library');
-                const data = await response.json();
+                const data = await apiClient.getLibrary(abortController.signal);
                 setSongs(data.songs || []);
             } catch (err: any) {
+                if (abortController.signal.aborted) return;
                 console.error(err);
                 setError(err.message);
             } finally {
@@ -35,6 +31,10 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
         };
 
         fetchSongs();
+
+        return () => {
+            abortController.abort();
+        };
     }, []);
 
     const handleSelect = (song: SongEntry) => {
