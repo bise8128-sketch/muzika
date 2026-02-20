@@ -12,12 +12,27 @@ import { StorageManager } from '@/utils/storage/StorageManager';
  * A lightweight wrapper around a single Web Worker for stateful session messaging.
  * Unlike WorkerPool, this pins ALL messages to one worker instance, which is required
  * by audio.worker.ts since `activeSession` state is per-worker.
+ *
+ * Sends are serialized via an internal queue since the worker is single-threaded —
+ * responses always arrive in FIFO order. Callers can still use Promise.all for
+ * concurrency; their promises resolve in order as the worker completes each task.
  */
 class SessionWorker {
     private worker: Worker;
     private pendingResolve: ((value: unknown) => void) | null = null;
     private pendingReject: ((reason: Error) => void) | null = null;
     private progressHandler: ((progress: number) => void) | null = null;
+    private inFlight = false;
+
+    // Queue of sends waiting for the worker to become free
+    private queue: Array<{
+        type: string;
+        payload: unknown;
+        transferables: Transferable[];
+        onProgress?: (p: number) => void;
+        resolve: (v: unknown) => void;
+        reject: (e: Error) => void;
+    }> = [];
 
     constructor() {
         this.worker = new Worker(
@@ -34,15 +49,19 @@ class SessionWorker {
             this.pendingReject?.(new Error(payload?.message || 'Unknown worker error'));
             this.pendingResolve = null;
             this.pendingReject = null;
+            this.flushQueue();
         } else if (type === 'PROGRESS') {
             const value = typeof payload === 'number'
                 ? payload
                 : (payload?.percentage ?? payload?.progress);
             if (typeof value === 'number') this.progressHandler?.(value);
+            // PROGRESS does NOT complete the task — do NOT flush here
         } else {
+            // SUCCESS / COMPLETE / STREAM_READY / CHUNK_PROCESSED / etc.
             this.pendingResolve?.(payload);
             this.pendingResolve = null;
             this.pendingReject = null;
+            this.flushQueue();
         }
     }
 
@@ -50,6 +69,21 @@ class SessionWorker {
         this.pendingReject?.(new Error(`Worker error: ${e.message}`));
         this.pendingResolve = null;
         this.pendingReject = null;
+        this.flushQueue();
+    }
+
+    private flushQueue(): void {
+        this.inFlight = false;
+        if (this.queue.length === 0) return;
+        this.dispatch(this.queue.shift()!);
+    }
+
+    private dispatch(item: typeof this.queue[number]): void {
+        this.inFlight = true;
+        this.pendingResolve = item.resolve;
+        this.pendingReject = item.reject;
+        this.progressHandler = item.onProgress ?? null;
+        this.worker.postMessage({ type: item.type, payload: item.payload }, item.transferables);
     }
 
     send<TResult>(
@@ -58,11 +92,20 @@ class SessionWorker {
         transferables: Transferable[] = [],
         onProgress?: (p: number) => void
     ): Promise<TResult> {
-        this.progressHandler = onProgress ?? null;
         return new Promise<TResult>((resolve, reject) => {
-            this.pendingResolve = resolve as (v: unknown) => void;
-            this.pendingReject = reject;
-            this.worker.postMessage({ type, payload }, transferables);
+            const item = {
+                type,
+                payload,
+                transferables,
+                onProgress,
+                resolve: resolve as (v: unknown) => void,
+                reject
+            };
+            if (this.inFlight) {
+                this.queue.push(item);
+            } else {
+                this.dispatch(item);
+            }
         });
     }
 

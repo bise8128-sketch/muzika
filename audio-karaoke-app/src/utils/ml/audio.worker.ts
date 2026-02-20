@@ -46,6 +46,7 @@ export type WorkerResponse =
     | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: SeparationMetrics } }
     | { type: 'STREAM_READY'; payload: { sessionId: string; backend?: ExecutionBackend } }
     | { type: 'CHUNK_PROCESSED'; payload: { vocals: Float32Array; instrumentals: Float32Array; chunkIndex: number; sessionId: string } }
+    | { type: 'SESSION_ENDED'; payload: { sessionId: string } }
     | { type: 'ERROR'; payload: { message: string } };
 
 // Helper to send progress
@@ -150,6 +151,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             activeSession.engine.dispose();
             activeSession = null;
         }
+        ctx.postMessage({ type: 'SESSION_ENDED', payload: { sessionId } });
         return;
     }
     if (type === 'START_SEPARATION') {
