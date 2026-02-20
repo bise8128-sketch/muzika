@@ -20,21 +20,15 @@ export function usePageOrchestrator() {
   const { models: AVAILABLE_MODELS } = useModels();
 
   // PlaybackController
-  const [controller, setController] = useState<PlaybackController | null>(null);
+  // Initialize lazily to ensure it only runs on client and avoids effect-state updates
+  const [controller] = useState<PlaybackController | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new PlaybackController();
+  });
   
   useEffect(() => {
-    let mounted = true;
-    const c = new PlaybackController();
-    
-    if (mounted) {
-      setController(c);
-    }
-    
-    return () => { 
-      mounted = false;
-      if (c) c.dispose(); 
-    };
-  }, []);
+    return () => { if (controller) controller.dispose(); };
+  }, [controller]);
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -193,5 +187,6 @@ export function usePageOrchestrator() {
     controller,
   };
 }
+
 
 
