@@ -9,12 +9,12 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
-import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
 import { useAutoKey } from '@/hooks/useAutoKey';
 import { useHarmonyGuide } from '@/hooks/useHarmonyGuide';
+import { useMixRecorder } from '@/hooks/useMixRecorder';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
 
 // Custom Hooks
@@ -54,6 +54,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
     const playback = usePlayback(controller);
     const recorder = useVoiceRecorder();
+    const mixRecorder = useMixRecorder();
     const useAutoKeyHook = useAutoKey(controller);
     const harmonyGuide = useHarmonyGuide(useAutoKeyHook.detectedKey);
     const pitchAnalysis = usePitchAnalysis(controller, harmonyGuide.activeKeyInfo);
@@ -135,6 +136,31 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             controller.setVoiceBuffer(recorder.recordedBuffer);
         }
     }, [recorder.recordedBuffer, controller]);
+
+    // Mix Bus Routing Setup
+    useEffect(() => {
+        // Unconditionally get mix destination so it's ready
+        const dest = mixRecorder.getMixDestination();
+        
+        // Let PlaybackCore output straight into the mix recorder destination
+        const systemDest = controller['effects']?.getDestination?.(); // Internal hack/bypass or expose explicitly
+        if (systemDest) {
+            systemDest.connect(dest);
+        }
+
+        const voiceStream = useVoiceHook.getProcessedStream();
+        let micSource: MediaStreamAudioSourceNode | null = null;
+        if (voiceStream) {
+            const ctx = controller['audioContext'];
+            micSource = ctx.createMediaStreamSource(voiceStream);
+            micSource.connect(dest);
+        }
+
+        return () => {
+            if (systemDest) systemDest.disconnect(dest);
+            if (micSource) micSource.disconnect();
+        };
+    }, [mixRecorder, controller, useVoiceHook.getProcessedStream()]);
 
     // Link Pitch Analysis to Background Visualizer
     useEffect(() => {
