@@ -96,6 +96,10 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
         if (currentPlayingSong) {
             loadAudio();
         }
+
+        return () => {
+            abortController.abort();
+        };
     }, [currentPlayingSong, engine.load]);
 
     // Handle song end to play next
