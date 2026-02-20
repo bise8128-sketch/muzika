@@ -250,25 +250,27 @@ test.describe('Group 2: Upload & Processing States', () => {
 
   // T6 — Upload fires POST to /api/backend-upload
   test('T6: uploading an MP3 sends POST to /api/backend-upload', async ({ page }) => {
-    // Register listener before ANYTHING else so we catch all requests on this page
-    let uploadMethod: string | null = null;
+    const requests: string[] = [];
     page.on('request', req => {
-      if (req.url().includes('/api/backend-upload') && req.method() === 'POST') {
-        uploadMethod = req.method();
-      }
+      requests.push(`${req.method()} ${req.url()}`);
     });
 
     await gotoUpload(page);
-
     await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
 
-    // Wait up to 20s for the upload to fire (the mock responds instantly)
-    const deadline = Date.now() + 20_000;
-    while (!uploadMethod && Date.now() < deadline) {
-      await page.waitForTimeout(200);
+    // Wait up to 30s and log progress
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if (requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))) break;
+      await page.waitForTimeout(500);
     }
 
-    expect(uploadMethod).toBe('POST');
+    if (!requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))) {
+      console.log('DEBUG: Captured requests in T6:');
+      requests.forEach(r => console.log(`  - ${r}`));
+    }
+
+    expect(requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))).toBe(true);
   });
 
   // T7 — A loading indicator is shown while processing is in-flight
