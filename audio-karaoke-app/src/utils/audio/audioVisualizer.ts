@@ -148,7 +148,7 @@ export class AudioVisualizer {
     /**
      * Configure visualizer
      */
-    setConfig(config: any): void {
+    setConfig(config: Record<string, unknown>): void {
         this.visualizerWorker?.postMessage({
             type: 'config',
             payload: config
@@ -168,7 +168,7 @@ export class AudioVisualizer {
     /**
      * Set Pitch History for SingStar mode
      */
-    setPitchHistory(history: any[]): void {
+    setPitchHistory(history: Record<string, unknown>[]): void {
         this.visualizerWorker?.postMessage({
             type: 'pitch_history',
             payload: history
@@ -241,9 +241,9 @@ export class AudioVisualizer {
     }
 
     // Legacy methods placeholders if needed, but we should remove usages
-    drawWaveform(canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('waveform')"); }
-    drawSpectrum(canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('bars')"); }
-    draw3DLandscape(canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('3d-landscape')"); }
-    drawSpectrogram(canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('spectrogram')"); }
-    drawFluid(canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('fluid')"); }
+    drawWaveform(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('waveform')"); }
+    drawSpectrum(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('bars')"); }
+    draw3DLandscape(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('3d-landscape')"); }
+    drawSpectrogram(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('spectrogram')"); }
+    drawFluid(_canvas: HTMLCanvasElement): void { console.warn("Deprecated: Use setMode('fluid')"); }
 }

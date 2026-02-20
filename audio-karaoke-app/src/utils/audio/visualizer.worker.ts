@@ -482,22 +482,23 @@ function updateHistory() {
 function drawSingStar() {
     if (!ctx || !canvas) return;
 
+    const context = ctx;
     const w = canvas.width;
     const h = canvas.height;
 
     // Smooth background with slight opacity for trailing effect (glassmorphism/glow base)
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.4)';
-    ctx.fillRect(0, 0, w, h);
+    context.fillStyle = 'rgba(10, 10, 15, 0.4)';
+    context.fillRect(0, 0, w, h);
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
+    context.strokeStyle = 'rgba(255,255,255,0.05)';
+    context.lineWidth = 1;
     for (let midi = MIDI_MIN; midi <= MIDI_MIN + MIDI_RANGE; midi += 12) {
         const y = h - ((midi - MIDI_MIN) / MIDI_RANGE) * h;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(w, y);
+        context.stroke();
     }
 
     if (!latestPitchHistory || latestPitchHistory.length < 2) return;
@@ -506,30 +507,30 @@ function drawSingStar() {
     const stepX = w / VISIBLE_HISTORY;
 
     // Draw reference pitch (Glowing dotted line)
-    ctx.setLineDash([8, 8]);
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = 'rgba(52, 211, 153, 0.8)';
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.8)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
+    context.setLineDash([8, 8]);
+    context.shadowBlur = 10;
+    context.shadowColor = 'rgba(52, 211, 153, 0.8)';
+    context.strokeStyle = 'rgba(52, 211, 153, 0.8)';
+    context.lineWidth = 3;
+    context.beginPath();
     visibleData.forEach((d, i) => {
         if (d.referenceMidi <= 0) return;
         const x = i * stepX;
         const y = h - ((d.referenceMidi - MIDI_MIN) / MIDI_RANGE) * h;
         if (i === 0 || visibleData[i - 1].referenceMidi <= 0) {
-            ctx.moveTo(x, y);
+            context.moveTo(x, y);
         } else {
-            ctx.lineTo(x, y);
+            context.lineTo(x, y);
         }
     });
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 0; // reset
+    context.stroke();
+    context.setLineDash([]);
+    context.shadowBlur = 0; // reset
 
     // Draw user pitch trail with aesthetic gradient
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    context.lineWidth = 5;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
 
     visibleData.forEach((d, i) => {
         if (i === 0 || d.detectedMidi <= 0) return;
@@ -547,16 +548,16 @@ function drawSingStar() {
         const b = acc >= 70 ? 234 : acc >= 40 ? 36 : 68;
 
         // Premium glow effect
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+        context.shadowBlur = 15;
+        context.shadowColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        context.strokeStyle = `rgba(${r}, ${g}, ${b}, 1)`;
 
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.stroke();
+        context.beginPath();
+        context.moveTo(x0, y0);
+        context.lineTo(x1, y1);
+        context.stroke();
     });
 
     // Reset shadow
-    ctx.shadowBlur = 0;
+    context.shadowBlur = 0;
 }
