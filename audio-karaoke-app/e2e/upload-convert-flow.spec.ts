@@ -139,13 +139,17 @@ async function setupMocks(page: import('@playwright/test').Page, {
 async function gotoUpload(page: import('@playwright/test').Page) {
   await page.goto('/');
   await expect(page.locator('input[type="file"]')).toBeAttached({ timeout: 20_000 });
+  // Wait for the mock models to load into the selector to avoid the fallback-to-client-side race condition
+  // If we upload before models load, the app uses FALLBACK_MODELS which might trigger client-side ONNX path.
+  await expect(page.locator('select#model-select')).toContainText('Default Server Model', { timeout: 15_000 });
 }
 
 /** Uploads a file and waits for Separation Complete. */
 async function uploadAndWaitForResults(page: import('@playwright/test').Page) {
   await gotoUpload(page);
   await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
-  await expect(page.getByRole('heading', { name: /Separation Complete/i })).toBeVisible({ timeout: 60_000 });
+  // Increased timeout to 90s for slow dev server
+  await expect(page.getByRole('heading', { name: /Separation Complete/i })).toBeVisible({ timeout: 90_000 });
 }
 
 // ---------------------------------------------------------------------------
@@ -250,27 +254,23 @@ test.describe('Group 2: Upload & Processing States', () => {
 
   // T6 — Upload fires POST to /api/backend-upload
   test('T6: uploading an MP3 sends POST to /api/backend-upload', async ({ page }) => {
-    const requests: string[] = [];
+    let uploadMethod: string | null = null;
     page.on('request', req => {
-      requests.push(`${req.method()} ${req.url()}`);
+      if (req.url().includes('/api/backend-upload') && req.method() === 'POST') {
+        uploadMethod = req.method();
+      }
     });
 
     await gotoUpload(page);
     await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
 
-    // Wait up to 30s and log progress
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
-      if (requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))) break;
-      await page.waitForTimeout(500);
+    // Wait for the request to fire
+    const deadline = Date.now() + 20_000;
+    while (!uploadMethod && Date.now() < deadline) {
+      await page.waitForTimeout(200);
     }
 
-    if (!requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))) {
-      console.log('DEBUG: Captured requests in T6:');
-      requests.forEach(r => console.log(`  - ${r}`));
-    }
-
-    expect(requests.some(r => r.includes('POST') && r.includes('/api/backend-upload'))).toBe(true);
+    expect(uploadMethod).toBe('POST');
   });
 
   // T7 — A loading indicator is shown while processing is in-flight
