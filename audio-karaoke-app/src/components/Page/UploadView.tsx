@@ -5,6 +5,7 @@ import { AudioUpload } from '@/components/AudioUpload/AudioUpload';
 import dynamic from 'next/dynamic';
 import type { HistorySession } from '@/utils/storage/historyStore';
 import type { ExtractedMetadata } from '@/types/schema';
+import { LandingHero } from '@/components/Page/LandingHero';
 
 const History = dynamic(() => import('@/components/UI/History').then(mod => mod.History), {
   ssr: false
@@ -21,6 +22,7 @@ interface UploadViewProps {
   historyItems: HistorySession[];
   onRestore: (fileHash: string) => void;
   onClearHistory: () => void;
+  activeModelName: string;
 }
 
 export function UploadView({
@@ -34,31 +36,36 @@ export function UploadView({
   historyItems,
   onRestore,
   onClearHistory,
+  activeModelName,
 }: UploadViewProps) {
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
-      <AudioUpload
-        onUpload={onUpload}
-        onUrlSubmit={onUrlSubmit}
-        isLoading={isLoading}
-        autoStartKaraoke={autoStartKaraoke}
-        onAutoStartToggle={onAutoStartToggle}
-        selectedModelId={selectedModelId}
-        onModelChange={onModelChange}
-      />
-      <div className="mt-16">
-        <History
-          items={historyItems.map(h => ({
-            id: h.fileHash,
-            fileName: h.fileName,
-            date: new Date(h.date).toLocaleDateString(),
-            duration: `${Math.floor(h.duration / 60)}:${(h.duration % 60).toString().padStart(2, '0')}`
-          }))}
-          onRestore={onRestore}
-          onClear={onClearHistory}
+    <>
+      <LandingHero activeModelName={activeModelName} />
+      
+      <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 max-w-2xl mx-auto">
+        <AudioUpload
+          onUpload={onUpload}
+          onUrlSubmit={onUrlSubmit}
+          isLoading={isLoading}
+          autoStartKaraoke={autoStartKaraoke}
+          onAutoStartToggle={onAutoStartToggle}
+          selectedModelId={selectedModelId}
+          onModelChange={onModelChange}
         />
+        <div className="mt-16">
+          <History
+            items={historyItems.map(h => ({
+              id: h.fileHash,
+              fileName: h.fileName,
+              date: new Date(h.date).toLocaleDateString(),
+              duration: `${Math.floor(h.duration / 60)}:${(h.duration % 60).toString().padStart(2, '0')}`
+            }))}
+            onRestore={onRestore}
+            onClear={onClearHistory}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

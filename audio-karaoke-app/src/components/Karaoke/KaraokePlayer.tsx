@@ -29,10 +29,7 @@ import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 // Sub-components
 import { VisualizerContainer } from './Visualizer/VisualizerContainer';
 import { KaraokeControls } from './Controls/KaraokeControls';
-import { EffectsPanel } from './EffectsPanel';
-import { StemIsolationPanel } from './StemIsolationPanel';
-import { PitchVisualizer } from './PitchVisualizer';
-import { HarmonyGuidePanel } from './HarmonyGuidePanel';
+import { EffectsController } from './EffectsController';
 import { LyricTheme } from './LyricDisplay';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { PlayerHeader } from './PlayerHeader';
@@ -70,8 +67,6 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [showRoom, setShowRoom] = useState(false);
     const [showVoiceFx, setShowVoiceFx] = useState(false);
     const [showAutoKey, setShowAutoKey] = useState(false);
-    const [showHarmonyGuide, setShowHarmonyGuide] = useState(false);
-    const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
 
     const [visualSettings, setVisualSettings] = useState<VisualSettings>({
@@ -361,7 +356,8 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onVideoExport={handleVideoExport}
             />
 
-            <EffectsPanel
+            <EffectsController
+                controller={controller}
                 pitch={pitch}
                 tempo={tempo}
                 reverb={reverb}
@@ -376,84 +372,11 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 onBassChange={(v) => playback.setEQ(v, playback.mid, playback.treble)}
                 onMidChange={(v) => playback.setEQ(playback.bass, v, playback.treble)}
                 onTrebleChange={(v) => playback.setEQ(playback.bass, playback.mid, v)}
-                onReset={() => resetEffects(() => playback.setEQ(0, 0, 0))}
+                onResetEffects={() => resetEffects(() => playback.setEQ(0, 0, 0))}
+                pitchAnalysis={pitchAnalysis}
+                harmonyGuide={harmonyGuide}
+                detectedKey={useAutoKeyHook.detectedKey}
             />
-
-            <StemIsolationPanel controller={controller} />
-
-            <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => {
-                            if (pitchAnalysis.isListening) {
-                                pitchAnalysis.stopAnalysis();
-                            } else {
-                                setShowPitchAnalysis(true);
-                                pitchAnalysis.startAnalysis();
-                            }
-                        }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                            pitchAnalysis.isListening
-                                ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500/40'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
-                        }`}
-                    >
-                        🎯 {pitchAnalysis.isListening ? t('stopAnalysis') || 'Stop Analysis' : t('pitchAnalysis') || 'Pitch Analysis'}
-                    </button>
-                    {pitchAnalysis.overallScore && (
-                        <button
-                            onClick={() => {
-                                pitchAnalysis.resetAnalysis();
-                                setShowPitchAnalysis(false);
-                            }}
-                            className="text-xs text-white/40 hover:text-white/60 transition-colors"
-                        >
-                            {t('resetScore') || 'Reset'}
-                        </button>
-                    )}
-                    {pitchAnalysis.error && (
-                        <span className="text-xs text-red-400">{pitchAnalysis.error}</span>
-                    )}
-                </div>
-                {showPitchAnalysis && (
-                    <PitchVisualizer
-                        currentScore={pitchAnalysis.currentScore}
-                        currentPitch={pitchAnalysis.currentPitch}
-                        overallScore={pitchAnalysis.overallScore}
-                        isListening={pitchAnalysis.isListening}
-                    />
-                )}
-            </div>
-
-            {/* Harmony Guide */}
-            <div className="space-y-2">
-                <button
-                    onClick={() => setShowHarmonyGuide(!showHarmonyGuide)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        showHarmonyGuide
-                            ? 'bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/40'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
-                    }`}
-                >
-                    🎶 Harmony Guide
-                </button>
-                {showHarmonyGuide && (
-                    <HarmonyGuidePanel
-                        detectedKey={useAutoKeyHook.detectedKey}
-                        harmonyEnabled={harmonyGuide.harmonyEnabled}
-                        onToggleHarmony={harmonyGuide.setHarmonyEnabled}
-                        suggestions={harmonyGuide.getSuggestions(
-                            pitchAnalysis.pitchHistory.length > 0
-                                ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
-                                : 0
-                        )}
-                        lastMatch={harmonyGuide.lastMatch}
-                        totalHarmonyHits={harmonyGuide.totalHarmonyHits}
-                        harmonyBonus={pitchAnalysis.overallScore?.harmonyBonus ?? 0}
-                        onClose={() => setShowHarmonyGuide(false)}
-                    />
-                )}
-            </div>
             </div>
         </ErrorBoundary>
     );

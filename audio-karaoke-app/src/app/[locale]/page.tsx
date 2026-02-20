@@ -9,9 +9,13 @@ import { usePageOrchestrator } from '@/hooks/usePageOrchestrator';
 
 // Components
 import { PageHeader } from '@/components/Page/PageHeader';
-import { LandingHero } from '@/components/Page/LandingHero';
-import { PageContent } from '@/components/Page/PageContent';
 import { PageFooter } from '@/components/Page/PageFooter';
+import { UploadView } from '@/components/Page/UploadView';
+import { ProcessingView } from '@/components/Page/ProcessingView';
+import { ResultsView } from '@/components/Page/ResultsView';
+import { KaraokeView } from '@/components/Page/KaraokeView';
+import { ModelsView } from '@/components/Page/ModelsView';
+import { BatchView } from '@/components/Page/BatchView';
 
 const SettingsPanel = dynamic(() => import('@/components/UI/SettingsPanel').then(mod => mod.SettingsPanel), {
   ssr: false
@@ -54,6 +58,81 @@ export default function Home() {
 
   const activeModelName = AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown';
 
+  const renderContent = () => {
+    if (machineState.matches('uploading') || machineState.matches('idle')) {
+      return (
+        <UploadView
+          onUpload={handleUpload}
+          onUrlSubmit={handleUrlSubmit}
+          isLoading={machineState.matches('uploading') || separation.status === 'processing'}
+          autoStartKaraoke={autoStartKaraoke}
+          onAutoStartToggle={toggleAutoStartKaraoke}
+          selectedModelId={selectedModelId}
+          onModelChange={setSelectedModelId}
+          historyItems={history.historyItems}
+          onRestore={handleRestore}
+          onClearHistory={history.clearHistory}
+          activeModelName={activeModelName}
+        />
+      );
+    }
+
+    if (machineState.matches('processing')) {
+      return (
+        <ProcessingView
+          progress={separation.progress}
+          message={separation.message}
+          status={separation.status}
+          executionBackend={separation.executionBackend}
+        />
+      );
+    }
+
+    if (machineState.matches('results')) {
+      return (
+        <ResultsView
+          activeResult={activeResult}
+          onDownload={handleDownload}
+          onRestart={handleRestart}
+          onTryKaraoke={handleTryKaraoke}
+        />
+      );
+    }
+
+    if (machineState.matches('karaoke')) {
+      return controller ? (
+        <KaraokeView
+          controller={controller}
+          onBack={handleExitKaraoke}
+        />
+      ) : null;
+    }
+
+    if (machineState.matches('models')) {
+      return (
+        <ModelsView onBack={handleBack} />
+      );
+    }
+
+    if (machineState.matches('batchProcessing')) {
+      return (
+        <BatchView
+          queue={batch.queue}
+          isProcessing={batch.isProcessing}
+          onRemove={batch.removeFromQueue}
+          onClear={batch.clearQueue}
+          onStartBatch={batch.startBatch}
+          onBatchDownload={handleBatchDownload}
+          onBack={handleBack}
+          selectedModelId={selectedModelId}
+          models={AVAILABLE_MODELS}
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="min-h-screen selection:bg-primary/30 flex flex-col">
       <PageHeader 
@@ -64,33 +143,8 @@ export default function Home() {
       />
 
       <main className="container mx-auto px-6 py-12 md:py-20 flex-1">
-        {state === 'upload' && (
-          <LandingHero activeModelName={activeModelName} />
-        )}
-
         <ErrorBoundary>
-          <PageContent
-            machineState={machineState}
-            separation={separation}
-            batch={batch}
-            history={history}
-            activeResult={activeResult}
-            controller={controller}
-            selectedModelId={selectedModelId}
-            availableModels={AVAILABLE_MODELS}
-            autoStartKaraoke={autoStartKaraoke}
-            onUpload={handleUpload}
-            onUrlSubmit={handleUrlSubmit}
-            onAutoStartToggle={toggleAutoStartKaraoke}
-            onModelChange={setSelectedModelId}
-            onRestore={handleRestore}
-            onDownload={handleDownload}
-            onBatchDownload={handleBatchDownload}
-            onRestart={handleRestart}
-            onTryKaraoke={handleTryKaraoke}
-            onBack={handleBack}
-            onExitKaraoke={handleExitKaraoke}
-          />
+          {renderContent()}
         </ErrorBoundary>
       </main>
 
