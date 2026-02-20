@@ -1,4 +1,5 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
+import { modelStorage } from '@/utils/storage/modelStorage';
 import { StorageManager } from '@/utils/storage/StorageManager';
 import { calculateSHA256 } from '@/utils/crypto';
 
