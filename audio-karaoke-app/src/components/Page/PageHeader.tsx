@@ -2,28 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import LanguageSwitcher from '@/components/UI/LanguageSwitcher';
+import { apiClient } from '@/api/ApiClient';
 
 function BackendStatus() {
   const t = useTranslations('BackendStatus');
   const [status, setStatus] = useState<'online' | 'error' | 'loading'>('loading');
 
   useEffect(() => {
+    const abortController = new AbortController();
     const checkStatus = async () => {
       try {
-        const res = await fetch('/api/status');
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data.services.modelRepository === 'connected' ? 'online' : 'error');
-        } else {
-          setStatus('error');
-        }
-      } catch {
+        const data = await apiClient.getStatus(abortController.signal);
+        setStatus(data.services.modelRepository === 'connected' ? 'online' : 'error');
+      } catch (err) {
+        if (abortController.signal.aborted) return;
         setStatus('error');
       }
     };
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      abortController.abort();
+    };
   }, []);
 
   return (

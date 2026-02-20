@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { apiClient } from '@/api/ApiClient';
-import { SongEntry } from '@/api/types';
+import { SongEntry as ApiSongEntry } from '@/api/types';
 
 interface ServerLibrarySectionProps {
     onSelect: (song: unknown) => void;
 }
 
 export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSelect }) => {
-    const [songs, setSongs] = useState<SongEntry[]>([]);
+    const [songs, setSongs] = useState<ApiSongEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +36,7 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
         };
     }, []);
 
-    const handleSelect = (song: SongEntry) => {
+    const handleSelect = (song: ApiSongEntry) => {
         // Map to internal SongEntry structure
         onSelect({
             id: -1, // Special ID for server-side songs
@@ -49,10 +48,10 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
             instrumentalData: undefined,
             createdAt: Date.now(),
             stems: song.stems // Keep stems for processing
-        } as unknown as any);
+        });
     };
 
-    const handleProcess = (e: React.MouseEvent, song: SongEntry) => {
+    const handleProcess = (e: React.MouseEvent, song: ApiSongEntry) => {
         e.stopPropagation();
         const url = `/api/backend-files/${song.path}`;
         window.location.href = `/?source=${encodeURIComponent(url)}&title=${encodeURIComponent(song.filename)}`;
