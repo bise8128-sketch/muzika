@@ -41,6 +41,14 @@ export class AudioVisualizer {
     private setupVisualizerWorker() {
         if (typeof Worker !== 'undefined') {
             this.visualizerWorker = new Worker(new URL('./visualizer.worker.ts', import.meta.url));
+            
+            this.visualizerWorker.onmessage = (event) => {
+                if (event.data.type === 'audio_metrics') {
+                    if (this.onFrame) {
+                        this.onFrame(event.data.payload);
+                    }
+                }
+            };
         }
     }
 
@@ -58,17 +66,8 @@ export class AudioVisualizer {
                 outputChannelCount: [1]
             });
 
-            // Handle messages from Worklet (for Main Thread usage e.g. metrics/gameplay)
-            this.workletNode.port.onmessage = (event) => {
-                if (event.data.type === 'frequency_data') {
-                    // We still keep a copy in main thread for gameplay logic (Ghost Mode) if needed
-                    // But rendering is now offloaded.
-                    const data = event.data.data;
-                    if (this.onFrame) {
-                        this.processAudioFeatures(data);
-                    }
-                }
-            };
+            // Worklet now just acts as a pass-through, no main thread messages required.
+            // visualizerWorker handles the FFT and posts audio_metrics directly.
 
             // Connect dummy output to keep it alive
             const silence = this.audioContext.createGain();
@@ -214,38 +213,7 @@ export class AudioVisualizer {
         this.onFrame = callback;
     }
 
-    /**
-     * Process audio features and emit events
-     * Runs on main thread for game logic sync
-     */
-    private processAudioFeatures(frequencyData: Uint8Array): void {
-        if (!this.onFrame) return;
-
-        const bufferLength = frequencyData.length;
-        let bass = 0;
-        let mid = 0;
-        let treble = 0;
-        let energy = 0;
-
-        // Frequency bands (approximate)
-        const bassEnd = Math.floor(bufferLength * 0.05); // Low frequency
-        const midEnd = Math.floor(bufferLength * 0.4);   // Mids
-
-        for (let i = 0; i < bufferLength; i++) {
-            const val = frequencyData[i];
-            energy += val;
-            if (i < bassEnd) bass += val;
-            else if (i < midEnd) mid += val;
-            else treble += val;
-        }
-
-        this.onFrame({
-            bass: (bass / bassEnd) / 255,
-            mid: (mid / (midEnd - bassEnd)) / 255,
-            treble: (treble / (bufferLength - midEnd)) / 255,
-            energy: (energy / bufferLength) / 255
-        });
-    }
+    // Features processing moved to Web Worker
 
     /**
      * Cleanup resources
