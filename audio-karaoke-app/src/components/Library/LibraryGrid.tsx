@@ -11,7 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
 import { queueStorage } from '@/utils/storage/queueStorage';
 import { List, RowComponentProps } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 
 interface LibraryGridProps {
@@ -290,15 +290,14 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                         )}
                     </div>
                 ) : (
-                    <AutoSizer renderProp={({ height, width }) => (
+                    <AutoSizer renderProp={({ height, width }: { height: number; width: number }) => (
                             <List
                                 height={height!}
                                 width={width!}
                                 itemCount={filteredSongs.length}
                                 itemSize={130}
                                 className="scrollbar-hide"
-                            >
-                                {({ index, style }: RowComponentProps) => {
+                                rowComponent={({ index, style }: RowComponentProps) => {
                                     const song = filteredSongs[index];
                                     if (!song) return null;
 
@@ -380,7 +379,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                         </div>
                                     );
                                 }}
-                            </List>
+                            />
                         )} />
                 )}
             </div>
