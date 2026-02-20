@@ -175,7 +175,11 @@ export function useBatchSeparation() {
                 result
             });
 
-        } catch (err: any) {
+        } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (err.name === 'AbortError' || err.message === 'Aborted') {
+                return;
+            }
             updateItemStatus(item.id, {
                 status: 'error',
                 message: null,

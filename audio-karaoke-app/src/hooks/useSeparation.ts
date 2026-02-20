@@ -46,6 +46,9 @@ export function useSeparation() {
             executionBackend: null,
         });
 
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
         abortControllerRef.current = new AbortController();
 
         try {
@@ -75,6 +78,9 @@ export function useSeparation() {
             return result;
 
         } catch (error: unknown) {
+            if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+                return undefined;
+            }
             const message = error instanceof Error ? error.message : 'Unknown error occurred during separation';
             setState(s => ({
                 ...s,
