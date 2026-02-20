@@ -157,6 +157,7 @@ export function useBatchSeparation() {
             // Separate
             const result = await separateAudio(item.file, {
                 modelInfo: model,
+                signal: abortControllerRef.current?.signal,
                 onProgress: (p) => {
                     updateItemStatus(item.id, {
                         progress: p.percentage,
@@ -199,19 +200,18 @@ export function useBatchSeparation() {
     const startBatch = useCallback((model: ModelInfo) => {
         if (isProcessing) return; // Already running
         setIsProcessing(true);
-        // Start loop
-        // We need to wait for state to update? No, we use ref in loop.
-        // But ref needs to be fresh.
-        // We'll pass the *current future* intention.
-
-        // Small timeout to ensure ref is synced if we just added items?
-        // Actually addToQueue updates state, which updates ref in Effect.
-        // So if we call add then start immediately, we might miss it.
-        // Better to have "auto-start" or manual start.
-
-        // For manual start:
+        abortControllerRef.current = new AbortController();
         runBatchLoop(model);
     }, [isProcessing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     // Auto-continue if we are "processing" but stopped loop? 
     // No, keep it simple.

@@ -580,7 +580,24 @@ async function pollJobStatus(
      while (attempts < maxAttempts) {
          if (signal?.aborted) throw new Error('Aborted');
          
-         await new Promise(r => setTimeout(r, 5000)); // 5s poll interval
+         // Interruptible delay
+         await new Promise<void>((resolve, reject) => {
+             const timeoutId = setTimeout(() => {
+                 resolve();
+                 signal?.removeEventListener('abort', onAbort);
+             }, 5000);
+
+             const onAbort = () => {
+                 clearTimeout(timeoutId);
+                 reject(new Error('Aborted'));
+             };
+
+             if (signal?.aborted) {
+                 onAbort();
+             } else {
+                 signal?.addEventListener('abort', onAbort, { once: true });
+             }
+         });
          
          const res = await fetch(`/api/python-processing?jobId=${jobId}`, { signal });
          if (!res.ok) throw new Error('Status check failed');

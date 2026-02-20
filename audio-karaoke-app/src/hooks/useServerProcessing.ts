@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SeparationResult } from '@/types/audio';
 
 interface ServerProcessingState {
@@ -15,6 +15,7 @@ export function useServerProcessing() {
   const [result, setResult] = useState<SeparationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const processingAbortCtrl = useRef<AbortController | null>(null);
 
   // Poll for server job status
   useEffect(() => {
@@ -124,14 +125,31 @@ export function useServerProcessing() {
     };
   }, [serverJobId]);
 
+  // Clean up any pending processing request on unmount
+  useEffect(() => {
+    return () => {
+      if (processingAbortCtrl.current) {
+        processingAbortCtrl.current.abort();
+      }
+    };
+  }, []);
+
   const handleServerProcessing = useCallback(async (url: string, config: { model: string, format: string }) => {
+    // Cancel any previous request
+    if (processingAbortCtrl.current) {
+      processingAbortCtrl.current.abort();
+    }
+    processingAbortCtrl.current = new AbortController();
+    const signal = processingAbortCtrl.current.signal;
+
     try {
       setError(null);
       setResult(null);
       const res = await fetch('/api/python-processing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, ...config })
+        body: JSON.stringify({ url, ...config }),
+        signal
       });
 
       if (!res.ok) {
@@ -140,11 +158,28 @@ export function useServerProcessing() {
       }
 
       const data = await res.json();
-      setServerJobId(data.jobId);
+      if (!signal.aborted) {
+        setServerJobId(data.jobId);
+      }
     } catch (e) {
+      if (signal.aborted) return;
       console.error(e);
       setError(e instanceof Error ? e.message : "Failed to start processing");
+    } finally {
+      if (processingAbortCtrl.current?.signal === signal) {
+        processingAbortCtrl.current = null;
+      }
     }
+  }, []);
+
+  const cancel = useCallback(() => {
+    if (processingAbortCtrl.current) {
+      processingAbortCtrl.current.abort();
+      processingAbortCtrl.current = null;
+    }
+    setServerJobId(null);
+    setIsPolling(false);
+    setError(null);
   }, []);
 
   const reset = useCallback(() => {

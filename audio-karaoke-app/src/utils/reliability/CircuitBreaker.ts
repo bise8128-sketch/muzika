@@ -44,6 +44,10 @@ export class CircuitBreaker {
             }
             return result;
         } catch (error) {
+            // Don't trip the circuit breaker for AbortErrors (user cancellation)
+            if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+                throw error;
+            }
             this.recordFailure();
             throw error;
         }

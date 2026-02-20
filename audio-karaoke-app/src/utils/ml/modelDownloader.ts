@@ -9,8 +9,12 @@ import { calculateSHA256 } from '@/utils/crypto';
  */
 export async function downloadModel(
     modelInfo: ModelInfo,
-    onProgress?: (progress: ModelDownloadProgress) => void
+    onProgress?: (progress: ModelDownloadProgress) => void,
+    signal?: AbortSignal
 ): Promise<ArrayBuffer> {
+    if (signal?.aborted) {
+        throw new Error('Aborted');
+    }
     if (!modelInfo.url) {
         throw new Error(`No URL provided for model ${modelInfo.id}`);
     }
@@ -34,8 +38,11 @@ export async function downloadModel(
 
     let response: Response;
     try {
-        response = await fetch(fetchUrl);
+        response = await fetch(fetchUrl, { signal });
     } catch (err) {
+        if (signal?.aborted) {
+            throw new Error('Aborted');
+        }
         console.error(`[modelDownloader] fetch failed for ${fetchUrl}:`, err);
         throw new Error(`Failed to fetch model from ${fetchUrl}. This may be due to CORS, network issues, or an invalid URL.`);
     }
@@ -59,6 +66,10 @@ export async function downloadModel(
         const { done, value } = await reader.read();
 
         if (done) break;
+        if (signal?.aborted) {
+            reader.cancel();
+            throw new Error('Aborted');
+        }
 
         chunks.push(value);
         loaded += value.length;
