@@ -22,7 +22,7 @@ interface SeparationState {
   status: 'idle' | 'processing' | 'completed' | 'error';
   progress: number;
   message: string;
-  executionBackend: 'local' | 'cloud';
+  executionBackend?: 'webgpu' | 'wasm' | 'server' | null;
 }
 
 interface BatchState {
@@ -36,6 +36,12 @@ interface BatchState {
 interface HistoryState {
   historyItems: HistorySession[];
   clearHistory: () => void;
+}
+
+interface DownloadTrack {
+  id: string;
+  name: string;
+  blob: Blob | AudioBuffer | null;
 }
 
 interface PageContentProps {
@@ -55,7 +61,7 @@ interface PageContentProps {
   onAutoStartToggle: (val: boolean) => void;
   onModelChange: (id: string) => void;
   onRestore: (fileHash: string) => void;
-  onDownload: (type: 'vocals' | 'instrumental', format?: 'wav' | 'mp3') => void;
+  onDownload: (track: DownloadTrack, format: 'wav' | 'mp3') => void;
   onBatchDownload: (item: QueueItem) => void;
   onRestart: () => void;
   onTryKaraoke: () => void;
