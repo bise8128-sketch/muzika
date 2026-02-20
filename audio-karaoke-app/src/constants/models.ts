@@ -12,7 +12,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '1.0.0',
         size: 40 * 1024 * 1024,
         description: 'Standard lightweight model optimized for high-quality instrumental extraction with minimal vocal bleed.',
-        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Inst_HQ_3.onnx'),
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Inst_HQ_3.onnx') + '&fallbackUrl=' + encodeURIComponent('https://huggingface.co/seanghay/uvr_models/resolve/main/UVR-MDX-NET-Inst_HQ_3.onnx'),
         config: {
             fftSize: 6144,
             hopLength: 1024,
@@ -28,7 +28,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '1.0.0',
         size: 45 * 1024 * 1024,
         description: 'Fine-tuned MDX-Net model specifically for clean vocal extraction, ideal for isolation and karaoke lead vocals.',
-        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Voc_FT.onnx'),
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Voc_FT.onnx') + '&fallbackUrl=' + encodeURIComponent('https://huggingface.co/seanghay/uvr_models/resolve/main/UVR-MDX-NET-Voc_FT.onnx'),
         config: {
             fftSize: 6144,
             hopLength: 1024,
@@ -44,7 +44,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '2.0.0',
         size: 50 * 1024 * 1024,
         description: 'Premier model for ultra-clean vocal extraction with minimal artifacts. Preferred by professionals.',
-        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/Kim_Vocal_2.onnx'),
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/Kim_Vocal_2.onnx') + '&fallbackUrl=' + encodeURIComponent('https://huggingface.co/seanghay/uvr_models/resolve/main/Kim_Vocal_2.onnx'),
         config: {
             fftSize: 6144,
             hopLength: 1024,
@@ -60,7 +60,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '2.0.0',
         size: 45 * 1024 * 1024,
         description: 'Specialized for karaoke: removes lead vocals while preserving backing harmonies.',
-        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_KARA_2.onnx'),
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_KARA_2.onnx') + '&fallbackUrl=' + encodeURIComponent('https://huggingface.co/seanghay/uvr_models/resolve/main/UVR_MDXNET_KARA_2.onnx'),
         config: {
             fftSize: 4096,
             hopLength: 1024,
@@ -76,7 +76,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
         version: '1.0.0',
         size: 45 * 1024 * 1024,
         description: 'A robust general-purpose model for balanced vocal and instrumental separation.',
-        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_Main.onnx'),
+        url: '/api/proxy-model?url=' + encodeURIComponent('https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR_MDXNET_Main.onnx') + '&fallbackUrl=' + encodeURIComponent('https://huggingface.co/seanghay/uvr_models/resolve/main/UVR_MDXNET_Main.onnx'),
         config: {
             fftSize: 4096,
             hopLength: 1024,

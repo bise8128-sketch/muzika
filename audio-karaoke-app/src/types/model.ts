@@ -30,6 +30,7 @@ export interface ModelInfo {
     size: number; // Size in bytes
     config?: ModelConfig; // Architecture specific config
     url?: string;
+    fallbackUrl?: string;
     description?: string;
     downloadedAt?: number;
     isGpuSupported?: boolean;
