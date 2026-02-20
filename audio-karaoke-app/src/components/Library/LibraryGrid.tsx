@@ -290,10 +290,9 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                         )}
                     </div>
                 ) : (
-                    <AutoSizer renderProp={({ height, width }: { height: number; width: number }) => (
+                    <AutoSizer renderProp={({ height, width }: { height: number | undefined; width: number | undefined }) => (
                             <List
-                                height={height!}
-                                width={width!}
+                                style={{ height: height!, width: width! }}
                                 itemCount={filteredSongs.length}
                                 itemSize={130}
                                 className="scrollbar-hide"
