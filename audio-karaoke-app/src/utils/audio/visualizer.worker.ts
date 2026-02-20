@@ -9,7 +9,7 @@
 // For now, we assume standard Worker context.
 
 interface VisualizerConfig {
-    mode: 'bars' | 'waveform' | '3d-landscape' | 'spectrogram' | 'fluid';
+    mode: 'bars' | 'waveform' | '3d-landscape' | 'spectrogram' | 'fluid' | 'singstar';
     quality: 'high' | 'low';
     theme: any; // Using any for now to avoid dragging in complex types, or we can duplicate essential theme props
 }
@@ -43,6 +43,12 @@ for (let i = 0; i < fftSize; i++) {
     const a2 = alpha / 2;
     windowArray[i] = a0 - a1 * Math.cos((2 * Math.PI * i) / (fftSize - 1)) + a2 * Math.cos((4 * Math.PI * i) / (fftSize - 1));
 }
+
+// SingStar specific state
+let latestPitchHistory: any[] = [];
+const VISIBLE_HISTORY = 100;
+const MIDI_RANGE = 36;
+const MIDI_MIN = 36;
 
 let config: VisualizerConfig = {
     mode: 'bars',
@@ -93,6 +99,10 @@ self.onmessage = (e: MessageEvent) => {
                  canvas.height = payload.height;
              }
              break;
+             
+        case 'pitch_history':
+            latestPitchHistory = payload;
+            break;
     }
 };
 
@@ -252,6 +262,9 @@ function renderLoop() {
             break;
         case 'fluid':
             drawFluid();
+            break;
+        case 'singstar':
+            drawSingStar();
             break;
         case 'bars':
         default:
@@ -464,4 +477,86 @@ function updateHistory() {
     if (historyBuffer.length > maxHistoryLength) {
         historyBuffer.pop();
     }
+}
+
+function drawSingStar() {
+    if (!ctx || !canvas) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Smooth background with slight opacity for trailing effect (glassmorphism/glow base)
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.4)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let midi = MIDI_MIN; midi <= MIDI_MIN + MIDI_RANGE; midi += 12) {
+        const y = h - ((midi - MIDI_MIN) / MIDI_RANGE) * h;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+    }
+
+    if (!latestPitchHistory || latestPitchHistory.length < 2) return;
+
+    const visibleData = latestPitchHistory.slice(-VISIBLE_HISTORY);
+    const stepX = w / VISIBLE_HISTORY;
+
+    // Draw reference pitch (Glowing dotted line)
+    ctx.setLineDash([8, 8]);
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(52, 211, 153, 0.8)';
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.8)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    visibleData.forEach((d, i) => {
+        if (d.referenceMidi <= 0) return;
+        const x = i * stepX;
+        const y = h - ((d.referenceMidi - MIDI_MIN) / MIDI_RANGE) * h;
+        if (i === 0 || visibleData[i - 1].referenceMidi <= 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0; // reset
+
+    // Draw user pitch trail with aesthetic gradient
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    visibleData.forEach((d, i) => {
+        if (i === 0 || d.detectedMidi <= 0) return;
+        const prev = visibleData[i - 1];
+        if (prev.detectedMidi <= 0) return;
+
+        const x0 = (i - 1) * stepX;
+        const y0 = h - ((prev.detectedMidi - MIDI_MIN) / MIDI_RANGE) * h;
+        const x1 = i * stepX;
+        const y1 = h - ((d.detectedMidi - MIDI_MIN) / MIDI_RANGE) * h;
+
+        const acc = d.accuracy;
+        const r = acc >= 70 ? 147 : acc >= 40 ? 251 : 239;
+        const g = acc >= 70 ? 51 : acc >= 40 ? 191 : 68;
+        const b = acc >= 70 ? 234 : acc >= 40 ? 36 : 68;
+
+        // Premium glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+    });
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
 }

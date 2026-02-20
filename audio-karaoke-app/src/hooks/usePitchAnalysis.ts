@@ -13,7 +13,7 @@ import type { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 import type { KeyInfo } from '@/utils/audio/keyDetection';
 import {
-    analyzeFrame,
+    analyzeDetectedPitch,
     getReferencePitchAtTime,
     getPerformanceScore,
 } from '@/utils/audio/pitchAnalysis';
@@ -40,22 +40,20 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
     });
 
     const micStreamRef = useRef<MediaStream | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
     const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-    const rafRef = useRef<number>(0);
+    const pitchDetectorRef = useRef<AudioWorkletNode | null>(null);
     const historyRef = useRef<PitchAnalysisResult[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
 
-    // Cleanup helper
     const cleanup = useCallback(() => {
-        if (rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = 0;
+        if (pitchDetectorRef.current) {
+            pitchDetectorRef.current.port.close();
+            pitchDetectorRef.current.disconnect();
+            pitchDetectorRef.current = null;
         }
         micSourceRef.current?.disconnect();
         micStreamRef.current?.getTracks().forEach(t => t.stop());
         micStreamRef.current = null;
-        analyserRef.current = null;
         micSourceRef.current = null;
     }, []);
 
@@ -75,13 +73,23 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
             const ctx = new AudioContext();
             audioContextRef.current = ctx;
 
+            // Load the worklet
+            await ctx.audioWorklet.addModule(new URL('@/utils/audio/pitchDetector.worklet.ts', import.meta.url));
+
             const source = ctx.createMediaStreamSource(stream);
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = ANALYSIS_BUFFER_SIZE * 2;
-            source.connect(analyser);
+            const pitchDetector = new AudioWorkletNode(ctx, 'pitch-detector', {
+                processorOptions: { sampleRate: ctx.sampleRate }
+            });
+
+            source.connect(pitchDetector);
+            // Connect dummy output to keep worklet alive
+            const silence = ctx.createGain();
+            silence.gain.value = 0;
+            pitchDetector.connect(silence);
+            silence.connect(ctx.destination);
 
             micSourceRef.current = source;
-            analyserRef.current = analyser;
+            pitchDetectorRef.current = pitchDetector;
             historyRef.current = [];
 
             setState(prev => ({
@@ -96,42 +104,35 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
             const buffers = controller.getAudioBuffers();
             const vocalBuffer = buffers[0] || null; // First buffer is typically vocals
 
-            // Analysis loop
-            const buffer = new Float32Array(ANALYSIS_BUFFER_SIZE);
-            const tick = () => {
-                if (!analyserRef.current) return;
-                analyserRef.current.getFloatTimeDomainData(buffer);
+            pitchDetector.port.onmessage = (event) => {
+                if (event.data.type === 'pitch_data') {
+                    const { frequency, confidence } = event.data;
+                    const currentTime = controller.getCurrentTime();
 
-                const currentTime = controller.getCurrentTime();
+                    const refPitch = vocalBuffer
+                        ? getReferencePitchAtTime(vocalBuffer, currentTime, ANALYSIS_BUFFER_SIZE)
+                        : null;
 
-                // Get reference pitch at the current playback time
-                const refPitch = vocalBuffer
-                    ? getReferencePitchAtTime(vocalBuffer, currentTime, ANALYSIS_BUFFER_SIZE)
-                    : null;
+                    const result = analyzeDetectedPitch(
+                        frequency,
+                        confidence,
+                        refPitch,
+                        currentTime,
+                        keyInfo
+                    );
 
-                const result = analyzeFrame(
-                    buffer,
-                    refPitch,
-                    audioContextRef.current?.sampleRate ?? 44100,
-                    currentTime,
-                    keyInfo,
-                );
+                    if (result) {
+                        historyRef.current.push(result);
 
-                if (result) {
-                    historyRef.current.push(result);
-
-                    setState(prev => ({
-                        ...prev,
-                        currentPitch: result.detectedPitch,
-                        currentScore: result.accuracy,
-                        pitchHistory: [...historyRef.current],
-                    }));
+                        setState(prev => ({
+                            ...prev,
+                            currentPitch: result.detectedPitch,
+                            currentScore: result.accuracy,
+                            pitchHistory: [...historyRef.current],
+                        }));
+                    }
                 }
-
-                rafRef.current = requestAnimationFrame(tick);
             };
-
-            rafRef.current = requestAnimationFrame(tick);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Microphone access denied';
             setState(prev => ({ ...prev, error: message }));

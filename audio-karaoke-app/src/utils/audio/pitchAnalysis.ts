@@ -160,6 +160,71 @@ export function analyzeFrame(
 }
 
 /**
+ * Analyse a detected pitch against the reference.
+ * Bypasses buffer analysis when pitch detection is done in a worklet.
+ */
+export function analyzeDetectedPitch(
+    detectedPitch: number,
+    confidence: number,
+    refPitch: { pitch: number; midi: number } | null,
+    timestamp: number,
+    keyInfo?: KeyInfo | null,
+): PitchAnalysisResult | null {
+    if (detectedPitch <= 0 || confidence < MIN_CONFIDENCE) {
+        return null;
+    }
+
+    const detectedMidi = 69 + 12 * Math.log2(detectedPitch / 440);
+
+    if (!refPitch) {
+        return {
+            detectedPitch,
+            detectedMidi,
+            referencePitch: 0,
+            referenceMidi: 0,
+            centDeviation: 0,
+            accuracy: 0,
+            timestamp,
+            confidence,
+            harmonyInterval: null,
+            harmonyAccuracy: 0,
+        };
+    }
+
+    const cents = centDeviation(detectedMidi, refPitch.midi);
+    const acc = calculateAccuracy(detectedMidi, refPitch.midi);
+
+    let harmonyInterval: '3rd' | '5th' | 'octave' | null = null;
+    let harmonyAccuracy = 0;
+
+    if (keyInfo && acc < 70) {
+        const match = isHarmonyMatch(
+            detectedMidi,
+            refPitch.midi,
+            keyInfo.tonic,
+            keyInfo.scale,
+        );
+        if (match.isHarmony) {
+            harmonyInterval = match.matchedInterval;
+            harmonyAccuracy = match.accuracy;
+        }
+    }
+
+    return {
+        detectedPitch,
+        detectedMidi,
+        referencePitch: refPitch.pitch,
+        referenceMidi: refPitch.midi,
+        centDeviation: cents,
+        accuracy: acc,
+        timestamp,
+        confidence,
+        harmonyInterval,
+        harmonyAccuracy,
+    };
+}
+
+/**
  * Compute an overall performance score from the full history of frames.
  */
 export function getPerformanceScore(history: PitchAnalysisResult[]): PerformanceScore {

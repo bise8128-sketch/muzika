@@ -166,6 +166,16 @@ export class AudioVisualizer {
     }
 
     /**
+     * Set Pitch History for SingStar mode
+     */
+    setPitchHistory(history: any[]): void {
+        this.visualizerWorker?.postMessage({
+            type: 'pitch_history',
+            payload: history
+        });
+    }
+
+    /**
      * Set auto quality mode
      */
     setAutoQuality(enabled: boolean): void {
