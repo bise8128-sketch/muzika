@@ -1,31 +1,17 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Upload,
-    Edit3,
-    Maximize2,
-    Target,
-    Users,
-    Settings,
-    Mic2,
-    X,
-    Music,
-} from 'lucide-react';
 import { LRCData, VisualSettings } from '@/types/karaoke';
 import { VoicePreset, VoiceTransformSettings } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
-import { LyricTheme, LyricDisplay } from '../LyricDisplay';
-import { LyricEditor } from '../LyricEditor';
-import { CDGRenderer } from '../CDGRenderer';
-import { VoiceTransformPanel } from '../VoiceTransformPanel';
-import { PracticePanel } from '../PracticePanel';
-import { RoomLobby } from '../../Room/RoomLobby';
-import { RoomView } from '../../Room/RoomView';
+import { LyricTheme } from '../LyricDisplay';
 import { SettingsPanel } from '../../UI/SettingsPanel';
-import { AutoKeyPanel } from '../AutoKeyPanel';
 import { useTranslations } from 'next-intl';
 
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
+import { VisualizerCanvas } from './VisualizerCanvas';
+import { LyricsContainer } from './LyricsContainer';
+import { KaraokeToolbar } from './KaraokeToolbar';
+import { PanelsOverlay } from './PanelsOverlay';
 
 interface VisualizerContainerProps {
     visualizer: AudioVisualizer | null;
@@ -80,47 +66,7 @@ interface VisualizerContainerProps {
     onCloseAutoKey: () => void;
 }
 
-export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
-    visualizer,
-    canvasRef,
-    controller,
-    lyrics,
-    cdgData,
-    currentLineIndex,
-    currentWordIndex,
-    theme,
-    visualSettings,
-    isStageMode,
-    showEditor,
-    showPractice,
-    showRoom,
-    showVoiceFx,
-    showSettings,
-    showAutoKey,
-    isVisualSettingsOpen,
-    recorder,
-    voiceFxProps,
-    practiceProps,
-    roomProps,
-    autoKeyProps,
-    onCanvasReady,
-    onLRCUpload,
-    onThemeChange,
-    onToggleStageMode,
-    onTogglePractice,
-    onToggleRoom,
-    onToggleVoiceFx,
-    onToggleAutoKey,
-    onToggleSettings,
-    onToggleEditor,
-    onSaveLRC,
-    onVisualSettingsChange,
-    onCloseVisualSettings,
-    onCloseVoiceFx,
-    onClosePractice,
-    onCloseRoom,
-    onCloseAutoKey
-}) => {
+export const VisualizerContainer: React.FC<VisualizerContainerProps> = (props) => {
     const t = useTranslations('KaraokePlayer');
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -144,224 +90,71 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
             className={`glass-premium relative rounded-3xl overflow-hidden flex flex-col items-center justify-center p-6 md:p-8 group transition-all duration-700 ${
-                isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-black' : 'aspect-4/3 md:aspect-21/9'
+                props.isStageMode ? 'flex-1 min-h-[60vh] md:min-h-0 aspect-auto border-none bg-black' : 'aspect-4/3 md:aspect-21/9'
             }`}
         >
-            {/* Background Visualizer */}
-            <canvas
-                data-testid="visualizer-canvas"
-                ref={canvasRef}
-                className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 ${
-                    isStageMode ? 'opacity-80' : 'opacity-40'
-                } ${visualSettings.visualizationMode === '3d-landscape' ? 'mix-blend-screen' : ''}`}
-                width={1200}
-                height={400}
+            <VisualizerCanvas 
+                canvasRef={props.canvasRef}
+                visualSettings={props.visualSettings}
+                isStageMode={props.isStageMode}
             />
 
-            {/* Lyrics Layer */}
-            <motion.div 
-                layout
-                className={`relative z-10 w-full flex flex-col items-center transition-all duration-700 ${isStageMode ? 'scale-125' : ''}`}
-            >
-                {cdgData && (
-                    <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1.5, opacity: 1 }}
-                        className="mb-4 transform"
-                    >
-                        <CDGRenderer onCanvasReady={onCanvasReady} />
-                    </motion.div>
-                )}
+            <LyricsContainer
+                cdgData={props.cdgData}
+                lyrics={props.lyrics}
+                showEditor={props.showEditor}
+                isStageMode={props.isStageMode}
+                theme={props.theme}
+                visualSettings={props.visualSettings}
+                currentLineIndex={props.currentLineIndex}
+                currentWordIndex={props.currentWordIndex}
+                visualizer={props.visualizer}
+                controller={props.controller}
+                onCanvasReady={props.onCanvasReady}
+                onToggleEditor={props.onToggleEditor}
+                onSaveLRC={props.onSaveLRC}
+                onLRCUpload={props.onLRCUpload}
+            />
 
-                <AnimatePresence mode="wait">
-                    {showEditor ? (
-                        <motion.div 
-                            key="editor"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-3xl p-6 overflow-y-auto"
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <Edit3 className="w-5 h-5 text-primary" />
-                                    {t('editLyrics') || 'Lyric Editor'}
-                                </h2>
-                                <button
-                                    onClick={() => onToggleEditor(false)}
-                                    className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <LyricEditor
-                                currentTime={0}
-                                onSave={onSaveLRC}
-                                initialLRC={lyrics}
-                                controller={controller}
-                            />
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="display"
-                            layout
-                            className="w-full flex justify-center"
-                        >
-                                <LyricDisplay
-                                    visualizer={visualizer}
-                                    lyrics={lyrics}
-                                    currentLineIndex={currentLineIndex}
-                                currentWordIndex={currentWordIndex}
-                                theme={theme}
-                                visualSettings={visualSettings}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
+            <KaraokeToolbar
+                lyrics={props.lyrics}
+                cdgData={props.cdgData}
+                showEditor={props.showEditor}
+                theme={props.theme}
+                showPractice={props.showPractice}
+                showRoom={props.showRoom}
+                showVoiceFx={props.showVoiceFx}
+                showAutoKey={props.showAutoKey}
+                isVisualSettingsOpen={props.isVisualSettingsOpen}
+                visualSettings={props.visualSettings}
+                onThemeChange={props.onThemeChange}
+                onTogglePractice={props.onTogglePractice}
+                onToggleRoom={props.onToggleRoom}
+                onToggleVoiceFx={props.onToggleVoiceFx}
+                onToggleAutoKey={props.onToggleAutoKey}
+                onToggleEditor={props.onToggleEditor}
+                onToggleStageMode={props.onToggleStageMode}
+                onVisualSettingsChange={props.onVisualSettingsChange}
+            />
 
-            {/* Empty State Overlays */}
-            {!lyrics && !cdgData && !showEditor && (
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-20"
-                >
-                    <div className="text-center space-y-2">
-                        <h3 className="text-2xl font-bold text-white">Ready to Shine?</h3>
-                        <p className="text-white/40 text-sm">Upload an LRC file or CDG data to begin</p>
-                    </div>
-                    <div className="flex gap-4">
-                        <label className="cursor-pointer interactive-scale">
-                            <input type="file" accept=".lrc,.cdg" onChange={onLRCUpload} className="sr-only" />
-                            <div className="bg-primary/20 backdrop-blur-xl px-8 py-4 rounded-full border border-primary/30 text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(147,51,234,0.3)]">
-                                <Upload className="w-4 h-4" />
-                                {t('uploadLrc')}
-                            </div>
-                        </label>
-                        <button
-                            onClick={() => onToggleEditor(true)}
-                            className="bg-white/5 backdrop-blur-xl px-8 py-4 rounded-full border border-white/10 hover:bg-white/10 transition-all text-white/80 font-bold text-sm uppercase tracking-widest interactive-scale"
-                        >
-                            {t('createLyrics')}
-                        </button>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Quick Controls Toolbar */}
-            {(lyrics || cdgData) && !showEditor && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-6 right-6 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity z-50 p-2 rounded-2xl bg-black/20 backdrop-blur-xl border border-white/5"
-                >
-                    {/* Theme Switcher */}
-                    <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-                        {(['modern', 'neon', 'classic', 'retro'] as LyricTheme[]).map(t => (
-                            <button
-                                key={t}
-                                onClick={() => onThemeChange(t)}
-                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
-                                    theme === t ? 'bg-primary text-white shadow-[0_0_12px_rgba(147,51,234,0.5)]' : 'text-white/30 hover:text-white/60'
-                                }`}
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="w-[1px] h-8 bg-white/10 self-center" />
-
-                    <ToolbarButton 
-                        icon={<Target className="w-4 h-4" />} 
-                        active={showPractice} 
-                        onClick={onTogglePractice} 
-                        label="Practice" 
-                    />
-                    <ToolbarButton 
-                        icon={<Users className="w-4 h-4" />} 
-                        active={showRoom} 
-                        onClick={onToggleRoom} 
-                        label="Collab" 
-                    />
-                    <ToolbarButton 
-                        icon={<Mic2 className="w-4 h-4" />} 
-                        active={showVoiceFx} 
-                        onClick={onToggleVoiceFx} 
-                        label="Voice FX" 
-                    />
-                    <ToolbarButton 
-                        icon={<Music className="w-4 h-4" />} 
-                        active={showAutoKey} 
-                        onClick={onToggleAutoKey} 
-                        label="Auto-Key" 
-                    />
-                    <ToolbarButton 
-                        icon={<Settings className="w-4 h-4" />} 
-                        active={isVisualSettingsOpen} 
-                        onClick={() => onVisualSettingsChange({ ...visualSettings })} 
-                        label="Settings" 
-                    />
-                    <ToolbarButton 
-                        icon={<Edit3 className="w-4 h-4" />} 
-                        onClick={() => onToggleEditor(true)} 
-                        label="Editor" 
-                    />
-                    <ToolbarButton 
-                        icon={<Maximize2 className="w-4 h-4" />} 
-                        onClick={() => onToggleStageMode(true)} 
-                        label="Stage Mode" 
-                    />
-                </motion.div>
-            )} 
-
-            {/* Side Panels - Floating & Animated */}
-            <AnimatePresence>
-                {showVoiceFx && (
-                    <PanelWrapper key="voicefx" onClose={onCloseVoiceFx}>
-                        <VoiceTransformPanel {...voiceFxProps} onClose={onCloseVoiceFx} />
-                    </PanelWrapper>
-                )}
-                {showPractice && (
-                    <PanelWrapper key="practice" onClose={onClosePractice} className="w-85">
-                        <PracticePanel
-                            {...practiceProps}
-                            onStopPractice={() => {
-                                practiceProps.onStopPractice();
-                                onClosePractice();
-                            }}
-                        />
-                         {!practiceProps.isPracticing && !practiceProps.isComplete && (
-                            <button 
-                                className="w-full mt-4 px-4 py-3 bg-primary/20 hover:bg-primary/40 text-primary-foreground rounded-xl font-bold transition-all border border-primary/30"
-                                onClick={() => practiceProps.startPractice(practiceProps.pitchHistory)}
-                                disabled={practiceProps.pitchHistory.length === 0}
-                            >
-                                Start Practice From History
-                            </button>
-                        )}
-                    </PanelWrapper>
-                )}
-                {showRoom && (
-                    <PanelWrapper key="room" onClose={onCloseRoom}>
-                        {!roomProps.isConnected || !roomProps.room ? (
-                                <RoomLobby onJoin={roomProps.onJoin} onCancel={onCloseRoom} />
-                        ) : (
-                            <RoomView {...roomProps} onLeave={roomProps.onLeave} />
-                        )}
-                    </PanelWrapper>
-                )}
-                {showAutoKey && (
-                    <PanelWrapper key="autokey" onClose={onCloseAutoKey}>
-                        <AutoKeyPanel {...autoKeyProps} onClose={onCloseAutoKey} />
-                    </PanelWrapper>
-                )}
-            </AnimatePresence>
+            <PanelsOverlay
+                showVoiceFx={props.showVoiceFx}
+                showPractice={props.showPractice}
+                showRoom={props.showRoom}
+                showAutoKey={props.showAutoKey}
+                voiceFxProps={props.voiceFxProps}
+                practiceProps={props.practiceProps}
+                roomProps={props.roomProps}
+                autoKeyProps={props.autoKeyProps}
+                onCloseVoiceFx={props.onCloseVoiceFx}
+                onClosePractice={props.onClosePractice}
+                onCloseRoom={props.onCloseRoom}
+                onCloseAutoKey={props.onCloseAutoKey}
+            />
 
             {/* Recording Indicator */}
             <AnimatePresence>
-                {recorder.isRecording && (
+                {props.recorder.isRecording && (
                     <motion.div 
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -380,36 +173,11 @@ export const VisualizerContainer: React.FC<VisualizerContainerProps> = ({
 
             {/* Visual Settings Panel */}
             <SettingsPanel
-                isOpen={isVisualSettingsOpen}
-                onClose={onCloseVisualSettings}
-                visualSettings={visualSettings}
-                onVisualSettingsChange={onVisualSettingsChange}
+                isOpen={props.isVisualSettingsOpen}
+                onClose={props.onCloseVisualSettings}
+                visualSettings={props.visualSettings}
+                onVisualSettingsChange={props.onVisualSettingsChange}
             />
         </motion.div>
     );
 };
-
-const ToolbarButton: React.FC<{ icon: React.ReactNode; active?: boolean; onClick: () => void; label: string }> = ({ icon, active, onClick, label }) => (
-    <button
-        onClick={onClick}
-        className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center interactive-scale ${
-            active 
-                ? 'bg-primary text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]' 
-                : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/5'
-        }`}
-        title={label}
-    >
-        {icon}
-    </button>
-);
-
-const PanelWrapper: React.FC<{ children: React.ReactNode; onClose: () => void; className?: string }> = ({ children, className }) => (
-    <motion.div 
-        initial={{ opacity: 0, scale: 0.9, x: 10 }}
-        animate={{ opacity: 1, scale: 1, x: 0 }}
-        exit={{ opacity: 0, scale: 0.9, x: 10 }}
-        className={`absolute top-24 right-6 z-[60] glass-premium rounded-3xl p-1 shadow-2xl ${className || ''}`}
-    >
-        {children}
-    </motion.div>
-);
