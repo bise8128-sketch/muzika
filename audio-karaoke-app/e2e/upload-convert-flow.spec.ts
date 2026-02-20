@@ -124,7 +124,7 @@ async function setupMocks(page: import('@playwright/test').Page, {
   });
 
   await page.route('**/mock-audio/*.wav', route =>
-    route.fulfill({ status: 200, contentType: 'audio/wav', body: Buffer.from([0x52,0x49,0x46,0x46,0x00,0x00,0x00,0x00,0x57,0x41,0x56,0x45,0x66,0x6d,0x74,0x20]) }),
+    route.fulfill({ status: 200, contentType: 'audio/wav', body: Buffer.from('RIFF....WAVEfmt ') }),
   );
   await page.route('**/models/**/*.onnx', route => route.abort());
   await page.route('**/models/**/*.wasm', route => route.abort());
