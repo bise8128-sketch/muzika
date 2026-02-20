@@ -18,9 +18,9 @@ test.describe('Karaoke Player', () => {
     await fileInput.setInputFiles('e2e/fixtures/dummy.mp3');
 
     // Wait for processing and for the player to appear
-    const playerContainer = page.locator('.glass-premium');
+    const playerContainer = page.getByTestId('visualizer-container');
     // Large timeout for AI processing
-    await expect(playerContainer).toBeVisible({ timeout: 60000 });
+    await expect(playerContainer).toBeVisible({ timeout: 90000 });
   });
 
   test('should show playback controls', async ({ page }) => {
