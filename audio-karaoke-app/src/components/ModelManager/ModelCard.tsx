@@ -53,8 +53,8 @@ export const ModelCard: React.FC<ModelCardProps> = ({
             if (!signal.aborted) {
                 onDownloadComplete();
             }
-        } catch (err: any) {
-            if (err.message === 'Aborted') return;
+        } catch (err: unknown) {
+            if (err instanceof Error && err.message === 'Aborted') return;
             console.error('Download failed:', err);
             setError('Download failed. Please try again.');
         } finally {
