@@ -373,16 +373,10 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 </div>
                 {showPitchAnalysis && (
                     <PitchVisualizer
-                        pitchHistory={pitchAnalysis.pitchHistory}
                         currentScore={pitchAnalysis.currentScore}
                         currentPitch={pitchAnalysis.currentPitch}
                         overallScore={pitchAnalysis.overallScore}
                         isListening={pitchAnalysis.isListening}
-                        harmonySuggestions={harmonyGuide.harmonyEnabled ? harmonyGuide.getSuggestions(
-                            pitchAnalysis.pitchHistory.length > 0
-                                ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
-                                : 0
-                        ) : undefined}
                     />
                 )}
             </div>

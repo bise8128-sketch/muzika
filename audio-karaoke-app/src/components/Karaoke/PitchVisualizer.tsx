@@ -6,6 +6,8 @@
  * Shows a scrolling pitch trace comparing the user's voice
  * against the reference pitch, plus live accuracy score and
  * a final grade card.
+ */
+
 import React from 'react';
 import type { PerformanceScore, PerformanceGrade } from '@/types/audio';
 import { useTranslations } from 'next-intl';

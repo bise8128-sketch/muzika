@@ -168,7 +168,7 @@ export class AudioVisualizer {
     /**
      * Set Pitch History for SingStar mode
      */
-    setPitchHistory(history: Record<string, unknown>[]): void {
+    setPitchHistory(history: import('../../types/audio').PitchAnalysisResult[]): void {
         this.visualizerWorker?.postMessage({
             type: 'pitch_history',
             payload: history
