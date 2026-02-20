@@ -22,10 +22,27 @@ let isRunning = false;
 let animationId: number | null = null;
 
 // State needed for rendering
-let frequencyData: Uint8Array = new Uint8Array(1024); // Default size, will resize on first data
-let timeDomainData: Uint8Array = new Uint8Array(1024); // If we get it
+let frequencyData: Uint8Array = new Uint8Array(1024);
+let timeDomainData: Float32Array = new Float32Array(2048);
 const historyBuffer: Uint8Array[] = [];
 let maxHistoryLength = 200;
+
+// FFT State
+const fftSize = 2048;
+const smoothingTimeConstant = 0.8;
+let lastFrequencyData = new Float32Array(fftSize / 2);
+let windowArray = new Float32Array(fftSize);
+let real = new Float32Array(fftSize);
+let imag = new Float32Array(fftSize);
+
+// Pre-compute Blackman window
+for (let i = 0; i < fftSize; i++) {
+    const alpha = 0.16;
+    const a0 = (1 - alpha) / 2;
+    const a1 = 0.5;
+    const a2 = alpha / 2;
+    windowArray[i] = a0 - a1 * Math.cos((2 * Math.PI * i) / (fftSize - 1)) + a2 * Math.cos((4 * Math.PI * i) / (fftSize - 1));
+}
 
 let config: VisualizerConfig = {
     mode: 'bars',
@@ -83,23 +100,137 @@ function setupAudioPort() {
     if (!frequencyPort) return;
 
     frequencyPort.onmessage = (e) => {
-        if (e.data.type === 'frequency_data') {
-            // e.data.data is the Uint8Array
+        // We now receive raw time_domain_data from the worklet
+        if (e.data.type === 'time_domain_data') {
             const newData = e.data.data;
-            
-            // Check if size changed
-            if (frequencyData.length !== newData.length) {
-                frequencyData = new Uint8Array(newData.length);
+            if (timeDomainData.length !== newData.length) {
+                timeDomainData = new Float32Array(newData.length);
             }
-            
-            frequencyData.set(newData);
-            
-            // We might want to push to history here if we want history to be update-driven
-            // But usually history is frame-driven or update-driven. 
-            // Let's do update driven for smoother history if audio is fast, or frame driven.
-            // Existing implementation was frame-driven in the draw loop updateHistory()
+            timeDomainData.set(newData);
+            // Run FFT asynchronously off the main audio thread
+            performFFT();
         }
     };
+}
+
+function performFFT() {
+    // Apply Window & Prepare Complex Arrays
+    for (let i = 0; i < fftSize; i++) {
+        real[i] = timeDomainData[i] * windowArray[i];
+        imag[i] = 0;
+    }
+
+    // Compute FFT
+    fft(real, imag);
+
+    // Compute Magnitude & Smooth
+    const binCount = fftSize / 2;
+    
+    // AnalyserNode: minDecibels = -100, maxDecibels = -30
+    const minDecibels = -100;
+    const maxDecibels = -30;
+    const range = maxDecibels - minDecibels;
+
+    if (frequencyData.length !== binCount) {
+        frequencyData = new Uint8Array(binCount);
+    }
+
+    let bass = 0;
+    let mid = 0;
+    let treble = 0;
+    let energy = 0;
+
+    const bassEnd = Math.floor(binCount * 0.05); // Low frequency
+    const midEnd = Math.floor(binCount * 0.4);   // Mids
+
+    for (let i = 0; i < binCount; i++) {
+        const magnitude = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
+        
+        // Convert to dB
+        const db = 20 * Math.log10(magnitude + 1e-6);
+
+        // Smooth
+        const smoothedDb = smoothingTimeConstant * lastFrequencyData[i] + (1 - smoothingTimeConstant) * db;
+        lastFrequencyData[i] = smoothedDb;
+
+        // Map to 0-255
+        let byteValue = 255 * (smoothedDb - minDecibels) / range;
+        
+        // Clamp
+        if (byteValue < 0) byteValue = 0;
+        if (byteValue > 255) byteValue = 255;
+
+        frequencyData[i] = byteValue;
+
+        // Metrics accumulations
+        energy += byteValue;
+        if (i < bassEnd) bass += byteValue;
+        else if (i < midEnd) mid += byteValue;
+        else treble += byteValue;
+    }
+
+    // Send computed metrics back to main thread for game logic
+    postMessage({
+        type: 'audio_metrics',
+        payload: {
+            bass: (bass / bassEnd) / 255,
+            mid: (mid / (midEnd - bassEnd)) / 255,
+            treble: (treble / (binCount - midEnd)) / 255,
+            energy: (energy / binCount) / 255
+        }
+    });
+}
+
+// In-place FFT (Cooley-Tukey algorithm) mapped from worklet to worker
+function fft(real: Float32Array, imag: Float32Array) {
+    const n = real.length;
+    
+    // Bit Reversal Permutation
+    let j = 0;
+    for (let i = 0; i < n - 1; i++) {
+        if (i < j) {
+            let temp = real[i]; real[i] = real[j]; real[j] = temp;
+            temp = imag[i]; imag[i] = imag[j]; imag[j] = temp;
+        }
+        let k = n >> 1;
+        while (k <= j) {
+            j -= k;
+            k >>= 1;
+        }
+        j += k;
+    }
+
+    // Butterfly Operations
+    let step = 1;
+    while (step < n) {
+        const jump = step << 1;
+        const deltaAngle = -Math.PI / step;
+        
+        const alpha = 2.0 * Math.pow(Math.sin(deltaAngle * 0.5), 2);
+        const beta = Math.sin(deltaAngle);
+        
+        let wr = 1.0;
+        let wi = 0.0;
+
+        for (let i = 0; i < step; i++) {
+            for (let j = i; j < n; j += jump) {
+                const k = j + step;
+                
+                const tr = wr * real[k] - wi * imag[k];
+                const ti = wr * imag[k] + wi * real[k];
+                
+                real[k] = real[j] - tr;
+                imag[k] = imag[j] - ti;
+                real[j] += tr;
+                imag[j] += ti;
+            }
+            
+            const tempp = wr;
+            wr = wr - (alpha * wr + beta * wi);
+            wi = wi - (alpha * wi - beta * tempp);
+        }
+        step = jump;
+    }
 }
 
 function renderLoop() {
