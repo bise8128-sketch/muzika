@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { downloadModel } from '@/utils/ml/modelDownloader';
 import { modelStorage } from '@/utils/storage/modelStorage';
@@ -19,6 +19,15 @@ export const ModelCard: React.FC<ModelCardProps> = ({
     const [isDownloading, setIsDownloading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     const formatSize = (bytes: number) => {
         const mb = bytes / (1024 * 1024);
@@ -27,20 +36,30 @@ export const ModelCard: React.FC<ModelCardProps> = ({
 
     const handleDownload = async () => {
         try {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            abortControllerRef.current = new AbortController();
+            const signal = abortControllerRef.current.signal;
+
             setIsDownloading(true);
             setError(null);
             setProgress(0);
 
             await downloadModel(model, (p: ModelDownloadProgress) => {
                 setProgress(p.percentage);
-            });
+            }, signal);
 
-            onDownloadComplete();
-        } catch (err) {
+            if (!signal.aborted) {
+                onDownloadComplete();
+            }
+        } catch (err: any) {
+            if (err.message === 'Aborted') return;
             console.error('Download failed:', err);
             setError('Download failed. Please try again.');
         } finally {
             setIsDownloading(false);
+            abortControllerRef.current = null;
         }
     };
 

@@ -15,7 +15,8 @@ const sessionCache = new Map<string, ort.InferenceSession>();
  */
 export async function loadModel(
     modelInfo: ModelInfo,
-    onProgress?: (progress: ModelDownloadProgress) => void
+    onProgress?: (progress: ModelDownloadProgress) => void,
+    signal?: AbortSignal
 ): Promise<InferenceEngine> {
     // Return from memory cache if already loaded
     if (sessionCache.has(modelInfo.id)) {
@@ -35,8 +36,9 @@ export async function loadModel(
 
     // If not in cache, download it
     if (!modelData) {
+        if (signal?.aborted) throw new Error('Aborted');
         console.log(`Model ${modelInfo.id} not found in cache. Downloading...`);
-        modelData = await downloadModel(modelInfo, onProgress);
+        modelData = await downloadModel(modelInfo, onProgress, signal);
     }
 
 
