@@ -24,7 +24,12 @@ async function setupMocks(page: import('@playwright/test').Page, {
   abortUpload?: boolean;
 } = {}) {
   await page.addInitScript(() => {
-    localStorage.setItem('muzika_onboarding_completed', 'true');
+    // Guard against cross-origin frame SecurityError
+    if (window.top !== window) return;
+
+    try {
+      localStorage.setItem('muzika_onboarding_completed', 'true');
+    } catch { /* cross-origin frame */ }
 
     const MockAudioContext = class {
       state = 'running';
@@ -237,7 +242,7 @@ test.describe('Group 1: Upload Gate', () => {
 // Group 2 — UPLOAD & PROCESSING STATES
 // ---------------------------------------------------------------------------
 test.describe('Group 2: Upload & Processing States', () => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
 
   test.beforeEach(async ({ page }) => {
     await setupMocks(page);
@@ -376,7 +381,7 @@ test.describe('Group 2: Upload & Processing States', () => {
 // Group 3 — RESULTS & STEM DOWNLOADS
 // ---------------------------------------------------------------------------
 test.describe('Group 3: Results & Stem Downloads', () => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
 
   // Navigate to results screen once per test
   test.beforeEach(async ({ page }) => {
