@@ -9,7 +9,9 @@ import type {
     PitchAnalysisResult,
     PerformanceScore,
     PerformanceGrade,
+    PitchTarget
 } from '../../types/audio';
+import type { LRCData } from '../../types/karaoke';
 import type { KeyInfo } from './keyDetection';
 import { PitchCorrector } from './pitchCorrection';
 import { isHarmonyMatch } from './harmonyGuide';
@@ -289,4 +291,40 @@ export function getPerformanceScore(history: PitchAnalysisResult[]): Performance
         harmonyHits,
         harmonyBonus,
     };
+}
+
+/**
+ * Generate rhythmic pitch targets from lyric text blocks and the reference vocal buffer.
+ * Samples the expected pitch for each lyric segment to draw target boxes.
+ */
+export function generatePitchTargets(
+    lyrics: LRCData,
+    vocalBuffer: AudioBuffer | null,
+    startIndex: number,
+    count: number = 5
+): PitchTarget[] {
+    if (!lyrics || !vocalBuffer || startIndex < 0) return [];
+
+    const targets: PitchTarget[] = [];
+    const endIndex = Math.min(startIndex + count, lyrics.lines.length);
+    const lines = lyrics.lines.slice(startIndex, endIndex);
+
+    for (const line of lines) {
+        // Sample pitch at the middle of the lyric duration
+        const duration = Math.max(0.5, line.endTime - line.startTime);
+        const midTime = line.startTime + duration * 0.4; // sample slightly before middle
+        
+        const refPitch = getReferencePitchAtTime(vocalBuffer, midTime, 8192); // larger window for better target extraction
+        
+        if (refPitch && refPitch.midi > 0) {
+            targets.push({
+                startTime: line.startTime,
+                endTime: line.endTime,
+                referenceMidi: Math.round(refPitch.midi),
+                text: line.text
+            });
+        }
+    }
+    
+    return targets;
 }

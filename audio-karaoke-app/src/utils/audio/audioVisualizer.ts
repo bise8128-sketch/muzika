@@ -176,6 +176,16 @@ export class AudioVisualizer {
     }
 
     /**
+     * Set Pitch Targets for rhythmic SingStar mode
+     */
+    setPitchTargets(targets: import('../../types/audio').PitchTarget[]): void {
+        this.visualizerWorker?.postMessage({
+            type: 'pitch_targets',
+            payload: targets
+        });
+    }
+
+    /**
      * Set auto quality mode
      */
     setAutoQuality(enabled: boolean): void {

@@ -17,6 +17,7 @@ import { useAutoKey } from '@/hooks/useAutoKey';
 import { useHarmonyGuide } from '@/hooks/useHarmonyGuide';
 import { useMixRecorder } from '@/hooks/useMixRecorder';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
+import { generatePitchTargets } from '@/utils/audio/pitchAnalysis';
 
 // Custom Hooks
 import { useKaraokeExport } from '@/hooks/useKaraokeExport';
@@ -177,6 +178,17 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             visualizerInstance.setPitchHistory(pitchAnalysis.pitchHistory);
         }
     }, [pitchAnalysis.pitchHistory, visualizerInstance, pitchAnalysis.isListening]);
+
+    useEffect(() => {
+        if (visualizerInstance && pitchAnalysis.isListening && lyrics) {
+            const vocalBuffer = controller.getAudioBuffers()[0] || null;
+            const startIndex = Math.max(0, lyricState.lineIndex);
+            
+            // Generate rhythmic targets dynamically as the line progresses
+            const targets = generatePitchTargets(lyrics, vocalBuffer, startIndex, 6);
+            visualizerInstance.setPitchTargets(targets);
+        }
+    }, [lyrics, lyricState.lineIndex, visualizerInstance, pitchAnalysis.isListening, controller]);
 
     // Initialize settings from store
     useEffect(() => {

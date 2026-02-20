@@ -46,6 +46,7 @@ for (let i = 0; i < fftSize; i++) {
 
 // SingStar specific state
 let latestPitchHistory: any[] = [];
+let latestPitchTargets: any[] = [];
 const VISIBLE_HISTORY = 100;
 const MIDI_RANGE = 36;
 const MIDI_MIN = 36;
@@ -102,6 +103,10 @@ self.onmessage = (e: MessageEvent) => {
              
         case 'pitch_history':
             latestPitchHistory = payload;
+            break;
+            
+        case 'pitch_targets':
+            latestPitchTargets = payload;
             break;
     }
 };
@@ -503,29 +508,69 @@ function drawSingStar() {
 
     if (!latestPitchHistory || latestPitchHistory.length < 2) return;
 
-    const visibleData = latestPitchHistory.slice(-VISIBLE_HISTORY);
-    const stepX = w / VISIBLE_HISTORY;
+    // Time-based rendering for rhythm game feel
+    const now = latestPitchHistory[latestPitchHistory.length - 1].timestamp;
+    const currentX = w * 0.3; // Current time is at 30% of screen width
+    const pixelsPerSecond = w * 0.25; // 4 seconds visible across the screen
 
-    // Draw reference pitch (Glowing dotted line)
-    context.setLineDash([8, 8]);
-    context.shadowBlur = 10;
-    context.shadowColor = 'rgba(52, 211, 153, 0.8)';
-    context.strokeStyle = 'rgba(52, 211, 153, 0.8)';
-    context.lineWidth = 3;
-    context.beginPath();
-    visibleData.forEach((d, i) => {
-        if (d.referenceMidi <= 0) return;
-        const x = i * stepX;
-        const y = h - ((d.referenceMidi - MIDI_MIN) / MIDI_RANGE) * h;
-        if (i === 0 || visibleData[i - 1].referenceMidi <= 0) {
-            context.moveTo(x, y);
-        } else {
-            context.lineTo(x, y);
-        }
-    });
-    context.stroke();
-    context.setLineDash([]);
-    context.shadowBlur = 0; // reset
+    const timeToX = (t: number) => currentX + (t - now) * pixelsPerSecond;
+    const midiToY = (m: number) => h - ((m - MIDI_MIN) / MIDI_RANGE) * h;
+
+    // 1. Draw upcoming target blocks
+    if (latestPitchTargets && latestPitchTargets.length > 0) {
+        context.shadowBlur = 15;
+        latestPitchTargets.forEach(target => {
+            const x1 = timeToX(target.startTime);
+            const x2 = timeToX(target.endTime);
+            const y = midiToY(target.referenceMidi);
+            
+            // Only draw if visible
+            if (x2 > 0 && x1 < w) {
+                const width = Math.max(x2 - x1, 10);
+                
+                // Check if currently hitting this target
+                const isHit = now >= target.startTime && now <= target.endTime && 
+                              Math.abs(latestPitchHistory[latestPitchHistory.length - 1].detectedMidi - target.referenceMidi) <= 1.5;
+
+                context.fillStyle = isHit ? 'rgba(250, 204, 21, 0.4)' : 'rgba(255, 255, 255, 0.15)';
+                context.strokeStyle = isHit ? 'rgba(250, 204, 21, 0.9)' : 'rgba(255, 255, 255, 0.4)';
+                context.shadowColor = isHit ? 'rgba(250, 204, 21, 0.8)' : 'rgba(255, 255, 255, 0.2)';
+                context.lineWidth = 2;
+                
+                // Rounded rectangle for block
+                context.beginPath();
+                context.roundRect(x1, y - 10, width, 20, 8);
+                context.fill();
+                context.stroke();
+            }
+        });
+        context.shadowBlur = 0;
+    }
+
+    const visibleData = latestPitchHistory.slice(-VISIBLE_HISTORY);
+
+    // 2. Draw continuous reference pitch (Glowing dotted line) if no targets
+    if (!latestPitchTargets || latestPitchTargets.length === 0) {
+        context.setLineDash([8, 8]);
+        context.shadowBlur = 10;
+        context.shadowColor = 'rgba(52, 211, 153, 0.8)';
+        context.strokeStyle = 'rgba(52, 211, 153, 0.8)';
+        context.lineWidth = 3;
+        context.beginPath();
+        visibleData.forEach((d, i) => {
+            if (d.referenceMidi <= 0) return;
+            const x = timeToX(d.timestamp);
+            const y = midiToY(d.referenceMidi);
+            if (i === 0 || visibleData[i - 1].referenceMidi <= 0) {
+                context.moveTo(x, y);
+            } else {
+                context.lineTo(x, y);
+            }
+        });
+        context.stroke();
+        context.setLineDash([]);
+        context.shadowBlur = 0; // reset
+    }
 
     // Draw user pitch trail with aesthetic gradient
     context.lineWidth = 5;
@@ -537,10 +582,10 @@ function drawSingStar() {
         const prev = visibleData[i - 1];
         if (prev.detectedMidi <= 0) return;
 
-        const x0 = (i - 1) * stepX;
-        const y0 = h - ((prev.detectedMidi - MIDI_MIN) / MIDI_RANGE) * h;
-        const x1 = i * stepX;
-        const y1 = h - ((d.detectedMidi - MIDI_MIN) / MIDI_RANGE) * h;
+        const x0 = timeToX(prev.timestamp);
+        const y0 = midiToY(prev.detectedMidi);
+        const x1 = timeToX(d.timestamp);
+        const y1 = midiToY(d.detectedMidi);
 
         const acc = d.accuracy;
         const r = acc >= 70 ? 147 : acc >= 40 ? 251 : 239;
