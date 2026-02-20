@@ -21,10 +21,10 @@ export const ServerLibrarySection: React.FC<ServerLibrarySectionProps> = ({ onSe
             try {
                 const data = await apiClient.getLibrary(abortController.signal);
                 setSongs(data.songs || []);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 if (abortController.signal.aborted) return;
                 console.error(err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : 'Unknown error');
             } finally {
                 setIsLoading(false);
             }
