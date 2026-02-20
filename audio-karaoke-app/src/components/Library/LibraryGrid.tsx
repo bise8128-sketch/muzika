@@ -10,8 +10,8 @@ import { FilterControls } from './FilterControls';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/utils/storage/audioDatabase';
 import { queueStorage } from '@/utils/storage/queueStorage';
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { List, RowComponentProps } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 
 interface LibraryGridProps {
@@ -27,6 +27,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     onClosePlayer,
     onAddToQueue
 }) => {
+    // ... (keep state variables)
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<FilterType>('all');
     const [sortOption, setSortOption] = useState<SortOption>('date');
@@ -289,16 +290,15 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                         )}
                     </div>
                 ) : (
-                    <AutoSizer>
-                        {({ height, width }: { height: number; width: number }) => (
+                    <AutoSizer renderProp={({ height, width }) => (
                             <List
-                                height={height}
-                                width={width}
+                                height={height!}
+                                width={width!}
                                 itemCount={filteredSongs.length}
                                 itemSize={130}
                                 className="scrollbar-hide"
                             >
-                                {({ index, style }: ListChildComponentProps) => {
+                                {({ index, style }: RowComponentProps) => {
                                     const song = filteredSongs[index];
                                     if (!song) return null;
 
@@ -381,8 +381,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                     );
                                 }}
                             </List>
-                        )}
-                    </AutoSizer>
+                        )} />
                 )}
             </div>
             
