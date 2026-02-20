@@ -4,12 +4,11 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { LRCData, VisualSettings } from '@/types/karaoke';
+import { LRCData } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { usePitchAnalysis } from '@/hooks/usePitchAnalysis';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
-import { useTranslations } from 'next-intl';
 import { usePractice } from '@/hooks/usePractice';
 import { useKaraokeRoom } from '@/hooks/useKaraokeRoom';
 import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
@@ -18,6 +17,7 @@ import { useHarmonyGuide } from '@/hooks/useHarmonyGuide';
 import { useMixRecorder } from '@/hooks/useMixRecorder';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
 import { generatePitchTargets } from '@/utils/audio/pitchAnalysis';
+import { useKaraokeUI } from '@/hooks/useKaraokeUI';
 
 // Custom Hooks
 import { useKaraokeExport } from '@/hooks/useKaraokeExport';
@@ -27,10 +27,10 @@ import { useVisualizerOrchestrator } from '@/hooks/useVisualizerOrchestrator';
 import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 
 // Sub-components
-import { VisualizerContainer } from './Visualizer/VisualizerContainer';
+import { KaraokeDisplay } from './Visualizer/KaraokeDisplay';
+import { KaraokeOverlay } from './KaraokeOverlay';
 import { KaraokeControls } from './Controls/KaraokeControls';
 import { EffectsController } from './EffectsController';
-import { LyricTheme } from './LyricDisplay';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { PlayerHeader } from './PlayerHeader';
 import { ErrorBoundary } from '../UI/ErrorBoundary';
@@ -48,9 +48,14 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 };
 
 const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
-    const t = useTranslations('KaraokePlayer');
+    // UI State Management
+    const { state: uiState, actions: uiActions } = useKaraokeUI();
+    
+    // Core Data State
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
+
+    // Audio Hooks
     const playback = usePlayback(controller);
     const recorder = useVoiceRecorder();
     const mixRecorder = useMixRecorder();
@@ -58,33 +63,11 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const harmonyGuide = useHarmonyGuide(useAutoKeyHook.detectedKey);
     const pitchAnalysis = usePitchAnalysis(controller, harmonyGuide.activeKeyInfo);
     
-    // UI State
-    const [showEditor, setShowEditor] = useState(false);
-    const [theme, setTheme] = useState<LyricTheme>('modern');
-    const [isStageMode, setIsStageMode] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [showPractice, setShowPractice] = useState(false);
-    const [showRoom, setShowRoom] = useState(false);
-    const [showVoiceFx, setShowVoiceFx] = useState(false);
-    const [showAutoKey, setShowAutoKey] = useState(false);
-    const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
-
-    const [visualSettings, setVisualSettings] = useState<VisualSettings>({
-        highlightColor: 'text-yellow-400',
-        fontSize: 'base',
-        fontWeight: 'bold',
-        textShadow: true,
-        offset: 0,
-        showDualText: false,
-        visualizationMode: 'bars',
-        autoQuality: true
-    });
-
     // Domain Logic Hooks
     const { lyricState, handleCanvasReady } = useKaraokeEngine({
         controller,
         lyrics,
-        visualSettings,
+        visualSettings: uiState.visualSettings,
         cdgData
     });
 
@@ -121,7 +104,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerInstance = useVisualizerOrchestrator({
         controller,
-        visualSettings,
+        visualSettings: uiState.visualSettings,
         canvasRef,
         vocalsVolume: playback.vocalsVolume,
         instrumentalVolume: playback.instrumentalVolume
@@ -136,11 +119,10 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Mix Bus Routing Setup
     useEffect(() => {
-        // Unconditionally get mix destination so it's ready
         const dest = mixRecorder.getMixDestination();
         
-        // Let PlaybackCore output straight into the mix recorder destination
-        const systemDest = controller['effects']?.getDestination?.(); // Internal hack/bypass or expose explicitly
+        // Internal hack/bypass or expose explicitly
+        const systemDest = controller['effects']?.getDestination?.(); 
         if (systemDest) {
             systemDest.connect(dest);
         }
@@ -164,9 +146,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         if (pitchAnalysis.isListening && visualizerInstance) {
             visualizerInstance.setMode('singstar');
         } else if (visualizerInstance) {
-            visualizerInstance.setMode(visualSettings.visualizationMode);
+            visualizerInstance.setMode(uiState.visualSettings.visualizationMode);
         }
-    }, [pitchAnalysis.isListening, visualizerInstance, visualSettings.visualizationMode]);
+    }, [pitchAnalysis.isListening, visualizerInstance, uiState.visualSettings.visualizationMode]);
 
     useEffect(() => {
         if (visualizerInstance && pitchAnalysis.isListening && pitchAnalysis.pitchHistory.length > 0) {
@@ -179,30 +161,26 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             const vocalBuffer = controller.getAudioBuffers()[0] || null;
             const startIndex = Math.max(0, lyricState.lineIndex);
             
-            // Generate rhythmic targets dynamically as the line progresses
             const targets = generatePitchTargets(lyrics, vocalBuffer, startIndex, 6);
             visualizerInstance.setPitchTargets(targets);
         }
     }, [lyrics, lyricState.lineIndex, visualizerInstance, pitchAnalysis.isListening, controller]);
 
-    // Initialize settings from store
+    // Initialize volume from settings
     useEffect(() => {
         const settings = getSettings();
-        setTheme(settings.theme);
-        setIsStageMode(settings.stageModeEnabled);
-
         const bal = settings.defaultVolumeBalance;
         const vVol = Math.min(1, bal * 2);
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
-    }, []); // Only once on mount
+    }, []); // Only once on mount (ignoring playback dep safely)
 
     // Shortcuts
     useKaraokeShortcuts({
         playback,
-        showEditor,
-        setIsStageMode
+        showEditor: uiState.showEditor,
+        setIsStageMode: uiActions.setIsStageMode
     });
 
     const handleLRCUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,146 +215,121 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     return (
         <ErrorBoundary onReset={() => recorder.clearRecording()}>
-            <div className={`flex flex-col gap-4 md:gap-8 w-full ${isStageMode ? 'fixed inset-0 z-100 bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
+            <div className={`flex flex-col gap-4 md:gap-8 w-full ${uiState.isStageMode ? 'fixed inset-0 z-100 bg-black p-4 md:p-12 overflow-y-auto' : ''}`}>
                 
                 <PlayerHeader 
-                    isStageMode={isStageMode} 
-                    onExitStageMode={() => setIsStageMode(false)} 
+                    isStageMode={uiState.isStageMode} 
+                    onExitStageMode={() => uiActions.setIsStageMode(false)} 
                 />
 
-            <VisualizerContainer
-                visualizer={visualizerInstance}
-                canvasRef={canvasRef}
-                controller={controller}
-                lyrics={lyrics}
-                cdgData={cdgData}
-                currentLineIndex={lyricState.lineIndex}
-                currentWordIndex={lyricState.wordIndex}
-                theme={theme}
-                visualSettings={visualSettings}
-                isStageMode={isStageMode}
-                showEditor={showEditor}
-                showPractice={showPractice}
-                showRoom={showRoom}
-                showVoiceFx={showVoiceFx}
-                showAutoKey={showAutoKey}
-                showSettings={showSettings}
-                isVisualSettingsOpen={isVisualSettingsOpen}
-                recorder={recorder}
-                
-                voiceFxProps={{
-                    currentPreset: useVoiceHook.currentPreset,
-                    settings: useVoiceHook.settings,
-                    isMonitoring: useVoiceHook.isMonitoring,
-                    onPresetChange: useVoiceHook.setPreset,
-                    onSettingsChange: useVoiceHook.updateSettings,
-                    onToggleMonitoring: useVoiceHook.toggleMonitoring
-                }}
-                autoKeyProps={{
-                    isAnalyzing: useAutoKeyHook.isAnalyzing,
-                    detectedKey: useAutoKeyHook.detectedKey,
-                    vocalRange: useAutoKeyHook.vocalRange,
-                    suggestedShift: useAutoKeyHook.suggestedShift,
-                    onAnalyze: useAutoKeyHook.analyzeTrack,
-                    onApply: useAutoKeyHook.applyShift,
-                    onRangeChange: useAutoKeyHook.updateVocalRange
-                }}
-                practiceProps={{
-                    ...usePracticeHook,
-                    startPractice: usePracticeHook.startPractice
-                }}
-                roomProps={{
-                    ...useRoomHook,
-                    onJoin: useRoomHook.joinRoom,
-                    onLeave: useRoomHook.leaveRoom
-                }}
+                <KaraokeDisplay
+                    canvasRef={canvasRef}
+                    visualSettings={uiState.visualSettings}
+                    isStageMode={uiState.isStageMode}
+                >
+                    <KaraokeOverlay
+                        uiState={uiState}
+                        uiActions={uiActions}
+                        lyrics={lyrics}
+                        cdgData={cdgData}
+                        controller={controller}
+                        visualizer={visualizerInstance}
+                        currentLineIndex={lyricState.lineIndex}
+                        currentWordIndex={lyricState.wordIndex}
+                        recorder={recorder}
+                        
+                        voiceFxProps={{
+                            currentPreset: useVoiceHook.currentPreset,
+                            settings: useVoiceHook.settings,
+                            isMonitoring: useVoiceHook.isMonitoring,
+                            onPresetChange: useVoiceHook.setPreset,
+                            onSettingsChange: useVoiceHook.updateSettings,
+                            onToggleMonitoring: useVoiceHook.toggleMonitoring
+                        }}
+                        autoKeyProps={{
+                            isAnalyzing: useAutoKeyHook.isAnalyzing,
+                            detectedKey: useAutoKeyHook.detectedKey,
+                            vocalRange: useAutoKeyHook.vocalRange,
+                            suggestedShift: useAutoKeyHook.suggestedShift,
+                            onAnalyze: useAutoKeyHook.analyzeTrack,
+                            onApply: useAutoKeyHook.applyShift,
+                            onRangeChange: useAutoKeyHook.updateVocalRange
+                        }}
+                        practiceProps={{
+                            ...usePracticeHook,
+                            startPractice: usePracticeHook.startPractice
+                        }}
+                        roomProps={{
+                            ...useRoomHook,
+                            onJoin: useRoomHook.joinRoom,
+                            onLeave: useRoomHook.leaveRoom
+                        }}
 
-                onCanvasReady={handleCanvasReady}
-                onLRCUpload={handleLRCUpload}
-                onThemeChange={(t) => {
-                    setTheme(t);
-                    saveSettings({ theme: t });
-                }}
-                onToggleStageMode={(val) => {
-                    setIsStageMode(val);
-                    saveSettings({ stageModeEnabled: val });
-                }}
-                onTogglePractice={() => setShowPractice(!showPractice)}
-                onToggleRoom={() => setShowRoom(!showRoom)}
-                onToggleVoiceFx={async () => {
-                    if (!useVoiceHook.isInitialized) await useVoiceHook.initProcessor();
-                    setShowVoiceFx(!showVoiceFx);
-                }}
-                onToggleAutoKey={() => setShowAutoKey(!showAutoKey)}
-                onToggleSettings={() => setShowSettings(!showSettings)}
-                onToggleEditor={setShowEditor}
-                onSaveLRC={(data) => {
-                    setLyrics(data);
-                    setShowEditor(false);
-                }}
-                onVisualSettingsChange={setVisualSettings}
-                onCloseVisualSettings={() => setIsVisualSettingsOpen(false)}
-                onCloseVoiceFx={() => setShowVoiceFx(false)}
-                onClosePractice={() => setShowPractice(false)}
-                onCloseRoom={() => setShowRoom(false)}
-                onCloseAutoKey={() => setShowAutoKey(false)}
-                isRecordingMix={mixRecorder.isRecordingMix}
-                recordedMixBlob={mixRecorder.recordedMixBlob}
-                onStartRecordingMix={mixRecorder.startRecordingMix}
-                onStopRecordingMix={mixRecorder.stopRecordingMix}
-                onClearMixRecording={mixRecorder.clearMixRecording}
-            />
+                        onCanvasReady={handleCanvasReady}
+                        onLRCUpload={handleLRCUpload}
+                        onSaveLRC={(data) => {
+                            setLyrics(data);
+                            uiActions.setShowEditor(false);
+                        }}
+                        
+                        isRecordingMix={mixRecorder.isRecordingMix}
+                        recordedMixBlob={mixRecorder.recordedMixBlob}
+                        onStartRecordingMix={mixRecorder.startRecordingMix}
+                        onStopRecordingMix={mixRecorder.stopRecordingMix}
+                        onClearMixRecording={mixRecorder.clearMixRecording}
+                    />
+                </KaraokeDisplay>
 
-            <KaraokeControls
-                playback={{
-                    ...playback,
-                    pitch,
-                    setPitch: handlePitchChange
-                }}
-                recorder={recorder}
-                lyrics={lyrics}
-                isExporting={isExportingVideo}
-                isExportingAudio={isExportingAudio}
-                exportProgress={exportProgress}
-                isStageMode={isStageMode}
-                voiceFx={{
-                    isInitialized: useVoiceHook.isInitialized,
-                    init: useVoiceHook.initProcessor,
-                    getProcessedStream: useVoiceHook.getProcessedStream
-                }}
-                onBalanceChange={handleBalanceChange}
-                onAudioDownload={(format) => handleAudioDownload(format, {
-                    pitch,
-                    tempo,
-                    bass: playback.bass,
-                    mid: playback.mid,
-                    treble: playback.treble,
-                    volumes: [playback.vocalsVolume, playback.instrumentalVolume]
-                })}
-                onVideoExport={handleVideoExport}
-            />
+                <KaraokeControls
+                    playback={{
+                        ...playback,
+                        pitch,
+                        setPitch: handlePitchChange
+                    }}
+                    recorder={recorder}
+                    lyrics={lyrics}
+                    isExporting={isExportingVideo}
+                    isExportingAudio={isExportingAudio}
+                    exportProgress={exportProgress}
+                    isStageMode={uiState.isStageMode}
+                    voiceFx={{
+                        isInitialized: useVoiceHook.isInitialized,
+                        init: useVoiceHook.initProcessor,
+                        getProcessedStream: useVoiceHook.getProcessedStream
+                    }}
+                    onBalanceChange={handleBalanceChange}
+                    onAudioDownload={(format) => handleAudioDownload(format, {
+                        pitch,
+                        tempo,
+                        bass: playback.bass,
+                        mid: playback.mid,
+                        treble: playback.treble,
+                        volumes: [playback.vocalsVolume, playback.instrumentalVolume]
+                    })}
+                    onVideoExport={handleVideoExport}
+                />
 
-            <EffectsController
-                controller={controller}
-                pitch={pitch}
-                tempo={tempo}
-                reverb={reverb}
-                echo={echo}
-                bass={playback.bass}
-                mid={playback.mid}
-                treble={playback.treble}
-                onPitchChange={handlePitchChange}
-                onTempoChange={handleTempoChange}
-                onReverbChange={handleReverbChange}
-                onEchoChange={handleEchoChange}
-                onBassChange={(v) => playback.setEQ(v, playback.mid, playback.treble)}
-                onMidChange={(v) => playback.setEQ(playback.bass, v, playback.treble)}
-                onTrebleChange={(v) => playback.setEQ(playback.bass, playback.mid, v)}
-                onResetEffects={() => resetEffects(() => playback.setEQ(0, 0, 0))}
-                pitchAnalysis={pitchAnalysis}
-                harmonyGuide={harmonyGuide}
-                detectedKey={useAutoKeyHook.detectedKey}
-            />
+                <EffectsController
+                    controller={controller}
+                    pitch={pitch}
+                    tempo={tempo}
+                    reverb={reverb}
+                    echo={echo}
+                    bass={playback.bass}
+                    mid={playback.mid}
+                    treble={playback.treble}
+                    onPitchChange={handlePitchChange}
+                    onTempoChange={handleTempoChange}
+                    onReverbChange={handleReverbChange}
+                    onEchoChange={handleEchoChange}
+                    onBassChange={(v) => playback.setEQ(v, playback.mid, playback.treble)}
+                    onMidChange={(v) => playback.setEQ(playback.bass, v, playback.treble)}
+                    onTrebleChange={(v) => playback.setEQ(playback.bass, playback.mid, v)}
+                    onResetEffects={() => resetEffects(() => playback.setEQ(0, 0, 0))}
+                    pitchAnalysis={pitchAnalysis}
+                    harmonyGuide={harmonyGuide}
+                    detectedKey={useAutoKeyHook.detectedKey}
+                />
             </div>
         </ErrorBoundary>
     );

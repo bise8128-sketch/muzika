@@ -118,8 +118,12 @@ jest.mock('../Controls/KaraokeControls', () => ({
     KaraokeControls: () => <div data-testid="karaoke-controls">Controls</div>
 }));
 
-jest.mock('../Visualizer/VisualizerContainer', () => ({
-    VisualizerContainer: () => <div data-testid="visualizer-container">Visualizer</div>
+jest.mock('../Visualizer/KaraokeDisplay', () => ({
+    KaraokeDisplay: ({ children }: { children: React.ReactNode }) => <div data-testid="visualizer-container">{children}</div>
+}));
+
+jest.mock('../KaraokeOverlay', () => ({
+    KaraokeOverlay: () => <div data-testid="karaoke-overlay">Overlay</div>
 }));
 
 jest.mock('@/utils/audio/playbackController', () => {
