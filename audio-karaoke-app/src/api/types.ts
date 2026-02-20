@@ -43,8 +43,9 @@ export interface ModelInfo {
   id: string;
   name: string;
   description?: string;
-  size?: number;
-  type?: string;
+  size: number;
+  type: string;
+  version: string;
 }
 
 export interface ModelsResponse {
