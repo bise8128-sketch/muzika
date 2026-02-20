@@ -40,6 +40,7 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
     }, [queueCurrentSong]);
 
     useEffect(() => {
+        const abortController = new AbortController();
         const loadAudio = async () => {
             setIsLoading(true);
             try {
@@ -59,12 +60,16 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
 
                 // Handle server-side songs fallback
                 if (!instBuffer && currentPlayingSong.id === -1 && currentPlayingSong.originalHash) {
-                    const response = await fetch(`/api/backend-files/downloads/${currentPlayingSong.originalHash}`);
+                    const response = await fetch(`/api/backend-files/downloads/${currentPlayingSong.originalHash}`, {
+                        signal: abortController.signal
+                    });
                     if (response.ok) {
                         const blob = await response.blob();
                         instBuffer = await blob.arrayBuffer();
                     }
                 }
+
+                if (abortController.signal.aborted) return;
 
                 if (instBuffer) {
                     console.log('[LibraryPlayer] Loading instrumental buffer:', {
