@@ -295,6 +295,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                 style={{ height: height!, width: width! }}
                                 rowCount={filteredSongs.length}
                                 rowHeight={130}
+                                rowProps={{}}
                                 className="scrollbar-hide"
                                 rowComponent={({ index, style }: RowComponentProps) => {
                                     const song = filteredSongs[index];
