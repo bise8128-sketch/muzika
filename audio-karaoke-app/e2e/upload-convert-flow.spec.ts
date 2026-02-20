@@ -245,27 +245,26 @@ test.describe('Group 2: Upload & Processing States', () => {
 
   // T6 — Upload fires POST to /api/backend-upload
   test('T6: uploading an MP3 sends POST to /api/backend-upload', async ({ page }) => {
-    // Register request listener BEFORE setting routes (so we catch the mocked route)
-    let capturedMethod: string | null = null;
-    page.on('request', req => {
-      if (req.url().includes('/api/backend-upload')) {
-        capturedMethod = req.method();
-      }
-    });
-
+    // Navigate first, then concurrently start listening and trigger the upload
     await gotoUpload(page);
-    await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
 
-    // Wait up to 15 s for the request to be intercepted
-    await page.waitForFunction(() => true, undefined, { timeout: 500 }); // flush microtasks
-    await page.waitForTimeout(10_000);
+    // Start listening BEFORE the upload action and await both together
+    const [uploadRequest] = await Promise.all([
+      page.waitForRequest(
+        req => req.url().includes('/api/backend-upload') && req.method() === 'POST',
+        { timeout: 20_000 },
+      ),
+      page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3'),
+    ]);
 
-    expect(capturedMethod).toBe('POST');
+    expect(uploadRequest.method()).toBe('POST');
   });
 
   // T7 — A loading indicator is shown while processing is in-flight
   test('T7: loading indicator shown while processing is in-flight', async ({ page }) => {
-    // Override processing to be slow so we can catch the loading state
+    // Override processing to be slow so we can catch the loading state.
+    // Unroute first so this handler wins (Playwright first-match-wins rule).
+    await page.unroute('**/api/python-processing*');
     await page.route('**/api/python-processing*', async route => {
       if (route.request().method() === 'POST') {
         await new Promise(r => setTimeout(r, 3_000));
@@ -291,6 +290,7 @@ test.describe('Group 2: Upload & Processing States', () => {
 
   // T8 — App moves to processing/results screen after upload
   test('T8: app transitions away from landing after upload', async ({ page }) => {
+    await page.unroute('**/api/python-processing*');
     await page.route('**/api/python-processing*', async route => {
       if (route.request().method() === 'POST') {
         await new Promise(r => setTimeout(r, 1_500));
@@ -316,6 +316,7 @@ test.describe('Group 2: Upload & Processing States', () => {
   // T9 — Pending state doesn't crash the app
   test('T9: UI stays alive while job is in pending state', async ({ page }) => {
     let callCount = 0;
+    await page.unroute('**/api/python-processing*');
     await page.route('**/api/python-processing*', async route => {
       callCount++;
       if (route.request().method() === 'POST') {
