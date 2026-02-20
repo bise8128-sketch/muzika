@@ -136,6 +136,21 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         }
     }, [recorder.recordedBuffer, controller]);
 
+    // Link Pitch Analysis to Background Visualizer
+    useEffect(() => {
+        if (pitchAnalysis.isListening && visualizerInstance) {
+            visualizerInstance.setMode('singstar');
+        } else if (visualizerInstance) {
+            visualizerInstance.setMode(visualSettings.visualizationMode);
+        }
+    }, [pitchAnalysis.isListening, visualizerInstance, visualSettings.visualizationMode]);
+
+    useEffect(() => {
+        if (visualizerInstance && pitchAnalysis.isListening && pitchAnalysis.pitchHistory.length > 0) {
+            visualizerInstance.setPitchHistory(pitchAnalysis.pitchHistory);
+        }
+    }, [pitchAnalysis.pitchHistory, visualizerInstance, pitchAnalysis.isListening]);
+
     // Initialize settings from store
     useEffect(() => {
         const settings = getSettings();
