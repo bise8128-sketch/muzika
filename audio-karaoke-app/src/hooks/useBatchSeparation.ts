@@ -204,6 +204,9 @@ export function useBatchSeparation() {
     const startBatch = useCallback((model: ModelInfo) => {
         if (isProcessing) return; // Already running
         setIsProcessing(true);
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
         abortControllerRef.current = new AbortController();
         runBatchLoop(model);
     }, [isProcessing]); // eslint-disable-line react-hooks/exhaustive-deps
