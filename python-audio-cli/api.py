@@ -34,8 +34,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
 )
 
 # Initialize components
@@ -444,7 +444,13 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
 
 @app.get("/files/{path:path}")
 async def get_file(path: str):
-    file_path = os.path.join(OUTPUT_DIR, path)
+    base_dir = os.path.abspath(OUTPUT_DIR)
+    file_path = os.path.abspath(os.path.join(base_dir, path))
+
+    # Path traversal protection: ensure the target file is inside our allowed output dir
+    if not file_path.startswith(base_dir):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     if os.path.exists(file_path):
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="File not found")

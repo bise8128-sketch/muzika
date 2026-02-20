@@ -37,3 +37,8 @@ def test_upload_sanitization():
     assert response.status_code == 200
     # The filename in the response should be sanitized
     assert response.json()["filename"] == "etc_passwd" # werkzeug's secure_filename behavior for ../../etc/passwd
+
+def test_file_proxy_path_traversal():
+    response = client.get("/files/../../../../etc/passwd")
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Access denied"
