@@ -47,6 +47,9 @@ export default function Home() {
     handleDownload,
     handleBatchDownload,
     controller,
+    handleBack,
+    handleExitKaraoke,
+    handleViewModels,
   } = usePageOrchestrator();
 
   const activeModelName = AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown';
@@ -56,7 +59,7 @@ export default function Home() {
       <PageHeader 
         onRestart={handleRestart}
         onShowHelp={() => setShowHelp(true)}
-        onShowModels={() => send({ type: 'VIEW_MODELS' })}
+        onShowModels={handleViewModels}
         onShowSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -85,8 +88,8 @@ export default function Home() {
             onBatchDownload={handleBatchDownload}
             onRestart={handleRestart}
             onTryKaraoke={handleTryKaraoke}
-            onBack={() => send({ type: 'BACK' })}
-            onExitKaraoke={() => send({ type: 'EXIT_KARAOKE' })}
+            onBack={handleBack}
+            onExitKaraoke={handleExitKaraoke}
           />
         </ErrorBoundary>
       </main>

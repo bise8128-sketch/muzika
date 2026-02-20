@@ -129,6 +129,11 @@ export function usePageOrchestrator() {
     saveSettings({ autoStartKaraoke: val });
   };
 
+  // Navigation Handlers
+  const handleBack = () => send({ type: 'BACK' });
+  const handleExitKaraoke = () => send({ type: 'EXIT_KARAOKE' });
+  const handleViewModels = () => send({ type: 'VIEW_MODELS' });
+
   return {
     state,
     machineState,
@@ -136,6 +141,9 @@ export function usePageOrchestrator() {
     activeResult,
     handleRestart,
     handleTryKaraoke,
+    handleBack,
+    handleExitKaraoke,
+    handleViewModels,
     isSettingsOpen,
     setIsSettingsOpen,
     showHelp,
