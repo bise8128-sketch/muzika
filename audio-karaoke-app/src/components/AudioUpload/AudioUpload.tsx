@@ -255,7 +255,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                             }}
                             onClick={(e) => e.stopPropagation()}
                             placeholder={t('urlPlaceholder')}
-                            data-testid="youtube-url-input"
                             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 transition-all"
                         />
                         <button
@@ -265,7 +264,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                                 handleUrlSubmit(urlInput);
                             }}
                             disabled={!urlInput.trim() || isLoading}
-                            data-testid="youtube-url-submit"
                             className="px-5 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-red-400 text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
