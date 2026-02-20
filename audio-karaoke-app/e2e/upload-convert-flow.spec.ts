@@ -103,7 +103,7 @@ async function setupMocks(page: import('@playwright/test').Page, {
   await page.route('**/api/models', route =>
     route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ models: [{ id: 'htdemucs', name: 'Demucs v4', type: 'htdemucs', isGpuSupported: false }] }),
+      body: JSON.stringify({ models: [{ id: 'mdx-net-inst-v1', name: 'Default Server Model', type: 'htdemucs', isGpuSupported: false }] }),
     }),
   );
 
@@ -123,7 +123,9 @@ async function setupMocks(page: import('@playwright/test').Page, {
     }
   });
 
-  await page.route('**/mock-audio/*.wav', route => route.abort());
+  await page.route('**/mock-audio/*.wav', route =>
+    route.fulfill({ status: 200, contentType: 'audio/wav', body: Buffer.from([0x52,0x49,0x46,0x46,0x00,0x00,0x00,0x00,0x57,0x41,0x56,0x45,0x66,0x6d,0x74,0x20]) }),
+  );
   await page.route('**/models/**/*.onnx', route => route.abort());
   await page.route('**/models/**/*.wasm', route => route.abort());
 }
@@ -243,19 +245,25 @@ test.describe('Group 2: Upload & Processing States', () => {
 
   // T6 — Upload fires POST to /api/backend-upload
   test('T6: uploading an MP3 sends POST to /api/backend-upload', async ({ page }) => {
-    // Navigate first, then concurrently start listening and trigger the upload
+    // Register listener before ANYTHING else so we catch all requests on this page
+    let uploadMethod: string | null = null;
+    page.on('request', req => {
+      if (req.url().includes('/api/backend-upload') && req.method() === 'POST') {
+        uploadMethod = req.method();
+      }
+    });
+
     await gotoUpload(page);
 
-    // Start listening BEFORE the upload action and await both together
-    const [uploadRequest] = await Promise.all([
-      page.waitForRequest(
-        req => req.url().includes('/api/backend-upload') && req.method() === 'POST',
-        { timeout: 20_000 },
-      ),
-      page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3'),
-    ]);
+    await page.locator('input[type="file"]').setInputFiles('e2e/fixtures/test-audio.mp3');
 
-    expect(uploadRequest.method()).toBe('POST');
+    // Wait up to 20s for the upload to fire (the mock responds instantly)
+    const deadline = Date.now() + 20_000;
+    while (!uploadMethod && Date.now() < deadline) {
+      await page.waitForTimeout(200);
+    }
+
+    expect(uploadMethod).toBe('POST');
   });
 
   // T7 — A loading indicator is shown while processing is in-flight
