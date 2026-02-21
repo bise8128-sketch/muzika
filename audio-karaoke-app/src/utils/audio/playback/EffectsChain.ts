@@ -145,6 +145,14 @@ export class EffectsChain {
         return this.workletNode !== null;
     }
 
+    getReverbInput(): AudioNode | null {
+        return this.reverbProcessor.getInput() || this.reverbNode;
+    }
+
+    getEchoInput(): AudioNode | null {
+        return this.echoProcessor.getInput() || this.echoNode;
+    }
+
     /** Connect a source node into the legacy & new effects. */
     connectSourceToEffects(sourceNode: AudioNode): void {
         const reverbInput = this.reverbProcessor.getInput();

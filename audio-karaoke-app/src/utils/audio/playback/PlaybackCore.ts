@@ -36,6 +36,9 @@ export class PlaybackController {
   // Sources
   private bufferSources: AudioBufferSourceNode[] = [];
   private gainNodes: GainNode[] = [];
+  private pannerNodes: StereoPannerNode[] = [];
+  private reverbSendNodes: GainNode[] = [];
+  private echoSendNodes: GainNode[] = [];
   private stemAnalysers: AnalyserNode[] = [];
 
   // Track state
@@ -160,19 +163,44 @@ export class PlaybackController {
       const destination = this.effects.getDestination();
 
       this.audioBuffers.forEach((buffer, index) => {
+        const stem = this.stemStates[index];
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
 
         const gainNode = this.audioContext.createGain();
         gainNode.gain.value = this.trackVolumes[index] || 1.0;
 
+        const pannerNode = this.audioContext.createStereoPanner();
+        pannerNode.pan.value = stem?.panning || 0;
+
         const analyser = this.audioContext.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.5;
 
+        // Effect Sends
+        const reverbSend = this.audioContext.createGain();
+        reverbSend.gain.value = stem?.reverbSend || 0;
+        const echoSend = this.audioContext.createGain();
+        echoSend.gain.value = stem?.echoSend || 0;
+
+        // Wiring
         source.connect(gainNode);
-        gainNode.connect(analyser); // Insert analyser after gain
+        gainNode.connect(pannerNode);
+        pannerNode.connect(analyser);
         analyser.connect(destination);
+
+        // Connect sends
+        const globalReverb = this.effects.getReverbInput();
+        const globalEcho = this.effects.getEchoInput();
+        if (globalReverb) {
+            analyser.connect(reverbSend);
+            reverbSend.connect(globalReverb);
+        }
+        if (globalEcho) {
+            analyser.connect(echoSend);
+            echoSend.connect(globalEcho);
+        }
+
         this.effects.connectSourceToEffects(analyser);
 
         source.start(0, currentTime);
@@ -185,6 +213,9 @@ export class PlaybackController {
 
         this.bufferSources.push(source);
         this.gainNodes[index] = gainNode;
+        this.pannerNodes[index] = pannerNode;
+        this.reverbSendNodes[index] = reverbSend;
+        this.echoSendNodes[index] = echoSend;
         this.stemAnalysers[index] = analyser;
       });
 
@@ -241,6 +272,9 @@ export class PlaybackController {
         /* may already be stopped */
       }
     });
+    this.pannerNodes.forEach(p => { try { p.disconnect(); } catch{} });
+    this.reverbSendNodes.forEach(g => { try { g.disconnect(); } catch{} });
+    this.echoSendNodes.forEach(g => { try { g.disconnect(); } catch{} });
     this.stemAnalysers.forEach((analyser) => {
       try {
         analyser.disconnect();
@@ -249,6 +283,9 @@ export class PlaybackController {
       }
     });
     this.bufferSources = [];
+    this.pannerNodes = [];
+    this.reverbSendNodes = [];
+    this.echoSendNodes = [];
     this.stemAnalysers = [];
   }
 
@@ -536,6 +573,9 @@ export class PlaybackController {
         muted: false,
         solo: false,
         icon: meta.icon,
+        panning: 0,
+        reverbSend: 0,
+        echoSend: 0,
       };
     });
     this.stemMutedVolumes = this.stemStates.map((s) => s.volume);
@@ -577,6 +617,33 @@ export class PlaybackController {
     if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
     this.stemStates[stemIndex].solo = !this.stemStates[stemIndex].solo;
     this._enforceSoloState();
+  }
+
+  setStemPanning(stemIndex: number, pan: number): void {
+    if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+    const clamped = Math.max(-1, Math.min(1, pan));
+    this.stemStates[stemIndex].panning = clamped;
+    if (this.pannerNodes[stemIndex]) {
+      this.pannerNodes[stemIndex].pan.setValueAtTime(clamped, this.audioContext.currentTime);
+    }
+  }
+
+  setStemReverbSend(stemIndex: number, amount: number): void {
+    if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+    const clamped = Math.max(0, Math.min(1, amount));
+    this.stemStates[stemIndex].reverbSend = clamped;
+    if (this.reverbSendNodes[stemIndex]) {
+      this.reverbSendNodes[stemIndex].gain.setValueAtTime(clamped, this.audioContext.currentTime);
+    }
+  }
+
+  setStemEchoSend(stemIndex: number, amount: number): void {
+    if (stemIndex < 0 || stemIndex >= this.stemStates.length) return;
+    const clamped = Math.max(0, Math.min(1, amount));
+    this.stemStates[stemIndex].echoSend = clamped;
+    if (this.echoSendNodes[stemIndex]) {
+      this.echoSendNodes[stemIndex].gain.setValueAtTime(clamped, this.audioContext.currentTime);
+    }
   }
 
   resetStems(): void {

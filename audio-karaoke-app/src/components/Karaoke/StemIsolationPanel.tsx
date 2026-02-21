@@ -25,7 +25,11 @@ interface StemIsolationPanelProps {
 interface StemSliderProps {
     stem: StemSettings;
     index: number;
+    advanced: boolean;
     onVolumeChange: (index: number, volume: number) => void;
+    onPanningChange: (index: number, pan: number) => void;
+    onReverbSendChange: (index: number, amount: number) => void;
+    onEchoSendChange: (index: number, amount: number) => void;
     onMuteToggle: (index: number) => void;
     onSoloToggle: (index: number) => void;
 }
@@ -74,7 +78,11 @@ const StemSlider: React.FC<StemSliderProps & { level: number }> = ({
     stem,
     index,
     level,
+    advanced,
     onVolumeChange,
+    onPanningChange,
+    onReverbSendChange,
+    onEchoSendChange,
     onMuteToggle,
     onSoloToggle,
 }) => {
@@ -83,22 +91,41 @@ const StemSlider: React.FC<StemSliderProps & { level: number }> = ({
     return (
         <motion.div 
             layout
-            className="flex flex-col items-center gap-4 p-4 rounded-3xl bg-white/5 hover:bg-white/10 transition-all group border border-white/5 w-24"
+            className={`flex flex-col items-center gap-4 p-4 rounded-3xl bg-white/5 hover:bg-white/10 transition-all group border border-white/5 ${advanced ? 'w-48' : 'w-24'}`}
         >
             {/* Mixer Buttons at Top */}
             <div className="flex flex-col gap-1.5 w-full">
-                <MixerButton 
-                    active={stem.solo} 
-                    onClick={() => onSoloToggle(index)} 
-                    label="S" 
-                    color="yellow" 
-                />
-                <MixerButton 
-                    active={stem.muted} 
-                    onClick={() => onMuteToggle(index)} 
-                    label="M" 
-                    color="red" 
-                />
+                <div className="flex gap-1">
+                    <MixerButton 
+                        active={stem.solo} 
+                        onClick={() => onSoloToggle(index)} 
+                        label="S" 
+                        color="yellow" 
+                    />
+                    <MixerButton 
+                        active={stem.muted} 
+                        onClick={() => onMuteToggle(index)} 
+                        label="M" 
+                        color="red" 
+                    />
+                </div>
+                
+                {advanced && (
+                    <div className="flex flex-col gap-2 mt-2 px-1">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter">Pan</span>
+                            <input
+                                type="range"
+                                min={-1}
+                                max={1}
+                                step={0.1}
+                                value={stem.panning}
+                                onChange={e => onPanningChange(index, parseFloat(e.target.value))}
+                                className="range-premium-xs"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Fader + Meter Area (Vertical) */}
@@ -119,7 +146,49 @@ const StemSlider: React.FC<StemSliderProps & { level: number }> = ({
                         } as any}
                     />
                 </div>
-                <VUMeter level={level} active={!effectivelyMuted} />
+
+                <div className="flex gap-1.5">
+                    <VUMeter level={level} active={!effectivelyMuted} />
+                    
+                    {advanced && (
+                        <div className="flex gap-1 h-full">
+                            <div className="flex flex-col items-center gap-1 h-full">
+                                <span className="text-[6px] font-bold text-purple-400 rotate-90 origin-left mt-2 whitespace-nowrap">REVERB</span>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={stem.reverbSend}
+                                    onChange={e => onReverbSendChange(index, parseFloat(e.target.value))}
+                                    className="range-premium-vertical-xs h-full"
+                                    style={{ 
+                                        writingMode: 'vertical-lr',
+                                        direction: 'rtl',
+                                        appearance: 'slider-vertical'
+                                    } as any}
+                                />
+                            </div>
+                            <div className="flex flex-col items-center gap-1 h-full">
+                                <span className="text-[6px] font-bold text-blue-400 rotate-90 origin-left mt-2 whitespace-nowrap">ECHO</span>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={stem.echoSend}
+                                    onChange={e => onEchoSendChange(index, parseFloat(e.target.value))}
+                                    className="range-premium-vertical-xs h-full"
+                                    style={{ 
+                                        writingMode: 'vertical-lr',
+                                        direction: 'rtl',
+                                        appearance: 'slider-vertical'
+                                    } as any}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Label Block */}
@@ -166,6 +235,7 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
     const [stemLevels, setStemLevels] = useState<number[]>([]);
     const [activePreset, setActivePreset] = useState<StemPreset>('full-mix');
     const [isExpanded, setIsExpanded] = useState(true);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const refreshStems = useCallback(() => {
         setStems(controller.getStemStates());
@@ -187,6 +257,21 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
     const handleVolumeChange = useCallback((index: number, volume: number) => {
         controller.setStemVolume(index, volume);
         setActivePreset('full-mix');
+        refreshStems();
+    }, [controller, refreshStems]);
+
+    const handlePanningChange = useCallback((index: number, pan: number) => {
+        controller.setStemPanning(index, pan);
+        refreshStems();
+    }, [controller, refreshStems]);
+
+    const handleReverbSendChange = useCallback((index: number, amount: number) => {
+        controller.setStemReverbSend(index, amount);
+        refreshStems();
+    }, [controller, refreshStems]);
+
+    const handleEchoSendChange = useCallback((index: number, amount: number) => {
+        controller.setStemEchoSend(index, amount);
         refreshStems();
     }, [controller, refreshStems]);
 

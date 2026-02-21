@@ -167,6 +167,9 @@ export interface StemSettings {
     muted: boolean;
     solo: boolean;
     icon: string;      // Emoji icon for UI
+    panning: number;   // -1 to 1
+    reverbSend: number; // 0 to 1
+    echoSend: number;   // 0 to 1
 }
 
 export type StemPreset = 'full-mix' | 'karaoke' | 'a-capella' | 'drums-only' | 'bass-only';
