@@ -145,19 +145,19 @@ export class EffectsChain {
         return this.workletNode !== null;
     }
 
-    /** Connect a source GainNode into the legacy & new effects. */
-    connectSourceToEffects(gainNode: GainNode): void {
+    /** Connect a source node into the legacy & new effects. */
+    connectSourceToEffects(sourceNode: AudioNode): void {
         const reverbInput = this.reverbProcessor.getInput();
         const echoInput = this.echoProcessor.getInput();
-        if (reverbInput) gainNode.connect(reverbInput);
-        if (echoInput) gainNode.connect(echoInput);
+        if (reverbInput) sourceNode.connect(reverbInput);
+        if (echoInput) sourceNode.connect(echoInput);
         if (this.pitchCorrector.isReady()) {
             const pitchInput = this.pitchCorrector.getInput();
-            if (pitchInput) gainNode.connect(pitchInput);
+            if (pitchInput) sourceNode.connect(pitchInput);
         }
         if (!this.workletNode) {
-            gainNode.connect(this.reverbNode);
-            gainNode.connect(this.echoNode);
+            sourceNode.connect(this.reverbNode);
+            sourceNode.connect(this.echoNode);
         }
     }
 

@@ -38,9 +38,42 @@ const PRESETS: { id: StemPreset; label: string; icon: React.ReactNode }[] = [
     { id: 'bass-only', label: 'Bass', icon: <Guitar className="w-3.5 h-3.5" /> },
 ];
 
-const StemSlider: React.FC<StemSliderProps> = ({
+interface VUMeterProps {
+    level: number;
+    active: boolean;
+}
+
+const VUMeter: React.FC<VUMeterProps> = ({ level, active }) => {
+    // 12 segments for the VU meter
+    const segments = Array.from({ length: 12 }, (_, i) => i);
+    
+    return (
+        <div className="flex flex-col-reverse gap-0.5 h-full w-1.5 py-1">
+            {segments.map(i => {
+                const threshold = (i + 1) / segments.length;
+                const isLit = active && level >= threshold;
+                // Color gradient: Green -> Yellow -> Red
+                const color = i > 9 ? 'bg-red-500' : i > 7 ? 'bg-yellow-400' : 'bg-emerald-400';
+                
+                return (
+                    <motion.div
+                        key={i}
+                        animate={{ 
+                            opacity: isLit ? 1 : 0.1,
+                            scaleX: isLit ? 1.2 : 1,
+                        }}
+                        className={`w-full h-1.5 rounded-full transition-all duration-75 ${color} ${isLit ? 'shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''}`}
+                    />
+                );
+            })}
+        </div>
+    );
+};
+
+const StemSlider: React.FC<StemSliderProps & { level: number }> = ({
     stem,
     index,
+    level,
     onVolumeChange,
     onMuteToggle,
     onSoloToggle,
@@ -50,58 +83,53 @@ const StemSlider: React.FC<StemSliderProps> = ({
     return (
         <motion.div 
             layout
-            className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all group border border-white/5"
+            className="flex flex-col items-center gap-4 p-4 rounded-3xl bg-white/5 hover:bg-white/10 transition-all group border border-white/5 w-24"
         >
-            {/* Label Block */}
-            <div className="flex items-center gap-3 min-w-[120px]">
-                <div className="p-2 rounded-xl bg-black/20 text-primary">
-                    <StemIcon type={stem.type} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/70 truncate">
-                    {stem.label}
-                </span>
-            </div>
-
-            {/* Fader Area */}
-            <div className="flex-1 relative flex items-center h-10">
-                <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(stem.volume * 100)}
-                    onChange={e => onVolumeChange(index, parseInt(e.target.value) / 100)}
-                    className="range-premium w-full"
-                    disabled={effectivelyMuted}
-                />
-                <AnimatePresence>
-                    {!effectivelyMuted && (
-                        <motion.span 
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 5 }}
-                            className="absolute -top-4 right-0 text-[10px] font-black text-primary"
-                        >
-                            {Math.round(stem.volume * 100)}%
-                        </motion.span>
-                    )}
-                </AnimatePresence>
-            </div>
-
-            {/* Mixer Buttons */}
-            <div className="flex gap-1.5 ml-2">
-                <MixerButton 
-                    active={stem.muted} 
-                    onClick={() => onMuteToggle(index)} 
-                    label="M" 
-                    color="red" 
-                />
+            {/* Mixer Buttons at Top */}
+            <div className="flex flex-col gap-1.5 w-full">
                 <MixerButton 
                     active={stem.solo} 
                     onClick={() => onSoloToggle(index)} 
                     label="S" 
                     color="yellow" 
                 />
+                <MixerButton 
+                    active={stem.muted} 
+                    onClick={() => onMuteToggle(index)} 
+                    label="M" 
+                    color="red" 
+                />
+            </div>
+
+            {/* Fader + Meter Area (Vertical) */}
+            <div className="flex gap-4 h-48 py-2">
+                <div className="relative w-8 flex justify-center">
+                    <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={Math.round(stem.volume * 100)}
+                        onChange={e => onVolumeChange(index, parseInt(e.target.value) / 100)}
+                        className="range-premium-vertical h-full"
+                        style={{ 
+                            writingMode: 'vertical-lr',
+                            direction: 'rtl',
+                            appearance: 'slider-vertical'
+                        } as any}
+                    />
+                </div>
+                <VUMeter level={level} active={!effectivelyMuted} />
+            </div>
+
+            {/* Label Block */}
+            <div className="flex flex-col items-center gap-2 mt-auto">
+                <div className="p-2.5 rounded-xl bg-black/20 text-primary group-hover:shadow-[0_0_15px_rgba(124,58,237,0.3)] transition-all">
+                    <StemIcon type={stem.type} />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-tighter text-white/50 text-center leading-tight">
+                    {stem.label}
+                </span>
             </div>
         </motion.div>
     );
@@ -119,10 +147,10 @@ const StemIcon = ({ type }: { type: string }) => {
 
 const MixerButton = ({ active, onClick, label, color }: { active: boolean; onClick: () => void; label: string; color: string }) => (
     <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black italic transition-all border
+        className={`w-full h-7 rounded-lg flex items-center justify-center text-[9px] font-black italic transition-all border
             ${active
                 ? `bg-${color}-500/30 text-${color}-400 border-${color}-500/40 shadow-lg shadow-${color}-500/20`
                 : 'bg-white/5 text-white/20 border-white/5 hover:border-white/10 hover:text-white/40'
@@ -135,6 +163,7 @@ const MixerButton = ({ active, onClick, label, color }: { active: boolean; onCli
 export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controller }) => {
     const t = useTranslations('StemIsolation');
     const [stems, setStems] = useState<StemSettings[]>([]);
+    const [stemLevels, setStemLevels] = useState<number[]>([]);
     const [activePreset, setActivePreset] = useState<StemPreset>('full-mix');
     const [isExpanded, setIsExpanded] = useState(true);
 
@@ -144,7 +173,16 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
 
     useEffect(() => {
         refreshStems();
-    }, [refreshStems]);
+
+        let animationId: number;
+        const updateLevels = () => {
+            setStemLevels(controller.getStemLevels());
+            animationId = requestAnimationFrame(updateLevels);
+        };
+        animationId = requestAnimationFrame(updateLevels);
+
+        return () => cancelAnimationFrame(animationId);
+    }, [refreshStems, controller]);
 
     const handleVolumeChange = useCallback((index: number, volume: number) => {
         controller.setStemVolume(index, volume);
@@ -235,13 +273,14 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
                                 ))}
                             </div>
 
-                            {/* Stem Sliders */}
-                            <div className="grid grid-cols-1 gap-3">
+                            {/* Stem Sliders (Mixer Deck) */}
+                            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/10">
                                 {stems.map((stem, index) => (
                                     <StemSlider
                                         key={`${stem.type}-${index}`}
                                         stem={stem}
                                         index={index}
+                                        level={stemLevels[index] || 0}
                                         onVolumeChange={handleVolumeChange}
                                         onMuteToggle={handleMuteToggle}
                                         onSoloToggle={handleSoloToggle}

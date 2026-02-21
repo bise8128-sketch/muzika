@@ -23,6 +23,7 @@ export class PlaybackController {
     // Sources
     private bufferSources: AudioBufferSourceNode[] = [];
     private gainNodes: GainNode[] = [];
+    private stemAnalysers: AnalyserNode[] = [];
 
     // Track state
     private audioBuffers: AudioBuffer[] = [];
@@ -124,9 +125,14 @@ export class PlaybackController {
                 const gainNode = this.audioContext.createGain();
                 gainNode.gain.value = this.trackVolumes[index] || 1.0;
 
+                const analyser = this.audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.5;
+
                 source.connect(gainNode);
-                gainNode.connect(destination);
-                this.effects.connectSourceToEffects(gainNode);
+                gainNode.connect(analyser); // Insert analyser after gain
+                analyser.connect(destination);
+                this.effects.connectSourceToEffects(analyser);
 
                 source.start(0, currentTime);
                 source.onended = () => {
@@ -138,6 +144,7 @@ export class PlaybackController {
 
                 this.bufferSources.push(source);
                 this.gainNodes[index] = gainNode;
+                this.stemAnalysers[index] = analyser;
             });
 
             // Voice buffer
@@ -186,7 +193,11 @@ export class PlaybackController {
         this.bufferSources.forEach(source => {
             try { source.stop(); source.disconnect(); } catch { /* may already be stopped */ }
         });
+        this.stemAnalysers.forEach(analyser => {
+            try { analyser.disconnect(); } catch { /* ignore */ }
+        });
         this.bufferSources = [];
+        this.stemAnalysers = [];
     }
 
     // ─── Seek / Time ───────────────────────────────────────────────
@@ -405,6 +416,24 @@ export class PlaybackController {
                 // No solo active → respect mute state
                 this._applyStemGain(i, stem.muted ? 0 : stem.volume);
             }
+        });
+    }
+
+    /** Returns current RMS / Peak levels for each stem (0.0 to 1.0) */
+    getStemLevels(): number[] {
+        if (!this.isPlaying) return this.trackVolumes.map(() => 0);
+        
+        return this.stemAnalysers.map(analyser => {
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteTimeDomainData(dataArray);
+            
+            // Calculate peak level from time domain data
+            let max = 128;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = Math.abs(dataArray[i] - 128);
+                if (val > max - 128) max = val + 128;
+            }
+            return (max - 128) / 128;
         });
     }
 
