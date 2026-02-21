@@ -19,6 +19,7 @@ export interface SeparationResult {
 
     fileHash: string;
     executionBackend?: 'webgpu' | 'wasm' | 'server';
+    file?: File;
 }
 
 export interface ProcessingProgress {

@@ -47,6 +47,9 @@ export function useAppState(options: UseAppStateOptions) {
 
       if (autoStartKaraoke && controller) {
         controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
+        if (separationResult.file) {
+          controller.setOriginalFile(separationResult.file);
+        }
         send({ type: 'START_KARAOKE' });
         router.push(`/karaoke/${separationResult.fileHash}`);
       } else {
