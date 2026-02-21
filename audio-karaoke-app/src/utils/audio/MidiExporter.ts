@@ -47,7 +47,7 @@ export class MidiExporter {
         const midiData = writer.buildFile(events);
 
         // 4. Download
-        const blob = new Blob([midiData], { type: 'audio/midi' });
+        const blob = new Blob([midiData as unknown as BlobPart], { type: 'audio/midi' });
         downloadBlob(blob, filename.endsWith('.mid') ? filename : `${filename}.mid`);
     }
 

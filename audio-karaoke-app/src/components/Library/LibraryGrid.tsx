@@ -162,7 +162,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
             setExportingId(song.id!);
             
             // 1. Get the path to analyze (prefer vocals)
-            const path = song.vocalsPath || song.originalPath;
+            const path = song.vocalPath || song.instrumentalPath;
             if (!path) throw new Error('No audio path available for this song.');
 
             // 2. Load from OPFS
