@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { MonitoringInit } from "@/components/UI/MonitoringInit";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ThemeAwareBackground } from "@/components/Visuals/ThemeAwareBackground";
 import Script from "next/script";
 
 const inter = Inter({
@@ -50,6 +51,7 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <MonitoringInit />
+            <ThemeAwareBackground />
             {children}
           </ThemeProvider>
         </NextIntlClientProvider>

@@ -23,6 +23,15 @@
 
   /* Layout Constants */
   --header-height: 5rem;
+
+  /* Theme Mesh Gradient Stops */
+  --mesh-stop-1: rgba(147, 51, 234, 0.15); /* Purple 500 */
+  --mesh-stop-2: rgba(236, 72, 153, 0.1);  /* Pink 500 */
+  --mesh-stop-3: rgba(147, 51, 234, 0.15); /* Purple 500 */
+  
+  /* Component Glows */
+  --ui-glow: rgba(147, 51, 234, 0.5);
+  --ui-glow-strong: rgba(147, 51, 234, 0.8);
 }
 
 .theme-cyberpunk {
@@ -32,6 +41,15 @@
   --card: #0f172a; /* Slate 900 */
   --glow-intensity: 0.8;
   --ring: #22d3ee;
+
+  /* Theme Mesh Gradient Stops */
+  --mesh-stop-1: rgba(6, 182, 212, 0.2);  /* Cyan 500 */
+  --mesh-stop-2: rgba(244, 114, 182, 0.15); /* Pink 400 */
+  --mesh-stop-3: rgba(6, 182, 212, 0.2);  /* Cyan 500 */
+
+  /* Component Glows */
+  --ui-glow: rgba(6, 182, 212, 0.5);
+  --ui-glow-strong: rgba(6, 182, 212, 0.8);
 }
 
 .theme-aurora {
@@ -41,6 +59,15 @@
   --card: #064e3b; /* Emerald 900 */
   --glow-intensity: 0.4;
   --ring: #34d399;
+
+  /* Theme Mesh Gradient Stops */
+  --mesh-stop-1: rgba(16, 185, 129, 0.15); /* Emerald 500 */
+  --mesh-stop-2: rgba(59, 130, 246, 0.1);   /* Blue 500 */
+  --mesh-stop-3: rgba(16, 185, 129, 0.15); /* Emerald 500 */
+
+  /* Component Glows */
+  --ui-glow: rgba(16, 185, 129, 0.5);
+  --ui-glow-strong: rgba(16, 185, 129, 0.8);
 }
 
 @theme inline {
@@ -105,7 +132,7 @@ body {
 
   /* Premium Glassmorphism */
   .glass-premium {
-    @apply bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-hidden;
+    @apply bg-white/3 backdrop-blur-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-hidden;
     /* Inner highlight */
     background-image: linear-gradient(
       135deg,
@@ -129,11 +156,12 @@ body {
   }
 
   .mesh-gradient {
-    background-color: #050505;
+    background-color: var(--background);
     background-image:
-      radial-gradient(at 0% 0%, rgba(147, 51, 234, 0.15) 0, transparent 50%),
-      radial-gradient(at 50% 0%, rgba(236, 72, 153, 0.1) 0, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(147, 51, 234, 0.15) 0, transparent 50%);
+      radial-gradient(at 0% 0%, var(--mesh-stop-1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, var(--mesh-stop-2) 0, transparent 50%),
+      radial-gradient(at 100% 0%, var(--mesh-stop-3) 0, transparent 50%);
+    @apply transition-[background-image] duration-1000 ease-in-out;
   }
 
   .interactive-scale {

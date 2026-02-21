@@ -5,10 +5,10 @@ import { useTheme, ThemeType } from '@/context/ThemeContext';
 import { motion } from 'framer-motion';
 import { Palette, Check } from 'lucide-react';
 
-const THEMES: { id: ThemeType; label: string; colors: string[] }[] = [
-    { id: 'midnight', label: 'Midnight Studio', colors: ['#9333ea', '#ec4899', '#050505'] },
-    { id: 'cyberpunk', label: 'Cyberpunk Neon', colors: ['#06b6d4', '#f472b6', '#020617'] },
-    { id: 'aurora', label: 'Aurora', colors: ['#10b981', '#3b82f6', '#022c22'] },
+const THEMES: { id: ThemeType; label: string; colors: string[]; description: string }[] = [
+    { id: 'midnight', label: 'Midnight Studio', colors: ['#9333ea', '#ec4899', '#050505'], description: 'Classic Deep Purple Ambient' },
+    { id: 'cyberpunk', label: 'Cyberpunk Neon', colors: ['#06b6d4', '#f472b6', '#020617'], description: 'Electrifying Cyan & Pink Glow' },
+    { id: 'aurora', label: 'Aurora', colors: ['#10b981', '#3b82f6', '#022c22'], description: 'Smooth Emerald Borealis' },
 ];
 
 export const ThemeSelector: React.FC = () => {
@@ -46,10 +46,15 @@ export const ThemeSelector: React.FC = () => {
                                     />
                                 ))}
                             </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-tight
-                                ${theme === t.id ? 'text-primary' : 'text-white/40 group-hover:text-white/60'}`}>
-                                {t.label}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors
+                                    ${theme === t.id ? 'text-primary' : 'text-white/40 group-hover:text-white/60'}`}>
+                                    {t.label}
+                                </span>
+                                <span className="text-[8px] text-white/20 font-medium uppercase tracking-tighter">
+                                    {t.description}
+                                </span>
+                            </div>
                         </div>
 
                         {theme === t.id && (
