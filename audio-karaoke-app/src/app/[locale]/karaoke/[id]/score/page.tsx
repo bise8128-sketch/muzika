@@ -32,7 +32,7 @@ export default function PerformanceScorePage() {
             if (!isNaN(songId)) {
                 performanceStorage.saveScore(
                     songId, 
-                    performanceScore.history[0]?.fileHash || 'unknown', 
+                    'session-' + id, 
                     performanceScore
                 ).then(() => {
                     console.log('✅ Performance score persisted to history');
@@ -109,13 +109,13 @@ export default function PerformanceScorePage() {
                         
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                             <ScoreSubmitForm 
-                                songId={typeof id === 'string' ? id : id[0]} 
+                                songId={typeof id === 'string' ? id : (id?.[0] || '')} 
                                 performanceScore={performanceScore} 
                             />
                             
                             <div className="space-y-8">
                                 <LeaderboardDisplay 
-                                    songId={typeof id === 'string' ? parseInt(id, 10) : parseInt(id[0], 10)} 
+                                    songId={id ? (typeof id === 'string' ? parseInt(id, 10) : parseInt(id[0], 10)) : 0} 
                                 />
                                 
                                 <div className="p-8 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4 text-center">
@@ -148,7 +148,7 @@ export default function PerformanceScorePage() {
                 <LeaderboardOverlay 
                     isOpen={isLeaderboardOpen} 
                     onClose={() => setIsLeaderboardOpen(false)} 
-                    songId={typeof id === 'string' ? id : id[0]}
+                    songId={id ? (typeof id === 'string' ? id : id[0]) : ''}
                 />
 
                 {/* Actions */}

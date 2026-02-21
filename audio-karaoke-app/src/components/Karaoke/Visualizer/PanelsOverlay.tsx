@@ -59,8 +59,10 @@ export const PanelsOverlay: React.FC<PanelsOverlayProps> = ({
                 <PanelWrapper key="voicefx" onClose={onCloseVoiceFx} className="w-96">
                     <VoiceRoomPanel 
                         currentPreset={voiceFxProps.currentPreset}
+                        settings={voiceFxProps.settings}
                         isMonitoring={voiceFxProps.isMonitoring}
                         onPresetChange={voiceFxProps.onPresetChange}
+                        onSettingsChange={voiceFxProps.onSettingsChange}
                         onToggleMonitoring={voiceFxProps.onToggleMonitoring}
                         isInitialized={voiceFxProps.isInitialized}
                         onInit={voiceFxProps.onInit}

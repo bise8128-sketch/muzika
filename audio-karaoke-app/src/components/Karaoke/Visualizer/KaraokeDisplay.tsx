@@ -149,7 +149,6 @@ export const KaraokeDisplay: React.FC<KaraokeDisplayProps> = ({
         <motion.div
             data-testid="visualizer-container"
             ref={containerRef}
-            onMouseMove={handleMouseMove}
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ 

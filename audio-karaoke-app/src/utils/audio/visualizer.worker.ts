@@ -695,7 +695,10 @@ function drawSingStar() {
   context.lineCap = "round";
   context.lineJoin = "round";
 
-  visibleData.forEach((d, i) => {
+  // --- 2. Draw User Pitch Trail ---
+  const visibleData = latestPitchHistory.slice(-VISIBLE_HISTORY);
+  
+  visibleData.forEach((d: any, i: number) => {
     if (i === 0 || d.detectedMidi <= 0) return;
     const prev = visibleData[i - 1];
     if (prev.detectedMidi <= 0) return;

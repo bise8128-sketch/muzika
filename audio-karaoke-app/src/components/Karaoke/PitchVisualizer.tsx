@@ -62,14 +62,20 @@ const ComboCounter: React.FC<ComboCounterProps> = ({ combo }) => {
     );
 };
 
+interface HitFeedbackProps {
+    hitType: 'perfect' | 'great' | 'good' | 'miss' | null;
+}
+
 const HitFeedback: React.FC<HitFeedbackProps> = ({ hitType }) => {
     if (!hitType || hitType === 'miss') return null;
 
-    const config = {
+    const configs = {
         perfect: { label: 'PERFECT', color: 'text-emerald-400' },
         great: { label: 'GREAT', color: 'text-blue-400' },
         good: { label: 'GOOD', color: 'text-amber-400' },
-    }[hitType];
+    };
+    
+    const config = configs[hitType as keyof typeof configs];
 
     // Use a unique key based on hitType and a fixed timestamp from when the hit occurred
     // for Framer Motion, but avoid calling Date.now() directly in render.

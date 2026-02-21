@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import { LRCData, PitchAnalysisResult } from '@/types/karaoke';
+import { LRCData } from '@/types/karaoke';
+import { PitchAnalysisResult } from '@/types/audio';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { KaraokeUIState, KaraokeUIActions } from '@/hooks/useKaraokeUI';

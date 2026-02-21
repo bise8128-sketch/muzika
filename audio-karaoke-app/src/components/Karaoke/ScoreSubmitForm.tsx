@@ -38,7 +38,7 @@ export const ScoreSubmitForm: React.FC<ScoreSubmitFormProps> = ({
                 body: JSON.stringify({
                     songId,
                     username: username.trim(),
-                    score: performanceScore.overallScore,
+                    score: performanceScore.overallAccuracy,
                     maxCombo: performanceScore.longestStreak,
                     perfectionRate: (performanceScore.history.filter(h => h.accuracy >= 90).length / performanceScore.history.length) * 100,
                     harmonyBonus: 0, // Potential future feature

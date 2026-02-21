@@ -108,7 +108,7 @@ const Fader: React.FC<{
 export const MultiTrackMixer: React.FC<MultiTrackMixerProps> = ({ controller, onClose }) => {
     const [stems, setStems] = useState<StemSettings[]>([]);
     const [levels, setLevels] = useState<number[]>([]);
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number>(0);
 
     useEffect(() => {
         const update = () => {

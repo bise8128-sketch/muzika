@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Edit3, X } from 'lucide-react';
-import { LRCData, VisualSettings, StageTheme, PitchAnalysisResult } from '@/types/karaoke';
+import { LRCData, VisualSettings, StageTheme } from '@/types/karaoke';
+import { PitchAnalysisResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 import { LyricTheme, LyricDisplay } from '../LyricDisplay';
 import { LyricEditor } from '../LyricEditor';

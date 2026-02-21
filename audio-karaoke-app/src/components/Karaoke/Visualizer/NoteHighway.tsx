@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
-import { PitchAnalysisResult, StageTheme } from '@/types/karaoke';
+import { StageTheme } from '@/types/karaoke';
+import { PitchAnalysisResult } from '@/types/audio';
 import { getReferencePitchAtTime } from '@/utils/audio/pitchAnalysis';
 
 interface NoteHighwayProps {
@@ -27,7 +28,7 @@ export const NoteHighway: React.FC<NoteHighwayProps> = ({
     className
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number>(0);
 
     // Theme Config
     const getThemeConfig = (theme: StageTheme) => {
