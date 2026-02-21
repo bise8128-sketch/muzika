@@ -39,6 +39,8 @@ import { EffectsController } from './EffectsController';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { PlayerHeader } from './PlayerHeader';
 import { ErrorBoundary } from '../UI/ErrorBoundary';
+import { useMachine } from '@xstate/react';
+import { karaokeMachine } from '@/machines/karaokeMachine';
 
 interface KaraokePlayerProps {
     controller: PlaybackController;
@@ -60,6 +62,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     // UI State Management
     const { state: uiState, actions: uiActions } = useKaraokeUI();
     
+    // XState for App Flow
+    const [machineState, send] = useMachine(karaokeMachine);
+
     // Core Data State
     const [lyrics, setLyrics] = useState<LRCData | null>(null);
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
@@ -139,6 +144,30 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             controller.setVoiceBuffer(recorder.recordedBuffer);
         }
     }, [recorder.recordedBuffer, controller]);
+    
+    // Sync machine with playback events
+    useEffect(() => {
+        const handlePlay = () => send({ type: 'PLAY' });
+        const handlePause = () => send({ type: 'PAUSE' });
+        const handleStop = () => send({ type: 'STOP' });
+
+        controller.on('play', handlePlay);
+        controller.on('pause', handlePause);
+        controller.on('ended', handleStop);
+
+        return () => {
+            controller.off('play', handlePlay);
+            controller.off('pause', handlePause);
+            controller.off('ended', handleStop);
+        };
+    }, [controller, send]);
+
+    // Transition from loading to ready when lyrics are available
+    useEffect(() => {
+        if (lyrics || cdgData) {
+            send({ type: 'READY' });
+        }
+    }, [lyrics, cdgData, send]);
 
     // Handle song end to show performance score
     useEffect(() => {
@@ -180,24 +209,22 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [mixRecorder, controller, useVoiceHook.getProcessedStream()]);
 
     const vizMode = uiState.visualSettings.visualizationMode;
-    const voicePreset = useVoiceHook.currentPreset;
 
     useEffect(() => {
         if (uiState.isStageMode && playback.isPlaying) {
             pitchAnalysis.startAnalysis();
-        } else if (!uiState.isStageMode && pitchAnalysis.isListening) {
-            // Optional: stop if leaving stage mode, but maybe keep it if user toggled it manually
-            // Let's stop it for now to save resources unless it was explicit
         }
     }, [uiState.isStageMode, playback.isPlaying, pitchAnalysis.startAnalysis]);
 
     useEffect(() => {
-        if (pitchAnalysis.isListening && visualizerInstance) {
+        if (!visualizerInstance) return;
+
+        if (pitchAnalysis.isListening) {
             visualizerInstance.setMode('singstar');
-        } else if (visualizerInstance) {
+        } else {
             visualizerInstance.setMode(vizMode);
         }
-    }, [pitchAnalysis.isListening, visualizerInstance, vizMode, voicePreset]);
+    }, [pitchAnalysis.isListening, visualizerInstance, vizMode]);
 
     useEffect(() => {
         if (visualizerInstance && pitchAnalysis.isListening && pitchAnalysis.pitchHistory.length > 0) {
@@ -229,7 +256,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
-    }, [playback]); // Only once on mount (ignoring playback dep safely)
+    }, [playback]);
 
     // Shortcuts
     useKaraokeShortcuts({
@@ -296,6 +323,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         currentWordIndex={lyricState.wordIndex}
                         pitchHistory={pitchAnalysis.pitchHistory}
                         recorder={recorder}
+                        machineState={machineState}
                         
                         voiceFxProps={{
                             currentPreset: useVoiceHook.currentPreset,

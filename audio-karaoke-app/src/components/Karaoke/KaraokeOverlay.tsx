@@ -15,6 +15,8 @@ import { StemSeparationPanel } from './StemSeparationPanel';
 import { separateAudio } from '@/utils/ml/separateAudio';
 import { ModelType, MODELS } from '@/types/model';
 import { ProcessingProgress } from '@/types/audio';
+import { StateFrom } from 'xstate';
+import { karaokeMachine } from '@/machines/karaokeMachine';
 
 interface KaraokeOverlayProps {
     uiState: KaraokeUIState;
@@ -25,7 +27,7 @@ interface KaraokeOverlayProps {
     cdgData: Uint8Array | null;
     controller: PlaybackController;
     visualizer: AudioVisualizer | null;
-    playback?: any;
+    playback?: any; // usePlayback return type is complex, keeping for now or use ReturnType<typeof usePlayback> if accessible
     
     // Playback State (needed for LyricsContainer)
     currentLineIndex: number;
@@ -57,6 +59,9 @@ interface KaraokeOverlayProps {
     onStartRecordingMix: () => void;
     onStopRecordingMix: () => void;
     onClearMixRecording: () => void;
+    
+    // XState
+    machineState: StateFrom<typeof karaokeMachine>;
 }
 
 export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
@@ -82,7 +87,8 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     recordedMixBlob,
     onStartRecordingMix,
     onStopRecordingMix,
-    onClearMixRecording
+    onClearMixRecording,
+    machineState
 }) => {
     const t = useTranslations('KaraokePlayer');
 
@@ -129,6 +135,20 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
             setSeparationError(err instanceof Error ? err : new Error(String(err)));
         }
     };
+
+    if (machineState.matches('loading')) {
+        return (
+            <div className="absolute inset-0 z-100 flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                    className="w-16 h-16 border-4 border-t-purple-500 border-white/10 rounded-full mb-6 shadow-[0_0_30px_rgba(168,85,247,0.3)]"
+                />
+                <h2 className="text-2xl font-bold text-white tracking-widest animate-pulse">PREPARING STUDIO...</h2>
+                <p className="text-white/40 mt-2 font-mono text-sm uppercase tracking-widest">Optimizing audio buffers</p>
+            </div>
+        );
+    }
 
     return (
         <>
