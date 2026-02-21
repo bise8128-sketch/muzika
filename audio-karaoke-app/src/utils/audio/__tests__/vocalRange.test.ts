@@ -90,5 +90,14 @@ describe('VocalRange', () => {
             const shift = getRecommendedShift(createKey('C'), 'bass');
             expect(shift).toBe(5);
         });
+
+        it('should suggest correct shift for Bass in F# Major', () => {
+            // Bass center: 53 (F3)
+            // F# is index 6. Center = 60 + 6 = 66.
+            // Shift: 53 - 66 = -13.
+            // Normalize: -13 + 12 = -1.
+            const shift = getRecommendedShift(createKey('F#'), 'bass');
+            expect(shift).toBe(-1);
+        });
     });
 });
