@@ -11,6 +11,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { LyricsContainer } from './Visualizer/LyricsContainer';
 import { KaraokeToolbar } from './Visualizer/KaraokeToolbar';
 import { PanelsOverlay } from './Visualizer/PanelsOverlay';
+import { SmartTransposeSuggestion } from './SmartTransposeSuggestion';
 import { SettingsPanel } from '../UI/SettingsPanel';
 import { StemSeparationPanel } from './StemSeparationPanel';
 import { separateAudio } from '@/utils/ml/separateAudio';
@@ -170,6 +171,13 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 onToggleEditor={uiActions.toggleEditor}
                 onSaveLRC={onSaveLRC}
                 onLRCUpload={onLRCUpload}
+            />
+
+            <SmartTransposeSuggestion
+                detectedKey={autoKeyProps.detectedKey}
+                vocalRange={autoKeyProps.vocalRange}
+                suggestedShift={autoKeyProps.suggestedShift}
+                onApply={autoKeyProps.onApply}
             />
 
             <KaraokeToolbar

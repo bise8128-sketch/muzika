@@ -5,6 +5,7 @@ import type { KeyInfo } from '../utils/audio/keyDetectionCore';
 import { VocalRangeType, getRecommendedShift } from '../utils/audio/vocalRange';
 import { PlaybackController } from '../utils/audio/playback/PlaybackCore';
 import type { KeyWorkerResponse } from '../workers/keyDetection.worker';
+import { getSettings, saveSettings } from '../utils/storage/settingsStore';
 
 /**
  * useAutoKey — Detects the musical key of the loaded track off the main thread.
@@ -16,7 +17,7 @@ import type { KeyWorkerResponse } from '../workers/keyDetection.worker';
 export function useAutoKey(controller: PlaybackController) {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [detectedKey, setDetectedKey] = useState<KeyInfo | null>(null);
-    const [vocalRange, setVocalRange] = useState<VocalRangeType>('tenor');
+    const [vocalRange, setVocalRange] = useState<VocalRangeType>(() => getSettings().preferredVocalRange);
     const [suggestedShift, setSuggestedShift] = useState<number | null>(null);
 
     // Persistent worker reference — created once, reused across analyses
@@ -42,7 +43,7 @@ export function useAutoKey(controller: PlaybackController) {
 
         setIsAnalyzing(true);
 
-        const buffer = buffers[0];
+        const buffer = buffers[1] || buffers[0]; // Prioritize instrumental stem (index 1)
         const sampleRate = buffer.sampleRate;
 
         // getChannelData returns a *view* — we copy it so we can safely transfer ownership.
@@ -80,6 +81,17 @@ export function useAutoKey(controller: PlaybackController) {
         );
     }, [controller, vocalRange]);
 
+    // Auto-analysis on buffer change
+    useEffect(() => {
+        const buffers = controller.getAudioBuffers();
+        if (buffers.length > 0 && !detectedKey && !isAnalyzing) {
+            // Use requestAnimationFrame to avoid "Calling setState synchronously within an effect" warning
+            requestAnimationFrame(() => {
+                analyzeTrack();
+            });
+        }
+    }, [controller, analyzeTrack, detectedKey, isAnalyzing]);
+
     const applyShift = useCallback(() => {
         if (suggestedShift !== null) {
             controller.setPitch(suggestedShift);
@@ -88,6 +100,7 @@ export function useAutoKey(controller: PlaybackController) {
 
     const updateVocalRange = useCallback((range: VocalRangeType) => {
         setVocalRange(range);
+        saveSettings({ preferredVocalRange: range });
         if (detectedKey) {
             setSuggestedShift(getRecommendedShift(detectedKey, range));
         }

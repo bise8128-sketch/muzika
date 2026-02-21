@@ -11,6 +11,7 @@ export interface UserSettings {
     defaultVolumeBalance: number; // 0.5 is equal, 0 is all instrumental, 1 is all vocals
     stageModeEnabled: boolean;
     showVisualizer: boolean;
+    preferredVocalRange: VocalRangeType;
 }
 
 const STORAGE_KEY = 'muzika_user_settings';
@@ -20,7 +21,8 @@ const DEFAULT_SETTINGS: UserSettings = {
     autoStartKaraoke: false,
     defaultVolumeBalance: 0.5,
     stageModeEnabled: false,
-    showVisualizer: true
+    showVisualizer: true,
+    preferredVocalRange: 'tenor'
 };
 
 export function getSettings(): UserSettings {
