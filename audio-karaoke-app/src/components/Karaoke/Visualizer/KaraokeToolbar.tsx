@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Maximize2, Target, Users, Settings, Mic2, Edit3, Music } from 'lucide-react';
+import { Maximize2, Target, Users, Settings, Mic2, Edit3, Music, Sparkles } from 'lucide-react';
 import { LyricTheme } from '../LyricDisplay';
 import { VisualSettings, LRCData } from '@/types/karaoke';
 
@@ -13,12 +13,14 @@ interface KaraokeToolbarProps {
     showRoom: boolean;
     showVoiceFx: boolean;
     showAutoKey: boolean;
+    showLyricSync: boolean;
     isVisualSettingsOpen: boolean;
     onThemeChange: (theme: LyricTheme) => void;
     onTogglePractice: () => void;
     onToggleRoom: () => void;
     onToggleVoiceFx: () => void;
     onToggleAutoKey: () => void;
+    onToggleLyricSync: () => void;
     onToggleEditor: (show: boolean) => void;
     onToggleStageMode: (enabled: boolean) => void;
     onVisualSettingsChange: (settings: VisualSettings) => void;
@@ -53,12 +55,14 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
     showRoom,
     showVoiceFx,
     showAutoKey,
+    showLyricSync,
     isVisualSettingsOpen,
     onThemeChange,
     onTogglePractice,
     onToggleRoom,
     onToggleVoiceFx,
     onToggleAutoKey,
+    onToggleLyricSync,
     onToggleEditor,
     onToggleStageMode,
     onVisualSettingsChange,
@@ -92,7 +96,7 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
                 ))}
             </div>
 
-            <div className="w-[1px] h-8 bg-white/10 self-center" />
+            <div className="w-px h-8 bg-white/10 self-center" />
 
             <ToolbarButton 
                 icon={<Target className="w-4 h-4" />} 
@@ -117,6 +121,12 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
                 active={showAutoKey} 
                 onClick={onToggleAutoKey} 
                 label="Auto-Key" 
+            />
+            <ToolbarButton 
+                icon={<Sparkles className="w-4 h-4" />} 
+                active={showLyricSync} 
+                onClick={onToggleLyricSync} 
+                label="AI Lyric Sync" 
             />
 
             {/* Recording Controls */}
@@ -151,7 +161,7 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
                 />
             )}
 
-            <div className="w-[1px] h-8 bg-white/10 self-center" />
+            <div className="w-px h-8 bg-white/10 self-center" />
 
             <ToolbarButton 
                 icon={<Settings className="w-4 h-4" />} 

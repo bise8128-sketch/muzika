@@ -5,20 +5,24 @@ import { PracticePanel } from '../PracticePanel';
 import { RoomLobby } from '../../Room/RoomLobby';
 import { RoomView } from '../../Room/RoomView';
 import { AutoKeyPanel } from '../AutoKeyPanel';
+import { LyricSyncPanel } from '../LyricSyncPanel';
 
 interface PanelsOverlayProps {
     showVoiceFx: boolean;
     showPractice: boolean;
     showRoom: boolean;
     showAutoKey: boolean;
+    showLyricSync: boolean;
     voiceFxProps: any;
     practiceProps: any;
     roomProps: any;
     autoKeyProps: any;
+    lyricSyncProps: any;
     onCloseVoiceFx: () => void;
     onClosePractice: () => void;
     onCloseRoom: () => void;
     onCloseAutoKey: () => void;
+    onCloseLyricSync: () => void;
 }
 
 const PanelWrapper: React.FC<{ children: React.ReactNode; onClose: () => void; className?: string }> = ({ children, className }) => (
@@ -26,7 +30,7 @@ const PanelWrapper: React.FC<{ children: React.ReactNode; onClose: () => void; c
         initial={{ opacity: 0, scale: 0.9, x: 10 }}
         animate={{ opacity: 1, scale: 1, x: 0 }}
         exit={{ opacity: 0, scale: 0.9, x: 10 }}
-        className={`absolute top-24 right-6 z-[60] glass-premium rounded-3xl p-1 shadow-2xl ${className || ''}`}
+        className={`absolute top-24 right-6 z-60 glass-premium rounded-3xl p-1 shadow-2xl ${className || ''}`}
     >
         {children}
     </motion.div>
@@ -37,14 +41,17 @@ export const PanelsOverlay: React.FC<PanelsOverlayProps> = ({
     showPractice,
     showRoom,
     showAutoKey,
+    showLyricSync,
     voiceFxProps,
     practiceProps,
     roomProps,
     autoKeyProps,
+    lyricSyncProps,
     onCloseVoiceFx,
     onClosePractice,
     onCloseRoom,
-    onCloseAutoKey
+    onCloseAutoKey,
+    onCloseLyricSync
 }) => {
     return (
         <AnimatePresence>
@@ -92,6 +99,11 @@ export const PanelsOverlay: React.FC<PanelsOverlayProps> = ({
             {showAutoKey && (
                 <PanelWrapper key="autokey" onClose={onCloseAutoKey}>
                     <AutoKeyPanel {...autoKeyProps} onClose={onCloseAutoKey} />
+                </PanelWrapper>
+            )}
+            {showLyricSync && (
+                <PanelWrapper key="lyricsync" onClose={onCloseLyricSync}>
+                    <LyricSyncPanel {...lyricSyncProps} onClose={onCloseLyricSync} />
                 </PanelWrapper>
             )}
         </AnimatePresence>

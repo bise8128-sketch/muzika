@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { LyricTheme } from '@/components/Karaoke/LyricDisplay';
 import { VisualSettings } from '@/types/karaoke';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
@@ -12,6 +12,7 @@ export interface KaraokeUIState {
     showRoom: boolean;
     showVoiceFx: boolean;
     showAutoKey: boolean;
+    showLyricSync: boolean;
     isVisualSettingsOpen: boolean;
     visualSettings: VisualSettings;
 }
@@ -25,6 +26,7 @@ export interface KaraokeUIActions {
     setShowRoom: (show: boolean) => void;
     setShowVoiceFx: (show: boolean) => void;
     setShowAutoKey: (show: boolean) => void;
+    setShowLyricSync: (show: boolean) => void;
     setIsVisualSettingsOpen: (open: boolean) => void;
     setVisualSettings: (settings: VisualSettings) => void;
     
@@ -34,6 +36,7 @@ export interface KaraokeUIActions {
     toggleRoom: () => void;
     toggleVoiceFx: () => void;
     toggleAutoKey: () => void;
+    toggleLyricSync: () => void;
     toggleSettings: () => void;
     toggleVisualSettings: () => void;
     toggleEditor: (show: boolean) => void;
@@ -67,6 +70,7 @@ export const useKaraokeUI = () => {
     const [showRoom, setShowRoom] = useState(false);
     const [showVoiceFx, setShowVoiceFx] = useState(false);
     const [showAutoKey, setShowAutoKey] = useState(false);
+    const [showLyricSync, setShowLyricSync] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
 
     const [visualSettings, setVisualSettings] = useState<VisualSettings>({
@@ -100,6 +104,7 @@ export const useKaraokeUI = () => {
     const toggleRoom = useCallback(() => setShowRoom(prev => !prev), []);
     const toggleVoiceFx = useCallback(() => setShowVoiceFx(prev => !prev), []);
     const toggleAutoKey = useCallback(() => setShowAutoKey(prev => !prev), []);
+    const toggleLyricSync = useCallback(() => setShowLyricSync(prev => !prev), []);
     const toggleSettings = useCallback(() => setShowSettings(prev => !prev), []);
     const toggleVisualSettings = useCallback(() => setIsVisualSettingsOpen(prev => !prev), []); // Usually strictly controlled, but toggle supported
     
@@ -113,6 +118,7 @@ export const useKaraokeUI = () => {
             showRoom,
             showVoiceFx,
             showAutoKey,
+            showLyricSync,
             isVisualSettingsOpen,
             visualSettings
         },
@@ -125,6 +131,7 @@ export const useKaraokeUI = () => {
             setShowRoom,
             setShowVoiceFx,
             setShowAutoKey,
+            setShowLyricSync,
             setIsVisualSettingsOpen,
             setVisualSettings,
             
@@ -133,6 +140,7 @@ export const useKaraokeUI = () => {
             toggleRoom,
             toggleVoiceFx,
             toggleAutoKey,
+            toggleLyricSync,
             toggleSettings,
             toggleVisualSettings,
             toggleEditor: setShowEditor,

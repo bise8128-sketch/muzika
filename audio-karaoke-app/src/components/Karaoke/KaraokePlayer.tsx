@@ -28,6 +28,7 @@ import { useKaraokeEffects } from '@/hooks/useKaraokeEffects';
 import { useKaraokeEngine } from '@/hooks/useKaraokeEngine';
 import { useVisualizerOrchestrator } from '@/hooks/useVisualizerOrchestrator';
 import { useVoiceTransform } from '@/hooks/useVoiceTransform';
+import { useLyricSync } from '@/hooks/useLyricSync';
 
 // Sub-components
 import { KaraokeDisplay } from './Visualizer/KaraokeDisplay';
@@ -106,6 +107,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const usePracticeHook = usePractice(controller);
     const useRoomHook = useKaraokeRoom(controller);
     const useVoiceHook = useVoiceTransform();
+    const lyricSync = useLyricSync(controller);
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,6 +120,16 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         vocalEnergy: pitchAnalysis.energy,
         voicePreset: useVoiceHook.currentPreset
     });
+    
+    // Auto-update lyrics when AI sync finishes
+    useEffect(() => {
+        if (lyricSync.result) {
+            setLyrics(prev => ({
+                lines: lyricSync.result!.lines,
+                metadata: prev?.metadata || {}
+            }));
+        }
+    }, [lyricSync.result]);
 
     // Cleanup and Sync
     useEffect(() => {
@@ -165,14 +177,16 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         };
     }, [mixRecorder, controller, useVoiceHook.getProcessedStream()]);
 
-    // Link Pitch Analysis to Background Visualizer
+    const vizMode = uiState.visualSettings.visualizationMode;
+    const voicePreset = useVoiceHook.currentPreset;
+
     useEffect(() => {
         if (pitchAnalysis.isListening && visualizerInstance) {
             visualizerInstance.setMode('singstar');
         } else if (visualizerInstance) {
-            visualizerInstance.setMode(uiState.visualSettings.visualizationMode);
+            visualizerInstance.setMode(vizMode);
         }
-    }, [pitchAnalysis.isListening, visualizerInstance, uiState.visualSettings.visualizationMode]);
+    }, [pitchAnalysis.isListening, visualizerInstance, vizMode, voicePreset]);
 
     useEffect(() => {
         if (visualizerInstance && pitchAnalysis.isListening && pitchAnalysis.pitchHistory.length > 0) {
@@ -198,7 +212,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
-    }, []); // Only once on mount (ignoring playback dep safely)
+    }, [playback]); // Only once on mount (ignoring playback dep safely)
 
     // Shortcuts
     useKaraokeShortcuts({
@@ -303,6 +317,21 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         onStartRecordingMix={mixRecorder.startRecordingMix}
                         onStopRecordingMix={mixRecorder.stopRecordingMix}
                         onClearMixRecording={mixRecorder.clearMixRecording}
+                        
+                        lyricSyncProps={{
+                            isProcessing: lyricSync.isProcessing,
+                            progress: lyricSync.progress,
+                            result: lyricSync.result,
+                            error: lyricSync.error,
+                            onStartSync: () => {
+                                if (lyrics) {
+                                    lyricSync.startSync(lyrics.lines.map(l => l.text));
+                                }
+                            },
+                            onCancel: lyricSync.cancelSync,
+                            onReset: lyricSync.resetSync,
+                            hasLyrics: !!lyrics
+                        }}
                     />
                 </KaraokeDisplay>
 

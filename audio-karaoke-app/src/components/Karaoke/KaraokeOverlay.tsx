@@ -36,6 +36,7 @@ interface KaraokeOverlayProps {
     practiceProps: any;
     roomProps: any;
     autoKeyProps: any;
+    lyricSyncProps: any;
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // Callbacks
@@ -65,6 +66,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     practiceProps,
     roomProps,
     autoKeyProps,
+    lyricSyncProps,
     onCanvasReady,
     onLRCUpload,
     onSaveLRC,
@@ -104,6 +106,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 showRoom={uiState.showRoom}
                 showVoiceFx={uiState.showVoiceFx}
                 showAutoKey={uiState.showAutoKey}
+                showLyricSync={uiState.showLyricSync}
                 isVisualSettingsOpen={uiState.isVisualSettingsOpen}
                 visualSettings={uiState.visualSettings}
                 isRecordingMix={isRecordingMix}
@@ -116,6 +119,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 onToggleRoom={uiActions.toggleRoom}
                 onToggleVoiceFx={uiActions.toggleVoiceFx}
                 onToggleAutoKey={uiActions.toggleAutoKey}
+                onToggleLyricSync={uiActions.toggleLyricSync}
                 onToggleEditor={uiActions.toggleEditor}
                 onToggleStageMode={uiActions.toggleStageMode}
                 onVisualSettingsChange={uiActions.updateVisualSettings}
@@ -126,14 +130,17 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 showPractice={uiState.showPractice}
                 showRoom={uiState.showRoom}
                 showAutoKey={uiState.showAutoKey}
+                showLyricSync={uiState.showLyricSync}
                 voiceFxProps={voiceFxProps}
                 practiceProps={practiceProps}
                 roomProps={roomProps}
                 autoKeyProps={autoKeyProps}
+                lyricSyncProps={lyricSyncProps}
                 onCloseVoiceFx={() => uiActions.setShowVoiceFx(false)}
                 onClosePractice={() => uiActions.setShowPractice(false)}
                 onCloseRoom={() => uiActions.setShowRoom(false)}
                 onCloseAutoKey={() => uiActions.setShowAutoKey(false)}
+                onCloseLyricSync={() => uiActions.setShowLyricSync(false)}
             />
 
             <AnimatePresence>
