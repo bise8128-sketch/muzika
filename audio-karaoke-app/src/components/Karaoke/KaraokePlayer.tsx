@@ -266,7 +266,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                             isMonitoring: useVoiceHook.isMonitoring,
                             onPresetChange: useVoiceHook.setPreset,
                             onSettingsChange: useVoiceHook.updateSettings,
-                            onToggleMonitoring: useVoiceHook.toggleMonitoring
+                            onToggleMonitoring: useVoiceHook.toggleMonitoring,
+                            isInitialized: useVoiceHook.isInitialized,
+                            onInit: useVoiceHook.initProcessor
                         }}
                         autoKeyProps={{
                             isAnalyzing: useAutoKeyHook.isAnalyzing,

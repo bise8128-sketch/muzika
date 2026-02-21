@@ -159,8 +159,11 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
                             pendingUpdateRef.current = true;
                             animationFrameRef.current = requestAnimationFrame(() => {
                                 pendingUpdateRef.current = false;
-                                // Grab latest reference point
-                                const latestResult = historyRef.current[historyRef.current.length - 1];
+                                
+                                // Optimization: Only pass the last 300 points for real-time visualization
+                                // This prevents massive array cloning (60fps x 10k items)
+                                const visibleWindow = historyRef.current.slice(-300);
+                                const latestResult = visibleWindow[visibleWindow.length - 1];
                                 
                                 setState(prev => ({
                                     ...prev,
@@ -168,7 +171,7 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
                                     currentScore: latestResult.accuracy,
                                     currentCombo: comboRef.current,
                                     lastHitType: hitType,
-                                    pitchHistory: [...historyRef.current],
+                                    pitchHistory: visibleWindow, // Only the sliding window
                                 }));
                             });
                         }
@@ -191,6 +194,7 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
             ...prev,
             isListening: false,
             overallScore: score,
+            pitchHistory: [...historyRef.current] // Final full history for the results page
         }));
     }, [cleanup]);
 

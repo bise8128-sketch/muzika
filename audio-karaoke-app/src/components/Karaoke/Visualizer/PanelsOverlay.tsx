@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { VoiceTransformPanel } from '../VoiceTransformPanel';
+import { VoiceRoomPanel } from '../VoiceRoomPanel';
 import { PracticePanel } from '../PracticePanel';
 import { RoomLobby } from '../../Room/RoomLobby';
 import { RoomView } from '../../Room/RoomView';
@@ -49,8 +49,15 @@ export const PanelsOverlay: React.FC<PanelsOverlayProps> = ({
     return (
         <AnimatePresence>
             {showVoiceFx && (
-                <PanelWrapper key="voicefx" onClose={onCloseVoiceFx}>
-                    <VoiceTransformPanel {...voiceFxProps} onClose={onCloseVoiceFx} />
+                <PanelWrapper key="voicefx" onClose={onCloseVoiceFx} className="w-96">
+                    <VoiceRoomPanel 
+                        currentPreset={voiceFxProps.currentPreset}
+                        isMonitoring={voiceFxProps.isMonitoring}
+                        onPresetChange={voiceFxProps.onPresetChange}
+                        onToggleMonitoring={voiceFxProps.onToggleMonitoring}
+                        isInitialized={voiceFxProps.isInitialized}
+                        onInit={voiceFxProps.onInit}
+                    />
                 </PanelWrapper>
             )}
             {showPractice && (
