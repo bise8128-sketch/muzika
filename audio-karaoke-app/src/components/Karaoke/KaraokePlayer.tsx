@@ -117,7 +117,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         canvasRef,
         vocalsVolume: playback.vocalsVolume,
         instrumentalVolume: playback.instrumentalVolume,
-        vocalEnergy: pitchAnalysis.energy,
+        vocalEnergy: 0, // Energy will be pulled via useAudioReactivity in sub-components
         voicePreset: useVoiceHook.currentPreset
     });
     
@@ -272,6 +272,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         cdgData={cdgData}
                         controller={controller}
                         visualizer={visualizerInstance}
+                        playback={playback}
                         currentLineIndex={lyricState.lineIndex}
                         currentWordIndex={lyricState.wordIndex}
                         recorder={recorder}

@@ -20,6 +20,7 @@ interface KaraokeOverlayProps {
     cdgData: Uint8Array | null;
     controller: PlaybackController;
     visualizer: AudioVisualizer | null;
+    playback: any;
     
     // Playback State (needed for LyricsContainer)
     currentLineIndex: number;
@@ -59,6 +60,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     cdgData,
     controller,
     visualizer,
+    playback,
     currentLineIndex,
     currentWordIndex,
     recorder,
@@ -89,8 +91,9 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 visualSettings={uiState.visualSettings}
                 currentLineIndex={currentLineIndex}
                 currentWordIndex={currentWordIndex}
-                visualizer={visualizer}
+                visualizer={visualizer || null}
                 controller={controller}
+                playback={playback}
                 onCanvasReady={onCanvasReady}
                 onToggleEditor={uiActions.toggleEditor}
                 onSaveLRC={onSaveLRC}

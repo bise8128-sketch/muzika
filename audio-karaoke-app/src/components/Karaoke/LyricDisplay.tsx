@@ -19,6 +19,7 @@ interface LyricDisplayProps {
     theme?: LyricTheme;
     visualSettings?: VisualSettings;
     visualizer?: AudioVisualizer | null;
+    isStageMode?: boolean;
 }
 
 const THEME_STYLES: Record<LyricTheme, {
@@ -64,7 +65,8 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     currentWordIndex,
     theme = 'modern',
     visualSettings,
-    visualizer
+    visualizer,
+    isStageMode = false
 }) => {
     const t = useTranslations('LyricDisplay');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -151,12 +153,12 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                             layout
                             initial={{ opacity: 0, y: 20, z: -100 }}
                             animate={{
-                                opacity: isActive ? 1 : (isPast ? 0.3 : 0.1),
-                                scale: isActive ? 1.15 : (isPast ? 0.9 : 0.8),
+                                opacity: isActive ? 1 : (isStageMode ? (isPast ? 0.2 : 0.05) : (isPast ? 0.3 : 0.1)),
+                                scale: isActive ? (isStageMode ? 1.3 : 1.15) : (isPast ? 0.9 : 0.8),
                                 y: 0,
-                                z: isActive ? 0 : (isPast ? -50 : -100),
-                                filter: isActive ? 'blur(0px)' : (isPast ? 'blur(3px)' : 'blur(6px)'),
-                                rotateX: isPast ? -5 : (isActive ? 0 : 5)
+                                z: isActive ? (isStageMode ? 100 : 0) : (isPast ? -50 : -100),
+                                filter: isActive ? 'blur(0px)' : (isStageMode ? 'blur(8px)' : (isPast ? 'blur(3px)' : 'blur(6px)')),
+                                rotateX: isStageMode ? (isActive ? -5 : (isPast ? -15 : 15)) : (isPast ? -5 : (isActive ? 0 : 5))
                             }}
                             style={{
                                 scale: isGhostActive ? ghostScale : undefined,
@@ -190,10 +192,11 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
                                             <motion.span
                                                 key={wIndex}
                                                 animate={{ 
-                                                    scale: isWordActive ? 1.1 : 1,
-                                                    color: (isWordPast || isWordActive) ? '#facc15' : '#ffffff66'
+                                                    scale: isWordActive ? (isStageMode ? 1.2 : 1.1) : 1,
+                                                    color: (isWordPast || isWordActive) ? (visualSettings?.highlightColor?.includes('yellow') ? '#facc15' : 'inherit') : '#ffffff66',
+                                                    textShadow: isWordActive ? '0 0 30px currentColor' : 'none'
                                                 }}
-                                                className={`inline-block mr-2 text-4xl lg:text-5xl font-black tracking-tighter`}
+                                                className={`inline-block mr-2 text-4xl lg:text-5xl font-black tracking-tighter ${isWordActive && !visualSettings?.highlightColor?.includes('yellow') ? (visualSettings?.highlightColor || 'text-yellow-400') : ''}`}
                                             >
                                                 {word.text}
                                             </motion.span>
