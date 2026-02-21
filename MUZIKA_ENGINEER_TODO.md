@@ -45,7 +45,7 @@
 - **Components to wrap**: `KaraokePlayer`, `AudioUpload`, `ResultsDisplay`, `ModelManager`
 
 ### CF-04: Implement Proper AbortController Cleanup
-- [ ] **Task**: Ensure all fetch requests and workers are properly cancelled on unmount
+- [x] **Task**: Ensure all fetch requests and workers are properly cancelled on unmount
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐ Low-Medium (2-3 hours)
 - **Impact**: Prevents memory leaks and stale state updates
@@ -53,7 +53,7 @@
 - **Implementation**: Review all `useEffect` hooks for proper cleanup
 
 ### CF-05: Fix Server-Side Rendering Issues with IndexedDB
-- [ ] **Task**: Verify SSR safety for all storage operations
+- [x] **Task**: Verify SSR safety for all storage operations
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐ Low-Medium (2-3 hours)
 - **Impact**: Prevents hydration mismatches and SSR errors
@@ -61,7 +61,7 @@
 - **Implementation**: Already has proxy pattern, verify all access points
 
 ### CF-06: Add Input Validation for File Uploads
-- [ ] **Task**: Implement comprehensive file validation before processing
+- [x] **Task**: Implement comprehensive file validation before processing
 - **Priority**: 🟡 MEDIUM
 - **Complexity**: ⭐⭐ Low-Medium (2-4 hours)
 - **Impact**: Prevents processing of invalid/corrupt files
@@ -69,7 +69,7 @@
 - **Validation**: Magic bytes, file size limits, duration limits, codec support
 
 ### CF-07: Handle AudioContext Suspension on iOS
-- [ ] **Task**: Implement proper AudioContext resume on user interaction for iOS Safari
+- [x] **Task**: Implement proper AudioContext resume on user interaction for iOS Safari
 - **Priority**: 🟡 MEDIUM
 - **Complexity**: ⭐⭐ Low-Medium (2-3 hours)
 - **Impact**: Fixes audio playback on iOS devices
@@ -77,7 +77,7 @@
 - **Implementation**: Add user interaction listener to resume suspended context
 
 ### CF-08: Add Rate Limiting to Python Backend
-- [ ] **Task**: Implement rate limiting middleware in FastAPI
+- [x] **Task**: Implement rate limiting middleware in FastAPI
 - **Priority**: 🟡 MEDIUM
 - **Complexity**: ⭐⭐ Low-Medium (2-3 hours)
 - **Impact**: Prevents API abuse
@@ -89,7 +89,7 @@
 ## 🏗️ ARCHITECTURAL REFACTORING
 
 ### AR-01: Decompose Main Page Component
-- [ ] **Task**: Split `page.tsx` (692 lines) into smaller, focused components
+- [x] **Task**: Split `page.tsx` (692 lines) into smaller, focused components
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐⭐ High (8-12 hours)
 - **Impact**: Improves maintainability and testability

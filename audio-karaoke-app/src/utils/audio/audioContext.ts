@@ -9,6 +9,31 @@ import { AudioWorkletManager } from './audioWorkletManager';
 let audioContext: AudioContext | null = null;
 let gainNode: GainNode | null = null;
 let workletManager: AudioWorkletManager | null = null;
+let isInteractionListenerAttached = false;
+
+function setupUserInteractionListeners(ctx: AudioContext) {
+    if (typeof window === 'undefined' || isInteractionListenerAttached) return;
+
+    const resumeContext = () => {
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+                const events = ['click', 'touchstart', 'touchend', 'keydown'];
+                events.forEach(event => document.removeEventListener(event, resumeContext));
+                isInteractionListenerAttached = false;
+            }).catch((err) => {
+                console.warn('[AudioContext] Failed to resume on interaction', err);
+            });
+        } else if (ctx.state === 'running') {
+            const events = ['click', 'touchstart', 'touchend', 'keydown'];
+            events.forEach(event => document.removeEventListener(event, resumeContext));
+            isInteractionListenerAttached = false;
+        }
+    };
+
+    const events = ['click', 'touchstart', 'touchend', 'keydown'];
+    events.forEach(event => document.addEventListener(event, resumeContext, { passive: true }));
+    isInteractionListenerAttached = true;
+}
 
 /**
  * Initialize and get the global AudioContext
@@ -36,6 +61,9 @@ export function getAudioContext(): AudioContext {
 
         // Initialize AudioWorklet manager (wraps GenericAudioProcessor)
         workletManager = new AudioWorkletManager(audioContext);
+
+        // Attach listeners to eagerly resume AudioContext on iOS Safari
+        setupUserInteractionListeners(audioContext);
     }
 
     // Resume context if suspended (browser autoplay policy)

@@ -42,14 +42,14 @@ class PitchDetectorProcessor extends AudioWorkletProcessor {
     private sampleRateVal: number = 44100;
 
     private framesSinceLastPost: number = 0;
-    private postInterval: number = 3; // roughly 30-40 fps for pitch detection (128 samples per frame * 3 = 384 samples) ~ 114fps. Actually let's use 6 for ~60fps.
+    private postInterval: number = 6; // roughly 60 fps for pitch detection (128 samples per frame * 6 = 768 samples) ~ 57fps.
 
     constructor(options?: AudioWorkletNodeOptions) {
         super();
         this.sampleRateVal = options?.processorOptions?.sampleRate || 44100;
         this.ringBuffer = new PitchDetectorRingBuffer(this.bufferSize);
         this.analysisBuffer = new Float32Array(this.bufferSize);
-        this.postInterval = 3; // Update pitch quickly for UI
+        this.postInterval = 6; // Target ~60FPS for UI smoothness
     }
 
     process(inputs: Float32Array[][], _outputs: Float32Array[][]): boolean {

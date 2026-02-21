@@ -4,6 +4,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
 import os
 import json
 import logging
@@ -24,7 +28,11 @@ from werkzeug.utils import secure_filename
 logger = setup_logging(level=logging.INFO)
 logger.name = "API"
 
+# Setup rate limiter
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Audio Processing API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
 # CORS
@@ -144,7 +152,8 @@ from fastapi import UploadFile, File
 import shutil
 
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+@limiter.limit("10/minute")
+async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
         filename = secure_filename(file.filename)
         file_path = os.path.join(DOWNLOADS_DIR, filename)
@@ -160,13 +169,14 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/download")
-async def download_audio(request: DownloadRequest):
+@limiter.limit("10/minute")
+async def download_audio(request: Request, payload: DownloadRequest):
     # Validate YouTube URL server-side
-    if not YOUTUBE_URL_REGEX.match(request.url.strip()):
+    if not YOUTUBE_URL_REGEX.match(payload.url.strip()):
         raise HTTPException(status_code=400, detail="Invalid YouTube URL")
     try:
-        logger.info(f"Received download request for: {request.url}")
-        file_path = downloader.download(request.url, format=request.format)
+        logger.info(f"Received download request for: {payload.url}")
+        file_path = downloader.download(payload.url, format=payload.format)
         filename = os.path.basename(file_path)
         relative_path = os.path.relpath(file_path, OUTPUT_DIR)
         return {"status": "success", "filename": filename, "path": relative_path}
@@ -197,12 +207,13 @@ async def run_separation_job(job_id: str, filename: str, model: str):
             update_job(job_id, status="failed", error=str(e))
 
 @app.post("/api/separate", response_model=JobStatus)
-async def separate_audio(request: SeparateRequest, background_tasks: BackgroundTasks):
+@limiter.limit("20/minute")
+async def separate_audio(request: Request, payload: SeparateRequest, background_tasks: BackgroundTasks):
     if separator is None:
         raise HTTPException(status_code=503, detail="Separator model not initialized")
     
     # Verify file exists synchronously to fail fast
-    file_path = os.path.join(DOWNLOADS_DIR, secure_filename(request.filename))
+    file_path = os.path.join(DOWNLOADS_DIR, secure_filename(payload.filename))
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -215,7 +226,7 @@ async def separate_audio(request: SeparateRequest, background_tasks: BackgroundT
     }
     set_job(job_id, job_data)
     
-    background_tasks.add_task(run_separation_job, job_id, secure_filename(request.filename), request.model)
+    background_tasks.add_task(run_separation_job, job_id, secure_filename(payload.filename), payload.model)
     return job_data
 
 
@@ -256,12 +267,13 @@ async def run_pitch_shift_job(job_id: str, filename: str, semitones: float):
         update_job(job_id, status="failed", error=str(e))
 
 @app.post("/api/process/pitch", response_model=JobStatus)
-async def pitch_shift_audio(request: PitchShiftRequest, background_tasks: BackgroundTasks):
+@limiter.limit("30/minute")
+async def pitch_shift_audio(request: Request, payload: PitchShiftRequest, background_tasks: BackgroundTasks):
     if pitch_shifter is None:
         raise HTTPException(status_code=503, detail="Pitch shifter not initialized")
 
     # Verify original file exists in downloads or processed
-    filename = secure_filename(request.filename)
+    filename = secure_filename(payload.filename)
     path_in_downloads = os.path.join(DOWNLOADS_DIR, filename)
     path_in_processed = os.path.join(PROCESSED_DIR, filename)
     
@@ -277,7 +289,7 @@ async def pitch_shift_audio(request: PitchShiftRequest, background_tasks: Backgr
     }
     set_job(job_id, job_data)
     
-    background_tasks.add_task(run_pitch_shift_job, job_id, filename, request.semitones)
+    background_tasks.add_task(run_pitch_shift_job, job_id, filename, payload.semitones)
     return job_data
 
 @app.get("/api/jobs/{job_id}", response_model=JobStatus)

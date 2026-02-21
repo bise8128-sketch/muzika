@@ -31,8 +31,8 @@ export default function LibraryPage() {
         }
     }, [addSongsToQueue, playAtIndex]);
 
-    const handleSongSelect = useCallback((song: SongEntry) => {
-        setSelectedSong(song);
+    const handleSongSelect = useCallback((song: any) => {
+        setSelectedSong(song as SongEntry);
     }, []);
 
     const handleImport = useCallback(async (song: SongEntry) => {

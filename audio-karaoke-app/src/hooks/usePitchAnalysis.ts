@@ -44,8 +44,14 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
     const pitchDetectorRef = useRef<AudioWorkletNode | null>(null);
     const historyRef = useRef<PitchAnalysisResult[]>([]);
     const audioContextRef = useRef<AudioContext | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const pendingUpdateRef = useRef<boolean>(false);
 
     const cleanup = useCallback(() => {
+        if (animationFrameRef.current !== null) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
         if (pitchDetectorRef.current) {
             pitchDetectorRef.current.port.close();
             pitchDetectorRef.current.disconnect();
@@ -124,12 +130,22 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
                     if (result) {
                         historyRef.current.push(result);
 
-                        setState(prev => ({
-                            ...prev,
-                            currentPitch: result.detectedPitch,
-                            currentScore: result.accuracy,
-                            pitchHistory: [...historyRef.current],
-                        }));
+                        // Throttle state update to requestAnimationFrame
+                        if (!pendingUpdateRef.current) {
+                            pendingUpdateRef.current = true;
+                            animationFrameRef.current = requestAnimationFrame(() => {
+                                pendingUpdateRef.current = false;
+                                // Grab latest reference point
+                                const latestResult = historyRef.current[historyRef.current.length - 1];
+                                
+                                setState(prev => ({
+                                    ...prev,
+                                    currentPitch: latestResult.detectedPitch,
+                                    currentScore: latestResult.accuracy,
+                                    pitchHistory: [...historyRef.current],
+                                }));
+                            });
+                        }
                     }
                 }
             };

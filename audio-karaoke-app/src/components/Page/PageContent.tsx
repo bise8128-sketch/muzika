@@ -101,6 +101,7 @@ export function PageContent({
         autoStartKaraoke={autoStartKaraoke}
         onAutoStartToggle={onAutoStartToggle}
         selectedModelId={selectedModelId}
+        activeModelName={availableModels.find(m => m.id === selectedModelId)?.name || 'Default'}
         onModelChange={onModelChange}
         historyItems={history.historyItems}
         onRestore={onRestore}
