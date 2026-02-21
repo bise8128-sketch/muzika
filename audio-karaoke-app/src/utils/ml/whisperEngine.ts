@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WhisperEngine — Browser-side transcription using Whisper ONNX.
  */
@@ -35,11 +36,11 @@ export class WhisperEngine {
         // Load the pipeline
         this.transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
             quantized: true,
-            progress_callback: (info: any) => {
+            progress_callback: (info: { status: string; progress?: number; loaded?: number; total?: number }) => {
                 if (onProgress && info.status === 'progress') {
                     // Convert to expected ModelDownloadProgress
                     onProgress({ 
-                        percentage: info.progress,
+                        percentage: info.progress || 0,
                         loaded: info.loaded || 0,
                         total: info.total || 0
                     });
