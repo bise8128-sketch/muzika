@@ -10,7 +10,7 @@
 
 import React from 'react';
 import type { PerformanceScore, PerformanceGrade, PitchAnalysisResult } from '@/types/audio';
-import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const GRADE_COLORS: Record<PerformanceGrade, string> = {
     S: '#fbbf24', // amber
@@ -43,29 +43,131 @@ const ScoreOverlay: React.FC<ScoreOverlayProps> = ({ currentScore, currentPitch 
     </div>
 );
 
+interface ComboCounterProps {
+    combo: number;
+}
+
+const ComboCounter: React.FC<ComboCounterProps> = ({ combo }) => {
+    if (combo < 2) return null;
+
+    return (
+        <div className="absolute top-1/2 left-6 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none z-10">
+            <motion.div
+                key={combo}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-center"
+            >
+                <div className="text-5xl font-black text-white italic tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                    {combo}
+                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 -mt-1">
+                    Combo
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+const HitFeedback: React.FC<HitFeedbackProps> = ({ hitType }) => {
+    if (!hitType || hitType === 'miss') return null;
+
+    const config = {
+        perfect: { label: 'PERFECT', color: 'text-emerald-400' },
+        great: { label: 'GREAT', color: 'text-blue-400' },
+        good: { label: 'GOOD', color: 'text-amber-400' },
+    }[hitType];
+
+    // Use a unique key based on hitType and a fixed timestamp from when the hit occurred
+    // for Framer Motion, but avoid calling Date.now() directly in render.
+    // Actually, for feedback text, just using hitType is enough if we want it to animate 
+    // when it changes. If we want multiple consecutive 'perfect' to re-animate, we'd need
+    // a more robust approach, but for now let's fix the purity issue.
+    
+    return (
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 pointer-events-none z-10">
+            <motion.div
+                key={hitType}
+                initial={{ y: 20, opacity: 0, scale: 0.8 }}
+                animate={{ y: -20, opacity: 1, scale: 1.2 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`text-xl font-black tracking-widest italic drop-shadow-lg ${config.color}`}
+            >
+                {config.label}
+            </motion.div>
+        </div>
+    );
+};
+
 interface GradeCardProps {
     score: PerformanceScore;
 }
 
 const GradeCard: React.FC<GradeCardProps> = ({ score }) => {
-    const t = useTranslations('PitchAnalysis');
     const color = GRADE_COLORS[score.grade];
 
     return (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-10 rounded-2xl">
-            <div className="text-center space-y-3 p-6">
-                <div className="text-7xl font-black" style={{ color, textShadow: `0 0 40px ${color}` }}>
-                    {score.grade}
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.9, backdropFilter: 'blur(0px)' }}
+            animate={{ opacity: 1, scale: 1, backdropFilter: 'blur(12px)' }}
+            className="absolute inset-0 flex items-center justify-center bg-black/40 z-20 rounded-2xl"
+        >
+            <div className="text-center space-y-6 p-8 relative overflow-hidden">
+                {/* Glow Background */}
+                <div 
+                    className="absolute inset-0 -z-10 blur-[100px] opacity-20"
+                    style={{ background: color }}
+                />
+
+                <div className="space-y-1">
+                    <motion.div 
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40"
+                    >
+                        Performance Grade
+                    </motion.div>
+                    <motion.div 
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', delay: 0.3 }}
+                        className="text-8xl font-black italic" 
+                        style={{ color, textShadow: `0 0 50px ${color}80` }}
+                    >
+                        {score.grade}
+                    </motion.div>
                 </div>
-                <div className="text-2xl font-bold text-white/90">
-                    {score.overallAccuracy}% {t('accuracy') || 'Accuracy'}
-                </div>
-                <div className="flex gap-6 justify-center text-sm text-white/50">
-                    <span>🎯 {score.notesHit}/{score.totalNotes} {t('notesHit') || 'notes hit'}</span>
-                    <span>🔥 {score.longestStreak} {t('streak') || 'streak'}</span>
-                </div>
+
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="grid grid-cols-2 gap-4"
+                >
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                        <div className="text-2xl font-bold text-white">{score.overallAccuracy}%</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/30">Accuracy</div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                        <div className="text-2xl font-bold text-white">{score.longestStreak}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/30">Max Combo</div>
+                    </div>
+                </motion.div>
+
+                <motion.button
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-full border border-white/20 transition-all uppercase tracking-widest"
+                >
+                    Back to Laboratory
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -74,6 +176,8 @@ const GradeCard: React.FC<GradeCardProps> = ({ score }) => {
 interface PitchVisualizerProps {
     currentScore: number;
     currentPitch: number;
+    currentCombo: number;
+    lastHitType: 'perfect' | 'great' | 'good' | 'miss' | null;
     overallScore: PerformanceScore | null;
     pitchHistory: PitchAnalysisResult[];
     isListening: boolean;
@@ -82,6 +186,8 @@ interface PitchVisualizerProps {
 export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
     currentScore,
     currentPitch,
+    currentCombo,
+    lastHitType,
     overallScore,
     pitchHistory,
     isListening,
@@ -188,6 +294,12 @@ export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
         <div className="relative rounded-2xl bg-linear-to-b from-white/8 to-white/3 border border-white/10 overflow-hidden">
             {/* Score overlay (top right) */}
             {isListening && <ScoreOverlay currentScore={currentScore} currentPitch={currentPitch} />}
+
+            {/* Combo and Hit Feedback */}
+            <AnimatePresence>
+                {isListening && <ComboCounter combo={currentCombo} />}
+                {isListening && <HitFeedback hitType={lastHitType} />}
+            </AnimatePresence>
 
             {/* Grade card (shown after stop) */}
             {overallScore && !isListening && <GradeCard score={overallScore} />}

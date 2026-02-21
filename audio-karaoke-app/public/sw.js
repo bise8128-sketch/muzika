@@ -3,7 +3,7 @@
  * Refined for premium offline support and ML model caching.
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const SHELL_CACHE = `muzika-shell-${CACHE_VERSION}`;
 const MODEL_CACHE = `muzika-models-${CACHE_VERSION}`;
 const ASSET_CACHE = `muzika-assets-${CACHE_VERSION}`;
@@ -18,6 +18,13 @@ const INITIAL_CACHED_RESOURCES = [
   '/icon-192.png',
   '/icon-512.png',
 ];
+
+// Broadcast signals to the main thread
+const BC = new BroadcastChannel('muzika-sw-channel');
+
+function broadcast(type, payload) {
+  BC.postMessage({ type, payload });
+}
 
 // ── Install ────────────────────────────────────────────────────────
 
@@ -78,7 +85,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache the page for next time
           const copy = response.clone();
           caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
           return response;
@@ -104,17 +110,23 @@ self.addEventListener('fetch', (event) => {
 
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);
-  if (cached) return cached;
+  if (cached) {
+    broadcast('CACHE_HIT', { url: request.url, cacheName });
+    return cached;
+  }
 
   try {
+    broadcast('DOWNLOAD_START', { url: request.url });
     const response = await fetch(request);
     if (response && response.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
+      broadcast('DOWNLOAD_COMPLETE', { url: request.url });
     }
     return response;
   } catch (err) {
-    return new Response('Offline model access failed', { status: 503 });
+    broadcast('DOWNLOAD_ERROR', { url: request.url, error: err.message });
+    return new Response('Offline access failed', { status: 503 });
   }
 }
 

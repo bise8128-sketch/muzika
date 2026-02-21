@@ -137,7 +137,7 @@ body {
   }
 
   .interactive-scale {
-    @apply transition-transform duration-200 active:scale-95 hover:scale-[1.02];
+    @apply bg-white/3 text-white transition-all transform hover:scale-[1.02] active:scale-[0.98];
   }
 
   .focus-ring {

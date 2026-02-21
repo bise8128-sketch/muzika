@@ -8,9 +8,9 @@ import { HarmonyGuidePanel } from './HarmonyGuidePanel';
 import { ThemeSelector } from './UI/ThemeSelector';
 import { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import { KeyInfo } from '@/utils/audio/keyDetection';
-import { HarmonySuggestion, HarmonyMatchResult } from '@/utils/audio/harmonyGuide';
-import { Palette, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { MultiTrackMixer } from './Mixer/MultiTrackMixer';
+import { Sliders } from 'lucide-react';
 
 interface EffectsControllerProps {
     controller: PlaybackController;
@@ -81,6 +81,7 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
     const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
     const [showHarmonyGuide, setShowHarmonyGuide] = useState(false);
     const [showThemePanel, setShowThemePanel] = useState(false);
+    const [showMixer, setShowMixer] = useState(false);
 
     return (
         <div className="flex flex-col gap-4">
@@ -148,6 +149,18 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         Themes
                     </button>
 
+                    <button
+                        onClick={() => setShowMixer(!showMixer)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            showMixer
+                                ? 'bg-cyan-500/30 text-cyan-300 ring-1 ring-cyan-500/40 shadow-lg shadow-cyan-500/20'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                        }`}
+                    >
+                        <Sliders className="w-4 h-4" />
+                        Studio Mixer
+                    </button>
+
                     {pitchAnalysis.overallScore && (
                         <button
                             onClick={() => {
@@ -173,6 +186,8 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                             <PitchVisualizer
                                 currentScore={pitchAnalysis.currentScore}
                                 currentPitch={pitchAnalysis.currentPitch}
+                                currentCombo={pitchAnalysis.currentCombo}
+                                lastHitType={pitchAnalysis.lastHitType}
                                 overallScore={pitchAnalysis.overallScore}
                                 pitchHistory={pitchAnalysis.pitchHistory}
                                 isListening={pitchAnalysis.isListening}
@@ -224,6 +239,15 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                                 onClose={() => setShowHarmonyGuide(false)}
                             />
                         </motion.div>
+                    )}
+
+                    {showMixer && (
+                        <div key="mixer-overlay">
+                            <MultiTrackMixer 
+                                controller={controller} 
+                                onClose={() => setShowMixer(false)} 
+                            />
+                        </div>
                     )}
                 </AnimatePresence>
             </div>

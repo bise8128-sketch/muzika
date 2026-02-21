@@ -124,6 +124,36 @@ export function useSeparation() {
     }, []);
 
     useEffect(() => {
+        const bc = new BroadcastChannel('muzika-sw-channel');
+        
+        const handleMessage = (event: MessageEvent) => {
+            const { type, payload } = event.data;
+            
+            switch (type) {
+                case 'DOWNLOAD_START':
+                    setState(s => ({ ...s, message: `Starting model cache: ${payload.url.split('/').pop()}`, status: 'processing' }));
+                    break;
+                case 'DOWNLOAD_COMPLETE':
+                    setState(s => ({ ...s, message: 'Model successfully cached for offline use.', status: 'completed' }));
+                    setTimeout(() => setState(s => ({ ...s, message: null, status: 'idle' })), 3000);
+                    break;
+                case 'DOWNLOAD_ERROR':
+                    setState(s => ({ ...s, error: `Cache failed: ${payload.error}`, status: 'error' }));
+                    break;
+                case 'CACHE_HIT':
+                    console.log('[useSeparation] Offline Cache Hit:', payload.url);
+                    break;
+            }
+        };
+
+        bc.onmessage = handleMessage;
+
+        return () => {
+            bc.close();
+        };
+    }, []);
+
+    useEffect(() => {
         return () => {
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();

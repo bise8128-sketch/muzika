@@ -24,6 +24,8 @@ interface PitchAnalysisState {
     isListening: boolean;
     currentPitch: number;          // Hz
     currentScore: number;          // 0–100
+    currentCombo: number;
+    lastHitType: 'perfect' | 'great' | 'good' | 'miss' | null;
     overallScore: PerformanceScore | null;
     pitchHistory: PitchAnalysisResult[];
     error: string | null;
@@ -34,6 +36,8 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
         isListening: false,
         currentPitch: 0,
         currentScore: 0,
+        currentCombo: 0,
+        lastHitType: null,
         overallScore: null,
         pitchHistory: [],
         error: null,
@@ -43,6 +47,7 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
     const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const pitchDetectorRef = useRef<AudioWorkletNode | null>(null);
     const historyRef = useRef<PitchAnalysisResult[]>([]);
+    const comboRef = useRef<number>(0);
     const audioContextRef = useRef<AudioContext | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const pendingUpdateRef = useRef<boolean>(false);
@@ -130,6 +135,25 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
                     if (result) {
                         historyRef.current.push(result);
 
+                        // Combo Logic
+                        const isHit = result.accuracy >= 70 || (result.harmonyInterval !== null && result.harmonyAccuracy >= 60);
+                        if (isHit) {
+                            comboRef.current++;
+                        } else if (result.referencePitch > 0) {
+                            // Only reset combo if there was a reference but we missed it
+                            // (silence doesn't break combo if it's natural)
+                            comboRef.current = 0;
+                        }
+
+                        let hitType: 'perfect' | 'great' | 'good' | 'miss' | null = null;
+                        if (isHit) {
+                            if (result.accuracy >= 95) hitType = 'perfect';
+                            else if (result.accuracy >= 85) hitType = 'great';
+                            else hitType = 'good';
+                        } else if (result.referencePitch > 0) {
+                            hitType = 'miss';
+                        }
+
                         // Throttle state update to requestAnimationFrame
                         if (!pendingUpdateRef.current) {
                             pendingUpdateRef.current = true;
@@ -142,6 +166,8 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
                                     ...prev,
                                     currentPitch: latestResult.detectedPitch,
                                     currentScore: latestResult.accuracy,
+                                    currentCombo: comboRef.current,
+                                    lastHitType: hitType,
                                     pitchHistory: [...historyRef.current],
                                 }));
                             });
@@ -172,10 +198,13 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
     const resetAnalysis = useCallback(() => {
         cleanup();
         historyRef.current = [];
+        comboRef.current = 0;
         setState({
             isListening: false,
             currentPitch: 0,
             currentScore: 0,
+            currentCombo: 0,
+            lastHitType: null,
             overallScore: null,
             pitchHistory: [],
             error: null,
