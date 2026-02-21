@@ -10,7 +10,7 @@ import { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import { KeyInfo } from '@/utils/audio/keyDetection';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MultiTrackMixer } from './Mixer/MultiTrackMixer';
-import { Sliders } from 'lucide-react';
+import { Sliders, X, Palette } from 'lucide-react';
 
 interface EffectsControllerProps {
     controller: PlaybackController;
@@ -35,7 +35,6 @@ interface EffectsControllerProps {
         isListening: boolean;
         currentScore: number;
         currentPitch: number;
-        overallScore: PerformanceScore | null;
         error: string | null;
         pitchHistory: PitchAnalysisResult[];
         startAnalysis: () => void;
@@ -161,7 +160,7 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         Studio Mixer
                     </button>
 
-                    {pitchAnalysis.overallScore && (
+                    {pitchAnalysis.currentScore > 0 && (
                         <button
                             onClick={() => {
                                 pitchAnalysis.resetAnalysis();
@@ -188,7 +187,6 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                                 currentPitch={pitchAnalysis.currentPitch}
                                 currentCombo={pitchAnalysis.currentCombo}
                                 lastHitType={pitchAnalysis.lastHitType}
-                                overallScore={pitchAnalysis.overallScore}
                                 pitchHistory={pitchAnalysis.pitchHistory}
                                 isListening={pitchAnalysis.isListening}
                             />

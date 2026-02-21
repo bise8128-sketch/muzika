@@ -15,6 +15,7 @@ export class AudioKaraokeDB extends Dexie {
     songs!: Table<SongEntry, number>;
     playlists!: Table<Playlist, number>;
     queue!: Table<QueueState, number>;
+    performanceHistory!: Table<any, number>;
 
     constructor() {
         super('AudioKaraokeDB');
@@ -30,17 +31,18 @@ export class AudioKaraokeDB extends Dexie {
             queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
         });
 
-        // Version 6: Hybrid storage support (OPFS paths)
-        // Note: Schema doesn't change much for Dexie as it just ignores extra fields,
-        // but this version bump triggers the upgrade path if we wanted to run migration here.
-        this.version(6).stores({
+        // Version 7: Performance history for leaderboards
+        this.version(7).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
             processingLogs: '++id, fileHash, status, startedAt',
             songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt',
             playlists: '++id, name, createdAt, updatedAt',
-            queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
+            queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt',
+            performanceHistory: '++id, songId, fileHash, grade, score, createdAt'
         });
+
+        // Version 6: Hybrid storage support (OPFS paths)
 
         // Keep previous versions for migration history if needed
         this.version(4).stores({

@@ -13,6 +13,8 @@ import { queueStorage } from '@/utils/storage/queueStorage';
 import { List, RowComponentProps } from 'react-window';
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
+import { performanceStorage } from '@/utils/storage/performanceStorage';
+import { PerformanceGrade } from '@/types/audio';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -20,6 +22,35 @@ interface LibraryGridProps {
     onClosePlayer?: () => void;
     onAddToQueue?: (songIds: number[]) => Promise<void>;
 }
+
+const GRADE_COLORS: Record<string, string> = {
+    'S': 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]',
+    'A': 'text-emerald-400',
+    'B': 'text-blue-400',
+    'C': 'text-purple-400',
+    'D': 'text-slate-400',
+};
+
+const BestGradeBadge: React.FC<{ songId: number }> = ({ songId }) => {
+    const bestScore = useLiveQuery(
+        () => performanceStorage.getBestScore(songId),
+        [songId]
+    );
+
+    if (!bestScore) return null;
+
+    return (
+        <div className={`
+            flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/10
+            animate-in fade-in zoom-in duration-500
+        `}>
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-tighter">Best</span>
+            <span className={`text-sm font-black ${GRADE_COLORS[bestScore.grade]}`}>
+                {bestScore.grade}
+            </span>
+        </div>
+    );
+};
 
 export const LibraryGrid: React.FC<LibraryGridProps> = ({
     onSongSelect,
@@ -349,6 +380,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                         `}>
                                                             {song.type === 'ai_separated' ? 'AI' : 'KARAOKE'}
                                                         </div>
+                                                        <BestGradeBadge songId={song.id!} />
                                                     </div>
 
                                                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
