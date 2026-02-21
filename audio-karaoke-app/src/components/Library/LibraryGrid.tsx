@@ -16,6 +16,9 @@ import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { performanceStorage } from '@/utils/storage/performanceStorage';
 import { PerformanceGrade } from '@/types/audio';
+import { MidiExporter } from '@/utils/audio/MidiExporter';
+import { fileSystem } from '@/utils/storage/fileSystem';
+import { decodeArrayBuffer } from '@/utils/audio/audioDecoder';
 
 interface LibraryGridProps {
     onSongSelect?: (song: SongEntry) => void;
@@ -67,6 +70,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     const [selectedSongs, setSelectedSongs] = useState<Set<number>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
+    const [exportingId, setExportingId] = useState<number | null>(null);
     const router = useRouter();
 
     // Use LiveQuery for reactive, performant data fetching
@@ -147,6 +151,35 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     const handlePlay = (song: SongEntry) => {
         if (onSongSelect) {
             onSongSelect(song);
+        }
+    };
+
+    const handleExportMidi = async (e: React.MouseEvent, song: SongEntry) => {
+        e.stopPropagation();
+        if (exportingId !== null) return;
+
+        try {
+            setExportingId(song.id!);
+            
+            // 1. Get the path to analyze (prefer vocals)
+            const path = song.vocalsPath || song.originalPath;
+            if (!path) throw new Error('No audio path available for this song.');
+
+            // 2. Load from OPFS
+            const blob = await fileSystem.getFile(path);
+            const arrayBuffer = await blob.arrayBuffer();
+            
+            // 3. Decode
+            const audioBuffer = await decodeArrayBuffer(arrayBuffer);
+
+            // 4. Export to MIDI
+            await MidiExporter.exportAudioToMidi(audioBuffer, `${song.title}_vocals`);
+            
+        } catch (error) {
+            console.error('Failed to export MIDI:', error);
+            alert(`Failed to export MIDI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setExportingId(null);
         }
     };
 
@@ -397,6 +430,28 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                 </div>
 
                                                 <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={(e) => handleExportMidi(e, song)}
+                                                        disabled={exportingId !== null}
+                                                        className={`p-2 rounded-lg transition-colors shrink-0 ${
+                                                            exportingId === song.id 
+                                                                ? 'text-primary animate-pulse' 
+                                                                : 'text-muted-foreground hover:bg-primary/20 hover:text-primary'
+                                                        }`}
+                                                        aria-label="Export to MIDI"
+                                                        title="Export as MIDI"
+                                                    >
+                                                        {exportingId === song.id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14v6m-3-3l3 3 3-3" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
                                                     <button
                                                         onClick={(e) => handleDelete(e, song.id)}
                                                         className="p-2 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
