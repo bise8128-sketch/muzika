@@ -1,7 +1,8 @@
 import type { ModelInfo, ModelDownloadProgress } from '@/types/model';
 import { modelStorage } from '@/utils/storage/modelStorage';
-import { StorageManager } from '@/utils/storage/StorageManager';
-import { calculateSHA256 } from '@/utils/crypto';
+import { StorageManager } from '../storage/StorageManager';
+import { ModelLoadError, NetworkFetchError, StorageQuotaError } from '../../errors';
+import { calculateSHA256 } from '../crypto';
 
 /**
  * Downloads a model file from a URL with progress tracking.
@@ -13,10 +14,10 @@ export async function downloadModel(
     signal?: AbortSignal
 ): Promise<ArrayBuffer> {
     if (signal?.aborted) {
-        throw new Error('Aborted');
+        throw new ModelLoadError('Download aborted by user.', true);
     }
     if (!modelInfo.url) {
-        throw new Error(`No URL provided for model ${modelInfo.id}`);
+        throw new ModelLoadError(`No URL provided for model ${modelInfo.id}`);
     }
 
     // Construct full URL for Web Worker context
@@ -41,14 +42,15 @@ export async function downloadModel(
         response = await fetch(fetchUrl, { signal });
     } catch (err) {
         if (signal?.aborted) {
-            throw new Error('Aborted');
+            throw new ModelLoadError('Download aborted by user.', true);
         }
-        console.error(`[modelDownloader] fetch failed for ${fetchUrl}:`, err);
-        throw new Error(`Failed to fetch model from ${fetchUrl}. This may be due to CORS, network issues, or an invalid URL.`);
+        const error = err as Error;
+        console.error(`[modelDownloader] fetch failed for ${fetchUrl}:`, error);
+        throw new NetworkFetchError(`Failed to fetch model from ${fetchUrl}. This may be due to CORS, network issues, or an invalid URL. Error: ${error.message}`);
     }
 
     if (!response.ok) {
-        throw new Error(`Failed to download model from ${modelInfo.url}: ${response.status} ${response.statusText}`);
+        throw new NetworkFetchError(`Failed to download model from ${modelInfo.url}: ${response.status} ${response.statusText}`, response.status);
     }
 
     const contentLength = response.headers.get('content-length');
@@ -57,7 +59,16 @@ export async function downloadModel(
 
     const reader = response.body?.getReader();
     if (!reader) {
-        throw new Error('Failed to get response body reader');
+        throw new ModelLoadError('Failed to get response body reader from model download.', true);
+    }
+
+    // Check for available storage before starting download if total size is known
+    if (total > 0) {
+        const estimate = await navigator.storage.estimate();
+        const availableSpace = (estimate.quota ?? 0) - (estimate.usage ?? 0);
+        if (estimate.quota !== undefined && total > availableSpace) {
+            throw new StorageQuotaError(`Insufficient storage space for model ${modelInfo.name}. Required: ${total} bytes, Available: ${availableSpace} bytes.`);
+        }
     }
 
     const chunks: Uint8Array[] = [];

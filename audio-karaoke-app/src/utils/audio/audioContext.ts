@@ -5,6 +5,7 @@
  */
 
 import { AudioWorkletManager } from './audioWorkletManager';
+import { AudioContextError, AudioProcessingError } from '../../errors';
 
 let audioContext: AudioContext | null = null;
 let gainNode: GainNode | null = null;
@@ -21,7 +22,8 @@ function setupUserInteractionListeners(ctx: AudioContext) {
                 events.forEach(event => document.removeEventListener(event, resumeContext));
                 isInteractionListenerAttached = false;
             }).catch((err) => {
-                console.warn('[AudioContext] Failed to resume on interaction', err);
+                const error = err as Error;
+                console.warn('[AudioContext] Failed to resume on interaction', error);
             });
         } else if (ctx.state === 'running') {
             const events = ['click', 'touchstart', 'touchend', 'keydown'];
@@ -42,13 +44,13 @@ function setupUserInteractionListeners(ctx: AudioContext) {
  */
 export function getAudioContext(): AudioContext {
     if (typeof window === 'undefined') {
-        throw new Error('AudioContext cannot be initialized on the server');
+        throw new AudioContextError('AudioContext is not supported on the server.', true);
     }
 
     if (!audioContext) {
         const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null);
         if (!AudioContextClass) {
-            throw new Error('AudioContext not supported in this environment');
+            throw new AudioContextError('AudioContext is not supported in this browser.', true);
         }
         audioContext = new AudioContextClass({
             sampleRate: 44100,
@@ -173,9 +175,15 @@ export async function suspendAudioContext(): Promise<void> {
  * Resume AudioContext
  */
 export async function resumeAudioContext(): Promise<void> {
-    const ctx = getAudioContext();
-    if (ctx.state === 'suspended') {
-        await ctx.resume();
+    const context = getAudioContext();
+    if (context.state === 'suspended') {
+        try {
+            await context.resume();
+        } catch (err) {
+            const error = err as Error;
+            console.error('Failed to resume AudioContext. User interaction may be required.', error);
+            throw new AudioContextError('Failed to resume AudioContext. User interaction required.');
+        }
     }
 }
 

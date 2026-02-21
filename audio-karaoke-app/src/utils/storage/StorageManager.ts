@@ -1,5 +1,7 @@
 import { audioCache } from './audioCache';
 import { modelStorage } from './modelStorage';
+import { db } from './audioDatabase';
+import { StorageQuotaError, FileValidationError } from '../../errors';
 
 export class StorageManager {
     /**
@@ -20,29 +22,29 @@ export class StorageManager {
     }
 
     /**
-     * Check storage status and log warnings if high usage detected.
+     * Check if it passes quotas.
      */
-    static async checkStorageHealth(): Promise<boolean> {
-        if (typeof navigator === 'undefined' || !('storage' in navigator)) return true;
+    static async validateStorage(fileSize: number): Promise<boolean> {
+        if (!navigator.storage || !navigator.storage.estimate) {
+            console.warn('Storage Estimation API not available, assuming space is available');
+            return true;
+        }
 
         try {
-            const estimate = await navigator.storage.estimate();
-            const usage = estimate.usage || 0;
-            const quota = estimate.quota || 0;
-            const percentage = quota > 0 ? (usage / quota) * 100 : 0;
-
-            if (percentage > 90) {
-                console.warn(`[StorageManager] Storage critical: ${percentage.toFixed(1)}% used. Triggering proactive eviction.`);
-                await audioCache.evictOldestIfNeeded(0.5); // Force clear to 500MB if we're near hard quota
-                return false;
-            } else if (percentage > 70) {
-                console.info(`[StorageManager] Storage warning: ${percentage.toFixed(1)}% used. Proactive background eviction may run.`);
-                await audioCache.evictOldestIfNeeded(1); // Standard 1GB limit
+            const { quota, usage } = await navigator.storage.estimate();
+            if (quota && usage) {
+                const available = quota - usage;
+                // Require at least fileSize + 200MB buffer
+                if (available < fileSize + 200 * 1024 * 1024) {
+                    throw new StorageQuotaError(`Insufficient storage space. Required: ${(fileSize / (1024*1024)).toFixed(0)}MB.`);
+                }
             }
             return true;
-        } catch (e) {
-            console.error('[StorageManager] Health check failed:', e);
-            return true;
+        } catch (error) {
+            const e = error as Error;
+            console.warn('Failed to estimate storage:', e);
+            if (e instanceof StorageQuotaError) throw e;
+            return true; // Fallback to allowing if estimation fails
         }
     }
 
@@ -65,6 +67,36 @@ export class StorageManager {
      */
     static async clearModelStorage(): Promise<void> {
         await modelStorage.clearAllModels();
+    }
+
+    /**
+     * Store a file in IndexedDB.
+     */
+    static async storeFile(file: File, fileId: string): Promise<string> {
+        try {
+            // First validate storage is available
+            await this.validateStorage(file.size);
+            
+            await db.audioFiles.put({
+                id: fileId,
+                data: file,
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                createdAt: Date.now()
+            });
+            return fileId;
+        } catch (error) {
+            const e = error as Error;
+            console.error('Failed to store file:', e);
+            
+            if (e.name === 'QuotaExceededError') {
+                 throw new StorageQuotaError('Browser storage quota exceeded. Please clear some space.');
+            }
+            if (e instanceof StorageQuotaError) throw e;
+            
+            throw new FileValidationError(`Failed to store file in IndexedDB: ${e.message}`);
+        }
     }
 
     /**
