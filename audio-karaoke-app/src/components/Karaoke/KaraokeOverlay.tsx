@@ -27,7 +27,7 @@ interface KaraokeOverlayProps {
     cdgData: Uint8Array | null;
     controller: PlaybackController;
     visualizer: AudioVisualizer | null;
-    playback?: any; // usePlayback return type is complex, keeping for now or use ReturnType<typeof usePlayback> if accessible
+    playback?: ReturnType<typeof usePlayback>;
     
     // Playback State (needed for LyricsContainer)
     currentLineIndex: number;
