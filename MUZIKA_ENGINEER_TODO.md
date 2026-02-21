@@ -132,7 +132,7 @@
   ```
 
 ### AR-04: Modularize PlaybackController
-- [ ] **Task**: Split `playbackController.ts` (700+ lines) into modules
+- [x] **Task**: Split `playbackController.ts` (700+ lines) into modules
 - **Priority**: 🟡 MEDIUM
 - **Complexity**: ⭐⭐⭐ Medium (4-6 hours)
 - **Impact**: Better organization, easier testing
