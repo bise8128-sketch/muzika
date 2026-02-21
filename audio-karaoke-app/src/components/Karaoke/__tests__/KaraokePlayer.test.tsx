@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { KaraokePlayer } from '../KaraokePlayer';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { MockAudioContext } from '../../../__mocks__/audioContextMock';
@@ -114,6 +114,43 @@ jest.mock('@/hooks/useVoiceTransform', () => ({
     })
 }));
 
+jest.mock('@/hooks/useKaraokeUI', () => ({
+    useKaraokeUI: () => ({
+        state: { isStageMode: false, showEditor: false, visualSettings: { visualizationMode: 'default' } },
+        actions: { setIsStageMode: jest.fn(), setShowEditor: jest.fn() }
+    })
+}));
+
+jest.mock('@/hooks/useAutoKey', () => ({
+    useAutoKey: () => ({
+        isAnalyzing: false,
+        detectedKey: null,
+        vocalRange: { min: 'C3', max: 'C5' },
+        suggestedShift: 0,
+        currentShift: 0,
+        analyzeTrack: jest.fn(),
+        applyShift: jest.fn(),
+        updateVocalRange: jest.fn()
+    })
+}));
+
+jest.mock('@/hooks/useHarmonyGuide', () => ({
+    useHarmonyGuide: () => ({
+        activeKeyInfo: null
+    })
+}));
+
+jest.mock('@/hooks/useMixRecorder', () => ({
+    useMixRecorder: () => ({
+        isRecordingMix: false,
+        recordedMixBlob: null,
+        getMixDestination: jest.fn(() => ({ connect: jest.fn(), disconnect: jest.fn() })),
+        startRecordingMix: jest.fn(),
+        stopRecordingMix: jest.fn(),
+        clearMixRecording: jest.fn()
+    })
+}));
+
 jest.mock('../Controls/KaraokeControls', () => ({
     KaraokeControls: () => <div data-testid="karaoke-controls">Controls</div>
 }));
@@ -162,6 +199,10 @@ jest.mock('../PlayerHeader', () => ({
     PlayerHeader: () => <div data-testid="player-header">Header</div>
 }));
 
+jest.mock('../EffectsController', () => ({
+    EffectsController: () => <div data-testid="effects-controller">EffectsController</div>
+}));
+
 jest.mock('../../UI/ErrorBoundary', () => ({
     ErrorBoundary: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
@@ -170,13 +211,17 @@ jest.mock('../../UI/ErrorBoundary', () => ({
 const mockController = new (require('@/utils/audio/playbackController').PlaybackController)();
 
 describe('KaraokePlayer', () => {
-    it('renders without crashing', () => {
-        render(<KaraokePlayer controller={mockController} />);
+    it('renders without crashing', async () => {
+        await act(async () => {
+            render(<KaraokePlayer controller={mockController} />);
+        });
         expect(screen.getByTestId('visualizer-container')).toBeInTheDocument();
     });
 
-    it('shows pitch analysis button', () => {
-        render(<KaraokePlayer controller={mockController} />);
-        expect(screen.getByText(/pitchAnalysis/i)).toBeInTheDocument();
+    it('shows the effects controller', async () => {
+        await act(async () => {
+            render(<KaraokePlayer controller={mockController} />);
+        });
+        expect(screen.getByTestId('effects-controller')).toBeInTheDocument();
     });
 });

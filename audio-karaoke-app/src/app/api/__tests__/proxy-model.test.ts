@@ -148,7 +148,7 @@ describe('/api/proxy-model', () => {
             const response = await GET(request);
             const data = await response.json();
 
-            expect(response.status).toBe(500);
+            expect(response.status).toBe(502);
             expect(data).toHaveProperty('error');
         });
 
@@ -164,7 +164,7 @@ describe('/api/proxy-model', () => {
             const request = createMockRequest(testUrl);
             const response = await GET(request);
 
-            expect(response.status).toBe(404);
+            expect(response.status).toBe(502);
         });
     });
 

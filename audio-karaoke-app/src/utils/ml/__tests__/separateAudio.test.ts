@@ -11,26 +11,8 @@ jest.mock('@/utils/audio/audioContext', () => ({
     getAudioContext: jest.fn(() => new MockAudioContext()),
 }));
 
-// Mock WorkerPool
-jest.mock('@/utils/worker/WorkerPool', () => {
-    return {
-        WorkerPool: jest.fn().mockImplementation(() => ({
-            addTask: jest.fn().mockImplementation(async (type, data) => {
-                 if (type === 'INIT_STREAM_SESSION') {
-                     return { sessionId: 'test-session', backend: 'wasm' };
-                 }
-                 // PROCESS_STREAM_CHUNK
-                 return {
-                    vocals: new Float32Array(100),
-                    instrumentals: new Float32Array(100),
-                    chunkIndex: data.chunkIndex,
-                    backend: 'wasm'
-                 };
-            }),
-            terminate: jest.fn()
-        }))
-    };
-});
+// The SessionWorker inside separateAudio.ts uses the global Worker instance.
+// We will mock global.Worker directly in beforeEach.
 
 jest.mock('@/utils/audio/BrowserAudioSegmenter', () => {
     return {
@@ -84,7 +66,29 @@ describe('separateAudio', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        (global as any).Worker = MockWorker;
+        class LocalMockWorker {
+            onmessage: any;
+            onerror: any;
+            postMessage(msg: { type: string; payload: any }) {
+                setTimeout(() => {
+                    if (this.onmessage) {
+                        if (msg.type === 'INIT_STREAM_SESSION') {
+                            this.onmessage({ data: { type: 'SUCCESS', payload: { sessionId: msg.payload.sessionId, backend: 'wasm' } } } as any);
+                        } else if (msg.type === 'PROCESS_STREAM_CHUNK') {
+                            this.onmessage({ data: { type: 'SUCCESS', payload: { vocals: new Float32Array(100), instrumentals: new Float32Array(100), chunkIndex: msg.payload.chunkIndex, backend: 'wasm' } } } as any);
+                        } else if (msg.type === 'END_STREAM_SESSION') {
+                            this.onmessage({ data: { type: 'SUCCESS', payload: {} } } as any);
+                        }
+                    }
+                }, 0);
+            }
+            terminate() {}
+            addEventListener(type: string, listener: any) {
+                if (type === 'message') this.onmessage = listener;
+                if (type === 'error') this.onerror = listener;
+            }
+        }
+        (global as any).Worker = LocalMockWorker;
         (audioCache.hashFile as jest.Mock).mockResolvedValue('test-hash');
         
         // Default ONNX support (high-end)
