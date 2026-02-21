@@ -1,15 +1,17 @@
 import React from 'react';
-import { VisualSettings } from '@/types/karaoke';
+import { VisualSettings, StageTheme } from '@/types/karaoke';
 
 interface VisualizerCanvasProps {
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
     visualSettings: VisualSettings;
+    stageTheme: StageTheme;
     isStageMode: boolean;
 }
 
 export const VisualizerCanvas: React.FC<VisualizerCanvasProps> = ({
     canvasRef,
     visualSettings,
+    stageTheme,
     isStageMode
 }) => {
     return (

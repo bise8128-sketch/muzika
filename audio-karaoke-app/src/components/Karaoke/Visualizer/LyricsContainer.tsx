@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Edit3, X } from 'lucide-react';
-import { LRCData, VisualSettings } from '@/types/karaoke';
+import { LRCData, VisualSettings, StageTheme, PitchAnalysisResult } from '@/types/karaoke';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 import { LyricTheme, LyricDisplay } from '../LyricDisplay';
 import { LyricEditor } from '../LyricEditor';
 import { CDGRenderer } from '../CDGRenderer';
+import { NoteHighway } from './NoteHighway';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { useTranslations } from 'next-intl';
 
@@ -15,11 +16,13 @@ interface LyricsContainerProps {
     showEditor: boolean;
     isStageMode: boolean;
     theme: LyricTheme;
+    stageTheme: StageTheme;
     visualSettings: VisualSettings;
     currentLineIndex: number;
     currentWordIndex: number;
     visualizer: AudioVisualizer | null;
     controller: PlaybackController;
+    pitchHistory: PitchAnalysisResult[];
     onCanvasReady: (canvas: HTMLCanvasElement) => void;
     onToggleEditor: (show: boolean) => void;
     onSaveLRC: (data: LRCData) => void;
@@ -32,11 +35,13 @@ export const LyricsContainer: React.FC<LyricsContainerProps> = ({
     showEditor,
     isStageMode,
     theme,
+    stageTheme,
     visualSettings,
     currentLineIndex,
     currentWordIndex,
     visualizer,
     controller,
+    pitchHistory,
     onCanvasReady,
     onToggleEditor,
     onSaveLRC,
@@ -64,6 +69,21 @@ export const LyricsContainer: React.FC<LyricsContainerProps> = ({
                         className="mb-4 transform"
                     >
                         <CDGRenderer onCanvasReady={onCanvasReady} />
+                    </motion.div>
+                )}
+
+                {isStageMode && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full h-48 mb-8 relative z-20"
+                    >
+                        <NoteHighway
+                            controller={controller}
+                            pitchHistory={pitchHistory}
+                            stageTheme={stageTheme}
+                            height={192}
+                        />
                     </motion.div>
                 )}
 

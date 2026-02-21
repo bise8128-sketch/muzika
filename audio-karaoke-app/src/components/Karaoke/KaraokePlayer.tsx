@@ -271,7 +271,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                 <KaraokeDisplay
                     canvasRef={canvasRef}
                     visualSettings={uiState.visualSettings}
+                    stageTheme={uiState.stageTheme}
                     isStageMode={uiState.isStageMode}
+                    visualizer={visualizerInstance}
                 >
                     <KaraokeOverlay
                         uiState={uiState}
@@ -283,6 +285,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
                         playback={playback}
                         currentLineIndex={lyricState.lineIndex}
                         currentWordIndex={lyricState.wordIndex}
+                        pitchHistory={pitchAnalysis.pitchHistory}
                         recorder={recorder}
                         
                         voiceFxProps={{

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import { LRCData } from '@/types/karaoke';
+import { LRCData, PitchAnalysisResult } from '@/types/karaoke';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { KaraokeUIState, KaraokeUIActions } from '@/hooks/useKaraokeUI';
@@ -24,10 +24,12 @@ interface KaraokeOverlayProps {
     cdgData: Uint8Array | null;
     controller: PlaybackController;
     visualizer: AudioVisualizer | null;
+    playback?: any;
     
     // Playback State (needed for LyricsContainer)
     currentLineIndex: number;
     currentWordIndex: number;
+    pitchHistory: PitchAnalysisResult[];
 
     // Recorder State
     recorder: {
@@ -65,6 +67,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     visualizer,
     currentLineIndex,
     currentWordIndex,
+    pitchHistory,
     recorder,
     voiceFxProps,
     practiceProps,
@@ -134,11 +137,13 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 showEditor={uiState.showEditor}
                 isStageMode={uiState.isStageMode}
                 theme={uiState.theme}
+                stageTheme={uiState.stageTheme}
                 visualSettings={uiState.visualSettings}
                 currentLineIndex={currentLineIndex}
                 currentWordIndex={currentWordIndex}
                 visualizer={visualizer || null}
                 controller={controller}
+                pitchHistory={pitchHistory}
                 onCanvasReady={onCanvasReady}
                 onToggleEditor={uiActions.toggleEditor}
                 onSaveLRC={onSaveLRC}
