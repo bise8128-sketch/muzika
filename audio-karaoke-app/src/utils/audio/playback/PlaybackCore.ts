@@ -48,6 +48,7 @@ export class PlaybackController {
   private playHead: number = 0;
   private startTime: number = 0;
   private _songId: string | null = null; // Track current song hash or id
+  private _originalFile: File | null = null; // Track original file for separation
 
   // Leftover samples for SoundTouch processing (deprecated)
   private leftoverLeft: Float32Array | null = null;
@@ -87,6 +88,14 @@ export class PlaybackController {
 
   getSongId(): string | null {
     return this._songId;
+  }
+
+  setOriginalFile(file: File | null): void {
+    this._originalFile = file;
+  }
+
+  getOriginalFile(): File | null {
+    return this._originalFile;
   }
 
   setVoiceBuffer(buffer: AudioBuffer | null): void {

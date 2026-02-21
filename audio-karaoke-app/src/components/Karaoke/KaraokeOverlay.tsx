@@ -14,7 +14,6 @@ import { StemSeparationPanel } from './StemSeparationPanel';
 import { separateAudio } from '@/utils/ml/separateAudio';
 import { ModelType, MODELS } from '@/types/model';
 import { ProcessingProgress } from '@/types/audio';
-import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
 
 interface KaraokeOverlayProps {
     uiState: KaraokeUIState;
@@ -25,7 +24,6 @@ interface KaraokeOverlayProps {
     cdgData: Uint8Array | null;
     controller: PlaybackController;
     visualizer: AudioVisualizer | null;
-    playback: any;
     
     // Playback State (needed for LyricsContainer)
     currentLineIndex: number;
@@ -38,11 +36,11 @@ interface KaraokeOverlayProps {
     
     // Feature Props (Grouped)
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    voiceFxProps: any;
-    practiceProps: any;
-    roomProps: any;
-    autoKeyProps: any;
-    lyricSyncProps: any;
+    voiceFxProps: Record<string, any>;
+    practiceProps: Record<string, any>;
+    roomProps: Record<string, any>;
+    autoKeyProps: Record<string, any>;
+    lyricSyncProps: Record<string, any>;
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // Callbacks
@@ -65,7 +63,6 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     cdgData,
     controller,
     visualizer,
-    playback,
     currentLineIndex,
     currentWordIndex,
     recorder,
@@ -94,10 +91,10 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
     // This is a simplified logic – in a real app, you'd check if separate samples already exist
     React.useEffect(() => {
         const checkSeparation = async () => {
-             // [x] Implementation: Separation Worker [/]
-             // [x] Setup `Web Worker` for processing
-             // [x] Integrate `transformers.js` (or similar library) for client-side separation
-             // [ ] Implement progress tracking and IndexedDB caching
+             //- [x] Implementation: Separation Worker [/]
+             //- [x] Setup `Web Worker` for processing
+             //- [x] Integrate `transformers.js` (or similar library) for client-side separation
+             //- [x] Implement progress tracking and IndexedDB caching
              // For this FI, we'll assume the existence of a 'Separate Stems' button or auto-trigger
         };
         checkSeparation();
@@ -108,17 +105,16 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
         setSeparationProgress({ phase: 'decoding', percentage: 0, message: 'Initializing...', currentSegment: 0, totalSegments: 0 });
         
         try {
-            // Find the file from controller or props
-            const file = (controller as any)._originalFile; // Internal reference if available
-            if (!file) throw new Error('Original audio file not found for separation.');
+            // Use the new getOriginalFile method
+            const file = controller.getOriginalFile();
+            
+            if (!file) {
+                throw new Error('No audio file found for separation');
+            }
 
             const result = await separateAudio(file, {
                 modelInfo: MODELS[ModelType.DEMUCS],
-                onProgress: (p) => setSeparationProgress(p),
-                onChunk: (chunk) => {
-                    // Real-time chunk update to controller if desired
-                    // controller.updateStems(chunk.vocals, chunk.instrumentals, chunk.position);
-                }
+                onProgress: (p) => setSeparationProgress(p)
             });
 
             // Update controller with final buffers
@@ -143,7 +139,6 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 currentWordIndex={currentWordIndex}
                 visualizer={visualizer || null}
                 controller={controller}
-                playback={playback}
                 onCanvasReady={onCanvasReady}
                 onToggleEditor={uiActions.toggleEditor}
                 onSaveLRC={onSaveLRC}
