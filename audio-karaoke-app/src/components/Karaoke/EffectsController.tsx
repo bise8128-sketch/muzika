@@ -139,6 +139,7 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         currentScore={pitchAnalysis.currentScore}
                         currentPitch={pitchAnalysis.currentPitch}
                         overallScore={pitchAnalysis.overallScore}
+                        pitchHistory={pitchAnalysis.pitchHistory}
                         isListening={pitchAnalysis.isListening}
                     />
                 )}
