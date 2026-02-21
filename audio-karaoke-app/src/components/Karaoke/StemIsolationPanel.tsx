@@ -50,12 +50,23 @@ interface VUMeterProps {
 const VUMeter: React.FC<VUMeterProps> = ({ level, active }) => {
     // 12 segments for the VU meter
     const segments = Array.from({ length: 12 }, (_, i) => i);
+    const [peak, setPeak] = useState(0);
+
+    useEffect(() => {
+        if (level > peak) {
+            setPeak(level);
+        } else if (peak > 0) {
+            const timer = setTimeout(() => setPeak(prev => Math.max(0, prev - 0.05)), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [level, peak]);
     
     return (
-        <div className="flex flex-col-reverse gap-0.5 h-full w-1.5 py-1">
+        <div className="flex flex-col-reverse gap-0.5 h-full w-1.5 py-1 relative">
             {segments.map(i => {
                 const threshold = (i + 1) / segments.length;
                 const isLit = active && level >= threshold;
+                const isPeak = active && peak >= threshold && peak < threshold + (1/segments.length);
                 // Color gradient: Green -> Yellow -> Red
                 const color = i > 9 ? 'bg-red-500' : i > 7 ? 'bg-yellow-400' : 'bg-emerald-400';
                 
@@ -63,10 +74,10 @@ const VUMeter: React.FC<VUMeterProps> = ({ level, active }) => {
                     <motion.div
                         key={i}
                         animate={{ 
-                            opacity: isLit ? 1 : 0.1,
+                            opacity: isLit || isPeak ? 1 : 0.1,
                             scaleX: isLit ? 1.2 : 1,
                         }}
-                        className={`w-full h-1.5 rounded-full transition-all duration-75 ${color} ${isLit ? 'shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''}`}
+                        className={`w-full h-1.5 rounded-full transition-all duration-75 ${color} ${isLit ? 'shadow-[0_0_8px_rgba(52,211,153,0.5)]' : ''} ${isPeak && !isLit ? 'opacity-50' : ''}`}
                     />
                 );
             })}
@@ -316,13 +327,30 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
                         <p className="text-[10px] font-black text-white/20 tracking-[0.2em]">{t('subtitle') || 'SUB-TRACK ISOLATION'}</p>
                     </div>
                 </div>
-                <motion.div 
-                    animate={{ rotate: isExpanded ? 180 : 0 }}
-                    transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                    className="text-white/20 p-2"
-                >
-                    <ChevronDown className="w-6 h-6" />
-                </motion.div>
+                <div className="flex items-center gap-6">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAdvanced(!showAdvanced);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center gap-2
+                            ${showAdvanced 
+                                ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' 
+                                : 'bg-white/5 text-white/20 border-white/5 hover:border-white/10 hover:text-white/40'}`}
+                    >
+                        <RefreshCcw className={`w-3 h-3 ${showAdvanced ? 'rotate-180' : ''} transition-transform duration-500`} />
+                        {showAdvanced ? 'Standard View' : 'Advanced Mixer'}
+                    </motion.button>
+                    <motion.div 
+                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                        className="text-white/20 p-2"
+                    >
+                        <ChevronDown className="w-6 h-6" />
+                    </motion.div>
+                </div>
             </button>
 
             <AnimatePresence>
@@ -366,7 +394,11 @@ export const StemIsolationPanel: React.FC<StemIsolationPanelProps> = ({ controll
                                         stem={stem}
                                         index={index}
                                         level={stemLevels[index] || 0}
+                                        advanced={showAdvanced}
                                         onVolumeChange={handleVolumeChange}
+                                        onPanningChange={handlePanningChange}
+                                        onReverbSendChange={handleReverbSendChange}
+                                        onEchoSendChange={handleEchoSendChange}
                                         onMuteToggle={handleMuteToggle}
                                         onSoloToggle={handleSoloToggle}
                                     />
