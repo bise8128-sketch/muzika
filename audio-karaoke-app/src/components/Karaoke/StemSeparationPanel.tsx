@@ -33,13 +33,13 @@ export const StemSeparationPanel: React.FC<StemSeparationPanelProps> = ({
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 z-200 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm"
             >
                 <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
                     {/* Header */}
                     <div className="p-6 border-b border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
                         <div className="flex items-center gap-3">
-                            <div className="p-3 bg-gradient-to-r from-primary to-blue-600 rounded-2xl shadow-lg shadow-primary/20">
+                            <div className="p-3 bg-linear-to-r from-primary/20 to-blue-500/20 rounded-2xl border border-white/5 shadow-inner">
                                 <Mic2 className="w-5 h-5 text-white" />
                             </div>
                             <div>
