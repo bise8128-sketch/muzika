@@ -7,42 +7,48 @@ import { ModelInfo } from '@/types/model';
 // --- Status ---
 
 export interface StatusResponse {
-  status: string;
+  status: 'ready' | 'loading' | 'error';
   services: {
     modelRepository: 'connected' | 'disconnected';
-    [key: string]: string;
+    pythonService?: 'connected' | 'disconnected';
+    [key: string]: string | undefined;
   };
 }
 
 // --- Processing ---
 
 export interface ProcessingRequest {
-  url: string;
+  url?: string;
+  filename?: string;
   model: string;
   format: string;
 }
 
 export interface ProcessingResponse {
   jobId: string;
+  status: 'queued' | 'processing' | 'completed';
 }
 
 export interface JobStatusResponse {
-  status: 'processing' | 'completed' | 'error';
+  status: 'processing' | 'completed' | 'error' | 'queued';
   error?: string;
   logs?: string;
-  stems?: {
-    vocals?: string;
-    other?: string;
-    drums?: string;
-    bass?: string;
-  };
+  stems?: Record<string, string>;
   original?: string;
+  filename?: string;
 }
 
 // --- Models ---
 
+export interface ModelStatus {
+  name: string;
+  status: 'ready' | 'downloading' | 'error';
+  progress?: number;
+}
+
 export interface ModelsResponse {
   models: ModelInfo[];
+  availableModels: string[];
 }
 
 // --- Library ---
@@ -57,6 +63,14 @@ export interface LibraryResponse {
   songs: SongEntry[];
 }
 
+// --- Upload ---
+
+export interface UploadResponse {
+  filename: string;
+  path: string;
+  id: string;
+}
+
 // --- Errors ---
 
 export class ApiError extends Error {
@@ -64,6 +78,8 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly body?: unknown,
+    public readonly url?: string,
+    public readonly method?: string,
   ) {
     super(message);
     this.name = 'ApiError';

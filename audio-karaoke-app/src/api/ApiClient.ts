@@ -7,6 +7,7 @@
 
 import { circuitBreakerFetch } from '@/utils/api/circuitBreakerFetch';
 import { RetryHandler } from '@/utils/reliability/RetryHandler';
+import { logError } from '@/lib/monitoring';
 import type {
   StatusResponse,
   ProcessingRequest,
@@ -14,6 +15,7 @@ import type {
   JobStatusResponse,
   ModelsResponse,
   LibraryResponse,
+  UploadResponse,
 } from './types';
 import { ApiError } from './types';
 
@@ -48,40 +50,70 @@ export class ApiClient {
     signal?: AbortSignal,
   ): Promise<T> {
     const url = `${this.config.baseUrl}${path}`;
+    const method = options?.method || 'GET';
     const mergedOptions: RequestInit = {
       ...options,
       signal: signal ?? options?.signal,
       headers: {
-        'Content-Type': 'application/json',
+        ...(!(options?.body instanceof FormData) && { 'Content-Type': 'application/json' }),
         ...options?.headers,
       },
     };
 
     const execute = async () => {
-      const response = await circuitBreakerFetch(url, mergedOptions);
+      try {
+        const response = await circuitBreakerFetch(url, mergedOptions);
 
-      if (!response.ok) {
-        let body: unknown;
-        try {
-          body = await response.json();
-        } catch {
-          // ignore parse failure
+        if (!response.ok) {
+          let body: unknown;
+          try {
+            body = await response.json();
+          } catch {
+            // ignore parse failure
+          }
+          const error = new ApiError(
+            (body as any)?.error || `Request failed with status ${response.status}`,
+            response.status,
+            body,
+            url,
+            method
+          );
+          
+          // Log high-severity errors to monitoring
+          if (response.status >= 500 || response.status === 429) {
+            logError(error, { url, method, status: response.status });
+          }
+          
+          throw error;
         }
-        throw new ApiError(
-          (body as any)?.error || `Request failed with status ${response.status}`,
-          response.status,
-          body,
-        );
-      }
 
-      return response.json() as Promise<T>;
+        return response.json() as Promise<T>;
+      } catch (error: any) {
+        if (error.name === 'AbortError') throw error;
+        
+        // Wrap network errors
+        if (!(error instanceof ApiError)) {
+          const apiError = new ApiError(
+            error.message || 'Network request failed',
+            0,
+            undefined,
+            url,
+            method
+          );
+          logError(apiError, { url, method, originalError: error.message });
+          throw apiError;
+        }
+        throw error;
+      }
     };
 
     if (this.config.retryEnabled) {
       return this.retryHandler.execute(execute, {
         shouldRetry: (error) => {
-          // Only retry on network / 5xx errors, not 4xx
-          if (error instanceof ApiError) return error.status >= 500;
+          if (error instanceof ApiError) {
+            // Retry on 5xx or circuit open (status 0 but not network abort)
+            return error.status >= 500 || error.status === 0;
+          }
           return true; // network errors
         },
       });
@@ -132,6 +164,25 @@ export class ApiClient {
   /** Fetch server library */
   async getLibrary(signal?: AbortSignal): Promise<LibraryResponse> {
     return this.request<LibraryResponse>('/api/backend-library', { method: 'GET' }, signal);
+  }
+
+  /** Upload a file for processing */
+  async uploadFile(
+    file: File | Blob,
+    filename?: string,
+    signal?: AbortSignal
+  ): Promise<UploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file, filename || (file as File).name);
+    
+    return this.request<UploadResponse>(
+      '/api/backend-upload',
+      {
+        method: 'POST',
+        body: formData,
+      },
+      signal
+    );
   }
 }
 
