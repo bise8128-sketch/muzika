@@ -202,14 +202,31 @@ export const NoteHighway: React.FC<NoteHighwayProps> = ({
                     } else {
                          // Check for large jumps
                         const prev = visibleHistory[i-1];
-                        const prevMidi = 69 + 12 * Math.log2(prev.detectedPitch / 440);
-                         if (Math.abs(prevMidi - midi) > 5) {
-                            ctx.stroke();
-                            ctx.beginPath();
+                        // Ensure prev had a pitch, though logic suggests we wouldn't be here if it was a continuous line
+                        // But if we had a gap (pitch=0) in between, firstUserPoint would be reset?
+                        // Actually, if pitch=0, we hit the else block below which resets firstUserPoint.
+                        // So if we are here, prev MUST be the immediate previous point in the array.
+                        // BUT, the previous point in array might have had pitch=0 and been skipped in this loop?
+                        // Ah, forEach iterates ALL.
+                        
+                        // We need to handle if prev was pitch=0.
+                        // If prev was 0, then we should have reset firstUserPoint in the iteration for prev.
+                        // So firstUserPoint would be true for THIS iteration.
+                        // So we wouldn't be in this else block.
+                        // So we are safe assuming prev had pitch > 0?
+                        // Let's be defensive.
+                        if (prev && prev.detectedPitch > 0) {
+                            const prevMidi = 69 + 12 * Math.log2(prev.detectedPitch / 440);
+                             if (Math.abs(prevMidi - midi) > 5) {
+                                ctx.stroke();
+                                ctx.beginPath();
+                                ctx.moveTo(x, y);
+                             } else {
+                                ctx.lineTo(x, y);
+                             }
+                        } else {
                             ctx.moveTo(x, y);
-                         } else {
-                            ctx.lineTo(x, y);
-                         }
+                        }
                     }
                 } else {
                     if (!firstUserPoint) {
