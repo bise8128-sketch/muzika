@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { MonitoringInit } from "@/components/UI/MonitoringInit";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { AudioProvider } from "@/context/AudioProvider";
 import { ThemeAwareBackground } from "@/components/Visuals/ThemeAwareBackground";
 import Script from "next/script";
 
@@ -50,9 +51,11 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            <MonitoringInit />
-            <ThemeAwareBackground />
-            {children}
+            <AudioProvider>
+              <MonitoringInit />
+              <ThemeAwareBackground />
+              {children}
+            </AudioProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
         {/* 
