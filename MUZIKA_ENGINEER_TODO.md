@@ -217,7 +217,7 @@
 ## ✨ FEATURE IMPLEMENTATION
 
 ### FI-01: AI-Powered Lyric Synchronization
-- [ ] **Task**: Implement automatic lyric alignment using Whisper.js
+- [/] **Task**: Implement automatic lyric alignment using Whisper.js
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐⭐⭐ Very High (20-30 hours)
 - **Impact**: Major differentiator, saves manual sync time
