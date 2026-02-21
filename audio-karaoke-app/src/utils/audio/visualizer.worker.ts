@@ -570,17 +570,6 @@ function drawSingStar() {
   context.fillStyle = "rgba(10, 10, 15, 0.4)";
   context.fillRect(0, 0, w, h);
 
-  // Grid lines (Horizontal Octaves)
-  context.strokeStyle = "rgba(255,255,255,0.05)";
-  context.lineWidth = 1;
-  for (let midi = MIDI_MIN; midi <= MIDI_MIN + MIDI_RANGE; midi += 12) {
-    const y = h - ((midi - MIDI_MIN) / MIDI_RANGE) * h;
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(w, y);
-    context.stroke();
-  }
-
   if (!latestPitchHistory || latestPitchHistory.length < 2) return;
 
   // Time-based rendering for rhythm game feel
@@ -609,6 +598,17 @@ function drawSingStar() {
   context.moveTo(0, trackBottom);
   context.lineTo(w, trackBottom);
   context.stroke();
+
+  // Grid lines (Horizontal Octaves)
+  context.strokeStyle = "rgba(255,255,255,0.05)";
+  context.lineWidth = 1;
+  for (let midi = MIDI_MIN; midi <= MIDI_MIN + MIDI_RANGE; midi += 12) {
+    const y = midiToY(midi);
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(w, y);
+    context.stroke();
+  }
 
   // --- 1. Draw Reference Highway (The "Snake") ---
   if (referencePitchMap && referencePitchMap.length > 0) {
