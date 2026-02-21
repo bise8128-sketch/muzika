@@ -10,6 +10,15 @@ export interface MidiNoteEvent {
     velocity: number;
 }
 
+export interface MidiMetaEvent {
+    ticks: number;
+    type: 'meta';
+    subtype: number; // e.g., 0x05 for Lyrics, 0x59 for Key Signature
+    data: number[] | string; // byte array or text
+}
+
+export type MidiEvent = MidiNoteEvent | MidiMetaEvent;
+
 export class MidiWriter {
     private buffer: number[] = [];
     private ppq: number = 480;
@@ -21,7 +30,7 @@ export class MidiWriter {
     /**
      * Encode a Standard MIDI File from a list of absolute tick events
      */
-    public buildFile(events: MidiNoteEvent[]): Uint8Array {
+    public buildFile(events: MidiEvent[]): Uint8Array {
         this.buffer = [];
         
         // 1. Header Chunk
@@ -40,7 +49,7 @@ export class MidiWriter {
         return new Uint8Array(this.buffer);
     }
 
-    private buildTrackData(events: MidiNoteEvent[]): number[] {
+    private buildTrackData(events: MidiEvent[]): number[] {
         const data: number[] = [];
         let lastTicks = 0;
 
@@ -51,11 +60,26 @@ export class MidiWriter {
             const delta = event.ticks - lastTicks;
             this.writeVLQ(data, delta);
 
-            if (event.type === 'on') {
+            if (event.type === 'meta') {
+                data.push(0xFF);
+                data.push(event.subtype & 0xFF);
+                
+                let metaBytes: number[] = [];
+                if (typeof event.data === 'string') {
+                    for (let i = 0; i < event.data.length; i++) {
+                        metaBytes.push(event.data.charCodeAt(i));
+                    }
+                } else {
+                    metaBytes = event.data;
+                }
+                
+                this.writeVLQ(data, metaBytes.length);
+                data.push(...metaBytes);
+            } else if (event.type === 'on') {
                 data.push(0x90); // Note On (Channel 0)
                 data.push(event.midi & 0x7F);
                 data.push(event.velocity & 0x7F);
-            } else {
+            } else if (event.type === 'off') {
                 data.push(0x80); // Note Off (Channel 0)
                 data.push(event.midi & 0x7F);
                 data.push(event.velocity & 0x7F);
