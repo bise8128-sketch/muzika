@@ -16,6 +16,8 @@ export interface LyricWord {
   text: string;
 }
 
+export type StageTheme = 'neon-tokyo' | 'acoustic-lounge' | 'grand-opera';
+
 export interface VisualSettings {
   highlightColor: string;
   fontSize: "sm" | "base" | "lg" | "xl";

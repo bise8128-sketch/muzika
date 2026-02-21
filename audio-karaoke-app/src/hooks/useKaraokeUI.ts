@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { LyricTheme } from '@/components/Karaoke/LyricDisplay';
-import { VisualSettings } from '@/types/karaoke';
+import { VisualSettings, StageTheme } from '@/types/karaoke';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 
 export interface KaraokeUIState {
     showEditor: boolean;
     theme: LyricTheme;
+    stageTheme: StageTheme;
     isStageMode: boolean;
     showSettings: boolean;
     showPractice: boolean;
@@ -20,6 +21,7 @@ export interface KaraokeUIState {
 export interface KaraokeUIActions {
     setShowEditor: (show: boolean) => void;
     setTheme: (theme: LyricTheme) => void;
+    setStageTheme: (theme: StageTheme) => void;
     setIsStageMode: (enabled: boolean) => void;
     setShowSettings: (show: boolean) => void;
     setShowPractice: (show: boolean) => void;
@@ -57,6 +59,7 @@ export const useKaraokeUI = () => {
             return 'modern';
         }
     });
+    const [stageTheme, setStageTheme] = useState<StageTheme>('neon-tokyo');
     const [isStageMode, setIsStageMode] = useState(() => {
         try {
             return getSettings().stageModeEnabled;
@@ -112,6 +115,7 @@ export const useKaraokeUI = () => {
         state: {
             showEditor,
             theme,
+            stageTheme,
             isStageMode,
             showSettings,
             showPractice,
@@ -125,6 +129,7 @@ export const useKaraokeUI = () => {
         actions: {
             setShowEditor,
             setTheme,
+            setStageTheme,
             setIsStageMode,
             setShowSettings,
             setShowPractice,
