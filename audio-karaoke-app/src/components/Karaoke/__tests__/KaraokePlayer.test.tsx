@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { KaraokePlayer } from '../KaraokePlayer';
-import { PlaybackController } from '@/utils/audio/playbackController';
+
 import { MockAudioContext } from '../../../__mocks__/audioContextMock';
 
 // Mocks
@@ -83,7 +83,9 @@ jest.mock('@/hooks/useKaraokeExport', () => ({
 
 jest.mock('@/hooks/useVisualizerOrchestrator', () => ({
     useVisualizerOrchestrator: () => ({
-        // visualizer mock
+        setMode: jest.fn(),
+        setPitchHistory: jest.fn(),
+        setPitchTargets: jest.fn()
     })
 }));
 
@@ -208,7 +210,8 @@ jest.mock('../../UI/ErrorBoundary', () => ({
 }));
 
 // Setup Controller Mock
-const mockController = new (require('@/utils/audio/playbackController').PlaybackController)();
+import { PlaybackController } from '@/utils/audio/playbackController';
+const mockController = new PlaybackController();
 
 describe('KaraokePlayer', () => {
     it('renders without crashing', async () => {
