@@ -30,6 +30,8 @@ interface KaraokeToolbarProps {
     onStartRecordingMix: () => void;
     onStopRecordingMix: () => void;
     onClearMixRecording: () => void;
+    showSeparation: boolean;
+    onToggleSeparation: () => void;
 }
 
 const ToolbarButton: React.FC<{ icon: React.ReactNode; active?: boolean; onClick: () => void; label: string }> = ({ icon, active, onClick, label }) => (
@@ -71,7 +73,9 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
     recordedMixBlob,
     onStartRecordingMix,
     onStopRecordingMix,
-    onClearMixRecording
+    onClearMixRecording,
+    showSeparation,
+    onToggleSeparation
 }) => {
     if ((!lyrics && !cdgData) || showEditor) return null;
 
@@ -127,6 +131,12 @@ export const KaraokeToolbar: React.FC<KaraokeToolbarProps> = ({
                 active={showLyricSync} 
                 onClick={onToggleLyricSync} 
                 label="AI Lyric Sync" 
+            />
+            <ToolbarButton 
+                icon={<Mic2 className="w-4 h-4 text-purple-400" />} 
+                active={showSeparation} 
+                onClick={onToggleSeparation} 
+                label="Separate Stems (Local AI)" 
             />
 
             {/* Recording Controls */}

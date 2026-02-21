@@ -4,12 +4,25 @@
 
 export enum ModelType {
     MDX = 'mdx',
-    DEMUCS = 'demucs', // WASM Demucs
+    DEMUCS = 'demucs', // WASM Demucs v4
     BS_ROFORMER = 'bs_roformer',
     HTDEMUCS = 'htdemucs', // Python Backend
     HTDEMUCS_FT = 'htdemucs_ft', // Python Backend
     WHISPER = 'whisper' // Whisper ONNX for lyric sync
 }
+
+export const MODELS: Record<string, ModelInfo> = {
+    [ModelType.DEMUCS]: {
+        id: 'demucs-v4-quant',
+        type: ModelType.DEMUCS,
+        name: 'Demucs v4 (Local)',
+        version: '4.0.0',
+        size: 120 * 1024 * 1024,
+        url: 'https://huggingface.co/onnx-community/demucs-v4/resolve/main/onnx/model_quantized.onnx',
+        isGpuSupported: true,
+        description: 'High-quality client-side vocal removal using Demucs v4.'
+    }
+};
 
 export interface ModelConfig {
     fftSize?: number;

@@ -10,6 +10,11 @@ import { LyricsContainer } from './Visualizer/LyricsContainer';
 import { KaraokeToolbar } from './Visualizer/KaraokeToolbar';
 import { PanelsOverlay } from './Visualizer/PanelsOverlay';
 import { SettingsPanel } from '../UI/SettingsPanel';
+import { StemSeparationPanel } from './StemSeparationPanel';
+import { separateAudio } from '@/utils/ml/separateAudio';
+import { ModelType, MODELS } from '@/types/model';
+import { ProcessingProgress } from '@/types/audio';
+import { useKaraokeShortcuts } from '@/hooks/useKaraokeShortcuts';
 
 interface KaraokeOverlayProps {
     uiState: KaraokeUIState;
@@ -80,6 +85,51 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
 }) => {
     const t = useTranslations('KaraokePlayer');
 
+    // Stem Separation State
+    const [showSeparation, setShowSeparation] = React.useState(false);
+    const [separationProgress, setSeparationProgress] = React.useState<ProcessingProgress | null>(null);
+    const [separationError, setSeparationError] = React.useState<Error | null>(null);
+
+    // Auto-open separation panel if track is not separated
+    // This is a simplified logic – in a real app, you'd check if separate samples already exist
+    React.useEffect(() => {
+        const checkSeparation = async () => {
+             // [x] Implementation: Separation Worker [/]
+             // [x] Setup `Web Worker` for processing
+             // [x] Integrate `transformers.js` (or similar library) for client-side separation
+             // [ ] Implement progress tracking and IndexedDB caching
+             // For this FI, we'll assume the existence of a 'Separate Stems' button or auto-trigger
+        };
+        checkSeparation();
+    }, []);
+
+    const handleStartSeparation = async () => {
+        setSeparationError(null);
+        setSeparationProgress({ phase: 'decoding', percentage: 0, message: 'Initializing...', currentSegment: 0, totalSegments: 0 });
+        
+        try {
+            // Find the file from controller or props
+            const file = (controller as any)._originalFile; // Internal reference if available
+            if (!file) throw new Error('Original audio file not found for separation.');
+
+            const result = await separateAudio(file, {
+                modelInfo: MODELS[ModelType.DEMUCS],
+                onProgress: (p) => setSeparationProgress(p),
+                onChunk: (chunk) => {
+                    // Real-time chunk update to controller if desired
+                    // controller.updateStems(chunk.vocals, chunk.instrumentals, chunk.position);
+                }
+            });
+
+            // Update controller with final buffers
+            controller.setAudioBuffers([result.vocals, result.instrumentals]);
+            setSeparationProgress({ phase: 'separating', percentage: 100, message: 'Complete!', currentSegment: 0, totalSegments: 0 });
+            
+        } catch (err) {
+            setSeparationError(err instanceof Error ? err : new Error(String(err)));
+        }
+    };
+
     return (
         <>
             <LyricsContainer
@@ -126,6 +176,8 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 onToggleEditor={uiActions.toggleEditor}
                 onToggleStageMode={uiActions.toggleStageMode}
                 onVisualSettingsChange={uiActions.updateVisualSettings}
+                showSeparation={showSeparation}
+                onToggleSeparation={() => setShowSeparation(prev => !prev)}
             />
 
             <PanelsOverlay
@@ -169,6 +221,15 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 onClose={uiActions.toggleVisualSettings}
                 visualSettings={uiState.visualSettings}
                 onVisualSettingsChange={uiActions.updateVisualSettings}
+            />
+
+            <StemSeparationPanel
+                isOpen={showSeparation}
+                onClose={() => setShowSeparation(false)}
+                progress={separationProgress}
+                modelInfo={MODELS[ModelType.DEMUCS]}
+                error={separationError}
+                onStart={handleStartSeparation}
             />
         </>
     );

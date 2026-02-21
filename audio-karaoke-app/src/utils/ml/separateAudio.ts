@@ -162,15 +162,14 @@ async function separateAudioInternal(
     try {
         const fileHash = await audioCache.hashFile(file);
         const serverModels = [ModelType.HTDEMUCS, ModelType.HTDEMUCS_FT, ModelType.BS_ROFORMER];
-
-
+        const clientModels = [ModelType.DEMUCS, ModelType.MDX];
 
         const support = await checkONNXSupport();
         
         // Smart Routing:
-        // 1. If model requires server (HTDEMUCS/BS_ROFORMER), always use server.
-        // 2. If device is low-end (e.g. mobile/weak CPU) AND server is available, use server to avoid crashing browser.
-        // 3. Otherwise, use client-side (WebGPU/WASM).
+        // 1. If model relies on server (HTDEMUCS/BS_ROFORMER) or if explicitly forced.
+        // 2. If client model (DEMUCS) is selected, try local processing first.
+        // 3. Fallback to server if device is low-end and server is available.
         
         let shouldUseServer = serverModels.includes(modelInfo.type);
         
