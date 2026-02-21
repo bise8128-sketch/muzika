@@ -3,9 +3,8 @@
  * Refined for premium offline support and ML model caching.
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE = `muzika-shell-${CACHE_VERSION}`;
-const MODEL_CACHE = `muzika-models-${CACHE_VERSION}`;
 const ASSET_CACHE = `muzika-assets-${CACHE_VERSION}`;
 
 const OFFLINE_URL = '/offline.html';
@@ -17,14 +16,9 @@ const INITIAL_CACHED_RESOURCES = [
   '/sw-register.js',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon.svg',
+  '/offline.html',
 ];
-
-// Broadcast signals to the main thread
-const BC = new BroadcastChannel('muzika-sw-channel');
-
-function broadcast(type, payload) {
-  BC.postMessage({ type, payload });
-}
 
 // ── Install ────────────────────────────────────────────────────────
 
@@ -44,7 +38,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (![SHELL_CACHE, MODEL_CACHE, ASSET_CACHE].includes(key)) {
+          if (![SHELL_CACHE, ASSET_CACHE].includes(key)) {
             return caches.delete(key);
           }
         })
@@ -60,15 +54,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip cross-origin requests (except HF for models)
-  const isHF = url.hostname === 'huggingface.co' || url.hostname.endsWith('hf.co');
-  if (url.origin !== self.location.origin && !isHF) return;
+  // Skip cross-origin requests
+  if (url.origin !== self.location.origin) return;
   if (request.method !== 'GET') return;
 
-  // 1. Models & WASM — Cache First (Immutable)
-  if (isHF || url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/')) {
-    event.respondWith(cacheFirst(request, MODEL_CACHE));
-    return;
+  // 1. Models & WASM — Let the main thread/IndexedDB handle these
+  // We explicitly bypass sw caching for large binary models to avoid double storage
+  if (url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/')) {
+    return; 
   }
 
   // 2. Static Assets — Stale While Revalidate
@@ -107,28 +100,6 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ── Strategies ─────────────────────────────────────────────────────
-
-async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
-  if (cached) {
-    broadcast('CACHE_HIT', { url: request.url, cacheName });
-    return cached;
-  }
-
-  try {
-    broadcast('DOWNLOAD_START', { url: request.url });
-    const response = await fetch(request);
-    if (response && response.status === 200) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-      broadcast('DOWNLOAD_COMPLETE', { url: request.url });
-    }
-    return response;
-  } catch (err) {
-    broadcast('DOWNLOAD_ERROR', { url: request.url, error: err.message });
-    return new Response('Offline access failed', { status: 503 });
-  }
-}
 
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
