@@ -1,5 +1,5 @@
-import { ApiClient } from '../api/ApiClient';
-import type { SongEntry, Playlist, QueueState } from '@/types/storage';
+import { ApiClient } from '../../api/ApiClient';
+import type { SongEntry, Playlist } from '@/types/storage';
 import type { 
     ISongRepository, 
     IPlaylistRepository, 
@@ -28,7 +28,7 @@ export class ServerSongRepository implements ISongRepository {
     }
 
     async create(song: SongEntry): Promise<string | number> {
-        const response = await this.api.post('/songs', song);
+        const response = await this.api.post<{ id: string | number }>('/songs', song);
         return response.id;
     }
 
@@ -57,7 +57,7 @@ export class ServerPlaylistRepository implements IPlaylistRepository {
     }
 
     async create(playlist: Playlist): Promise<string | number> {
-        const response = await this.api.post('/playlists', playlist);
+        const response = await this.api.post<{ id: string | number }>('/playlists', playlist);
         return response.id;
     }
 

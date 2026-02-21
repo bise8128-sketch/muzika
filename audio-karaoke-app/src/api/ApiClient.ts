@@ -124,6 +124,22 @@ export class ApiClient {
 
   // ---- Public API methods ----
 
+  async get<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(path, { method: 'GET' }, signal);
+  }
+
+  async post<T>(path: string, body: any, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) }, signal);
+  }
+
+  async put<T>(path: string, body: any, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(path, { method: 'PUT', body: JSON.stringify(body) }, signal);
+  }
+
+  async delete<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(path, { method: 'DELETE' }, signal);
+  }
+
   /** Check backend health / status */
   async getStatus(signal?: AbortSignal): Promise<StatusResponse> {
     return this.request<StatusResponse>('/api/status', { method: 'GET' }, signal);
