@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { SeparationResult } from '@/types/audio';
-import { songsStorage } from '@/utils/storage/songsStorage';
+import { useSeparation } from '@/hooks/useSeparation';
 
 interface AudioContextType {
     controller: PlaybackController | null;
@@ -11,6 +11,7 @@ interface AudioContextType {
     setActiveResult: (result: SeparationResult | null) => void;
     loadResultFromStorage: (fileHash: string) => Promise<boolean>;
     isLoading: boolean;
+    separation: ReturnType<typeof useSeparation>;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -23,6 +24,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const separation = useSeparation();
 
     useEffect(() => {
         return () => {
@@ -64,7 +66,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeResult, 
             setActiveResult, 
             loadResultFromStorage,
-            isLoading 
+            isLoading,
+            separation
         }}>
             {children}
         </AudioContext.Provider>

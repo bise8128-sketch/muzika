@@ -59,59 +59,8 @@ export default function Home() {
   const activeModelName = AVAILABLE_MODELS.find(m => m.id === selectedModelId)?.name || 'Unknown';
 
   const renderContent = () => {
-    if (machineState.matches('uploading') || machineState.matches('idle')) {
-      return (
-        <UploadView
-          onUpload={handleUpload}
-          onUrlSubmit={handleUrlSubmit}
-          isLoading={machineState.matches('uploading') || separation.status === 'processing'}
-          autoStartKaraoke={autoStartKaraoke}
-          onAutoStartToggle={toggleAutoStartKaraoke}
-          selectedModelId={selectedModelId}
-          onModelChange={setSelectedModelId}
-          historyItems={history.historyItems}
-          onRestore={handleRestore}
-          onClearHistory={history.clearHistory}
-          activeModelName={activeModelName}
-        />
-      );
-    }
-
-    if (machineState.matches('processing')) {
-      return (
-        <ProcessingView
-          progress={separation.progress}
-          message={separation.message}
-          status={separation.status}
-          executionBackend={separation.executionBackend}
-        />
-      );
-    }
-
-    if (machineState.matches('results')) {
-      return (
-        <ResultsView
-          activeResult={activeResult}
-          onDownload={handleDownload}
-          onRestart={handleRestart}
-          onTryKaraoke={handleTryKaraoke}
-        />
-      );
-    }
-
-    if (machineState.matches('karaoke')) {
-      return controller ? (
-        <KaraokeView
-          controller={controller}
-          onBack={handleExitKaraoke}
-        />
-      ) : null;
-    }
-
     if (machineState.matches('models')) {
-      return (
-        <ModelsView onBack={handleBack} />
-      );
+      return <ModelsView onBack={handleBack} />;
     }
 
     if (machineState.matches('batchProcessing')) {
@@ -130,7 +79,22 @@ export default function Home() {
       );
     }
 
-    return null;
+    // Default to UploadView for idle/uploading
+    return (
+      <UploadView
+        onUpload={handleUpload}
+        onUrlSubmit={handleUrlSubmit}
+        isLoading={machineState.matches('uploading') || separation.status === 'processing'}
+        autoStartKaraoke={autoStartKaraoke}
+        onAutoStartToggle={toggleAutoStartKaraoke}
+        selectedModelId={selectedModelId}
+        onModelChange={setSelectedModelId}
+        historyItems={history.historyItems}
+        onRestore={handleRestore}
+        onClearHistory={history.clearHistory}
+        activeModelName={activeModelName}
+      />
+    );
   };
 
   return (

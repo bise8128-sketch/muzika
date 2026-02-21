@@ -3,6 +3,7 @@ import type { SeparationResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playbackController';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
+import { useRouter } from '@/i18n/routing';
 
 export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
 
@@ -31,6 +32,7 @@ export function useAppState(options: UseAppStateOptions) {
     restoredResult,
   } = options;
 
+  const router = useRouter();
   const [state, send] = useMachine(appMachine);
 
   // React to separation completion
@@ -46,6 +48,9 @@ export function useAppState(options: UseAppStateOptions) {
       if (autoStartKaraoke && controller) {
         controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
         send({ type: 'START_KARAOKE' });
+        router.push(`/karaoke/${separationResult.fileHash}`);
+      } else {
+        router.push(`/results/${separationResult.fileHash}`);
       }
     } else if (separationStatus === 'error') {
       console.error("Separation Error:", separationError);
@@ -65,9 +70,10 @@ export function useAppState(options: UseAppStateOptions) {
     const activeResult = separationResult || restoredResult;
     if (activeResult && controller) {
       controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
+      router.push(`/karaoke/${activeResult.fileHash}`);
     }
     send({ type: 'START_KARAOKE' });
-  }, [separationResult, restoredResult, controller, send]);
+  }, [separationResult, restoredResult, controller, send, router]);
 
   // Actions exposed to UI
   const setViewState = useCallback((view: 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch') => {

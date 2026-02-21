@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n/routing';
+import { useAudio } from '@/context/AudioProvider';
 
-import { PlaybackController } from '@/utils/audio/playbackController';
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { songsStorage } from '@/utils/storage/songsStorage';
+import { audioCache } from '@/utils/storage/audioCache';
 import { DEFAULT_MODEL_ID } from '@/utils/constants';
 
-import { useSeparation } from '@/hooks/useSeparation';
 import { useBatchSeparation } from '@/hooks/useBatchSeparation';
 import { useModels } from '@/hooks/useModels';
 import { useHistoryManagement } from '@/hooks/useHistoryManagement';
@@ -19,16 +19,11 @@ export function usePageOrchestrator() {
   const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
 
-  // PlaybackController
-  // Initialize lazily to ensure it only runs on client and avoids effect-state updates
-  const [controller] = useState<PlaybackController | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return new PlaybackController();
-  });
-  
-  useEffect(() => {
-    return () => { if (controller) controller.dispose(); };
-  }, [controller]);
+  const { 
+    controller, 
+    setActiveResult,
+    separation
+  } = useAudio();
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -42,7 +37,6 @@ export function usePageOrchestrator() {
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
 
   // Domain hooks
-  const separation = useSeparation();
   const serverProcessing = useServerProcessing();
   const batch = useBatchSeparation();
   const history = useHistoryManagement();
@@ -53,6 +47,13 @@ export function usePageOrchestrator() {
   const isError = separation.status === 'error' || !!serverProcessing.error;
   const errorMessage = separation.error || serverProcessing.error;
   const processingResult = separation.result || serverProcessing.result;
+
+  // Update provider with new results automatically
+  useEffect(() => {
+    if (processingResult) {
+      setActiveResult(processingResult);
+    }
+  }, [processingResult, setActiveResult]);
 
   const unifiedStatus = useMemo(() => {
     if (isProcessing) return 'processing';
@@ -120,6 +121,10 @@ export function usePageOrchestrator() {
     }
 
     try {
+      // Calculate hash early for route-based tracking
+      const fileHash = await audioCache.hashFile(file);
+      router.push(`/process/${fileHash}`);
+      
       send({ type: 'PROCESS_START' });
       await separation.separate(file, modelInfo);
     } catch (e) {
@@ -132,6 +137,7 @@ export function usePageOrchestrator() {
     try {
       await history.handleRestore(fileHash);
       send({ type: 'RESTORE_SESSION' });
+      router.push(`/results/${fileHash}`);
     } catch {
       alert('Failed to restore session from database.');
     }
@@ -148,11 +154,10 @@ export function usePageOrchestrator() {
   const handleViewModels = () => send({ type: 'VIEW_MODELS' });
 
   // Expose specific separation state for UI
-  // Note: We expose a composite separation object that accounts for server state where relevant
   const compositeSeparation = {
     ...separation,
     status: unifiedStatus,
-    progress: serverProcessing.isPolling ? 0 : separation.progress, // Server doesn't report granular progress yet
+    progress: serverProcessing.isPolling ? 0 : separation.progress, 
     message: serverProcessing.isPolling ? (serverProcessing.serverLogs || 'Processing on server...') : separation.message,
     executionBackend: serverProcessing.isPolling || serverProcessing.result ? 'server' : separation.executionBackend,
   };
@@ -179,7 +184,7 @@ export function usePageOrchestrator() {
     handleUpload,
     handleUrlSubmit,
     handleRestore,
-    separation: compositeSeparation, // Expose composite object
+    separation: compositeSeparation, 
     batch,
     history,
     handleDownload,
@@ -187,6 +192,3 @@ export function usePageOrchestrator() {
     controller,
   };
 }
-
-
-
