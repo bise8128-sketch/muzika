@@ -28,6 +28,7 @@
     "@ffmpeg/util": "^0.12.1",
     "@sentry/nextjs": "^10.39.0",
     "@types/react-window": "^1.8.8",
+    "@xenova/transformers": "^2.17.2",
     "@xstate/react": "^6.0.0",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
