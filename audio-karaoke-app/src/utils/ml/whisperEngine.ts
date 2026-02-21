@@ -38,7 +38,11 @@ export class WhisperEngine {
             progress_callback: (info: any) => {
                 if (onProgress && info.status === 'progress') {
                     // Convert to expected ModelDownloadProgress
-                    onProgress({ percentage: info.progress });
+                    onProgress({ 
+                        percentage: info.progress,
+                        loaded: info.loaded || 0,
+                        total: info.total || 0
+                    });
                 }
             }
         });
