@@ -44,14 +44,14 @@ export class FileValidator {
             result.errors.push(`File size (${sizeMB}MB) exceeds the maximum limit of ${maxMB}MB.`);
         }
 
-        // MIME Type (Basic check first, then magic numbers if needed)
-        // For now, we'll trust the browser's type detection or extension if type is empty,
-        // but a real robust solution would read magic bytes.
-        // The plan mentioned "magic numbers, not just extensions".
+        // MIME Type
         const detectedType = await this.detectMimeType(file);
         if (!this.config.allowedTypes.includes(detectedType)) {
             result.isValid = false;
             result.errors.push(`File type '${detectedType}' is not supported. Allowed types: ${this.config.allowedTypes.join(', ')}.`);
+        } else if (!this.isCodecSupported(detectedType)) {
+            result.isValid = false;
+            result.errors.push(`MIME type '${detectedType}' is technically allowed but not supported by your browser's audio engine.`);
         }
 
         // 2. Environment Checks (Async)
@@ -128,43 +128,58 @@ export class FileValidator {
      */
     private async detectMimeType(file: File): Promise<string> {
         const fallback = file.type;
-        // If browser detected it and it's in our allowed list, we might trust it to save time,
-        // but for robustness (Plan requirement), we should check signatures.
-
         try {
-            const arr = (new Uint8Array(await file.slice(0, 4).arrayBuffer()));
-            let header = '';
-            for (let i = 0; i < arr.length; i++) {
-                header += arr[i].toString(16).toUpperCase();
-            }
+            const buffer = await file.slice(0, 12).arrayBuffer();
+            const arr = new Uint8Array(buffer);
+            
+            // Convert to hex string for easier matching
+            const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 
-            // Common Signatures
-            // MP3: ID3 (49 44 33) or FF FB / FF F3 / FF F2
-            if (header.startsWith('494433')) return 'audio/mpeg';
-            if (header.startsWith('FFF3') || header.startsWith('FFFB')) return 'audio/mpeg';
+            // 1. MP3 (standard or ID3v2)
+            if (hex.startsWith('494433')) return 'audio/mpeg'; // ID3v2
+            if (hex.startsWith('FFFB') || hex.startsWith('FFF3') || hex.startsWith('FFF2')) return 'audio/mpeg'; // Standard frames
 
-            // WAV: RIFF .... WAVE
-            // We need to check 'RIFF' at 0 and 'WAVE' at 8. 
-            // 52 49 46 46 (RIFF)
-            if (header.startsWith('52494646')) {
-                return 'audio/wav'; // Simplified, really should check for WAVE
-            }
+            // 2. WAV (RIFF header)
+            // Starts with "RIFF", bytes 8-11 should be "WAVE"
+            // "RIFF" = 52 49 46 46
+            // "WAVE" = 57 41 56 45
+            if (hex.startsWith('52494646') && hex.slice(16, 24) === '57415645') return 'audio/wav';
 
-            // FLAC: 66 4C 61 43
-            if (header.startsWith('664C6143')) return 'audio/flac';
+            // 3. FLAC
+            // "fLaC" = 66 4C 61 43
+            if (hex.startsWith('664C6143')) return 'audio/flac';
 
-            // OGG: 4F 67 67 53
-            if (header.startsWith('4F676753')) return 'audio/ogg';
+            // 4. OGG (Vorbis/Opus)
+            // "OggS" = 4F 67 67 53
+            if (hex.startsWith('4F676753')) return 'audio/ogg';
 
-            // M4A/AAC: usually starts with ftypM4A or similar. 
-            // 00 00 00 20 66 74 79 70 4D 34 41 (ftypM4A) is common but variable length.
+            // 5. M4A / MP4 Audio
+            // Starts with "ftypM4A" (at offset 4 usually)
+            // "ftyp" = 66 74 79 70
+            // "M4A " = 4D 34 41 20
+            if (hex.slice(8, 16) === '66747970' && hex.slice(16, 24) === '4D344120') return 'audio/mp4';
 
-            // If we can't detect it easily, fall back to extension/browser type
+            // 6. AAC (ADTS)
+            // Starts with FF F1 or FF F9
+            if (hex.startsWith('FFF1') || hex.startsWith('FFF9')) return 'audio/aac';
+
             return fallback;
         } catch (e) {
             console.warn('Magic number detection failed', e);
             return fallback;
         }
+    }
+
+    /**
+     * Check if the browser actually supports decoding this MIME type.
+     */
+    public isCodecSupported(mimeType: string): boolean {
+        if (typeof window === 'undefined') return true; // Server-side or generic check
+        
+        // Use standard Audio element to check support
+        const audio = document.createElement('audio');
+        const support = audio.canPlayType(mimeType);
+        return support === 'probably' || support === 'maybe';
     }
 
     /**

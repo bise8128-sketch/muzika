@@ -28,11 +28,12 @@ export interface AudioWorkletMessage {
 // Global registerProcessor function - this will be available in the AudioWorklet context
 
 import { RingBuffer } from './RingBuffer';
+import { PitchCorrector } from './pitchCorrection';
 
 // Define a base class that works in both Worklet and Main thread contexts for compilation
-let BaseProcessor: any = class {
-    port = { postMessage: (_msg: any, _transfers?: any) => {}, onmessage: null as any };
-};
+let BaseProcessor: { new(): AudioWorkletProcessor } = class {
+    port = { postMessage: (_msg: AudioWorkletMessage, _transfers?: Transferable[]) => {}, onmessage: null as any };
+} as any;
 
 if (typeof globalThis !== 'undefined' && 'AudioWorkletProcessor' in globalThis) {
     BaseProcessor = (globalThis as any).AudioWorkletProcessor;
@@ -43,15 +44,16 @@ if (typeof globalThis !== 'undefined' && 'AudioWorkletProcessor' in globalThis) 
  * This is the actual AudioWorklet processor that runs in the audio thread
  */
 export class GenericAudioProcessor extends BaseProcessor {
+    private lastPitchReportTime: number = 0;
+    private pitchReportInterval: number = 50; // ms
+    private pitchBuffer: Float32Array;
+    private internalPitchBuffer: Float32Array;
+    private pitchResult: { frequency: number, midiNote: number, confidence: number, timestamp: number } | null = null;
+    
     private config: AudioWorkletProcessorConfig;
     private metrics: PerformanceMetrics;
-    private lastProcessTime: number = 0;
-    private processCount: number = 0;
-    private startTime: number = performance.now();
     private gain: number = 1.0;
     private bypass: boolean = false;
-    
-    // Pipelining
     private ringBuffer: RingBuffer;
     private isPlaying: boolean = false;
 
@@ -75,6 +77,12 @@ export class GenericAudioProcessor extends BaseProcessor {
 
         // Initialize ring buffer with 1 second of capacity by default
         this.ringBuffer = new RingBuffer(44100 * 1, 2);
+
+        // Pre-allocate buffers for pitch detection
+        // 2048 samples is a good balance for latency and accuracy down to ~80Hz at 44.1kHz
+        this.pitchBuffer = new Float32Array(2048);
+        const maxPeriod = Math.floor(44100 / 80);
+        this.internalPitchBuffer = new Float32Array(maxPeriod + 1);
 
         this.port.onmessage = (event: MessageEvent<AudioWorkletMessage>) => {
             try {
@@ -128,7 +136,7 @@ export class GenericAudioProcessor extends BaseProcessor {
         if (!this.config.enablePerformanceMonitoring) return;
 
         const currentTime = performance.now();
-        this.metrics.memoryUsage = (performance as any).memory?.usedJSHeapSize || 0;
+        this.metrics.memoryUsage = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize || 0;
         this.metrics.timestamp = currentTime;
 
         this.port.postMessage({
@@ -151,8 +159,44 @@ export class GenericAudioProcessor extends BaseProcessor {
     process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
         try {
             const startTime = performance.now();
+            const inputChannels = inputs[0];
             const outputChannels = outputs[0];
 
+            // 1. Pitch Detection (Microphone Input)
+            if (inputChannels && inputChannels[0]) {
+                const micInput = inputChannels[0];
+                
+                // Shift old samples and add new ones (circular buffer style in a linear array)
+                // In a real high-perf app, we might use a RingBuffer for input too, 
+                // but for 2048 samples, a set/copy is often acceptable if done carefully.
+                // However, the rule is ZERO allocation.
+                this.pitchBuffer.set(this.pitchBuffer.subarray(micInput.length));
+                this.pitchBuffer.set(micInput, this.pitchBuffer.length - micInput.length);
+
+                // Analyze pitch if it's time
+                if (startTime - this.lastPitchReportTime > this.pitchReportInterval) {
+                    this.pitchResult = PitchCorrector.detectPitch(
+                        this.pitchBuffer, 
+                        this.config.sampleRate || 44100,
+                        this.internalPitchBuffer
+                    );
+
+                    if (this.pitchResult && this.pitchResult.confidence > 0.4) {
+                        this.port.postMessage({
+                            type: 'metrics', // Reuse metrics or create new type
+                            data: {
+                                type: 'pitch',
+                                pitch: this.pitchResult.frequency,
+                                confidence: this.pitchResult.confidence,
+                                timestamp: startTime
+                            }
+                        });
+                    }
+                    this.lastPitchReportTime = startTime;
+                }
+            }
+
+            // 2. Playback / Synthesis
             if (!outputChannels || !outputChannels[0]) return true;
 
             if (this.isPlaying && !this.bypass) {
@@ -171,8 +215,7 @@ export class GenericAudioProcessor extends BaseProcessor {
                         }
                     }
                 }
-            } else if (this.bypass && inputs[0]) {
-                const inputChannels = inputs[0];
+            } else if (this.bypass && inputChannels) {
                 for (let c = 0; c < inputChannels.length && c < outputChannels.length; c++) {
                     outputChannels[c].set(inputChannels[c]);
                 }
@@ -187,7 +230,7 @@ export class GenericAudioProcessor extends BaseProcessor {
             if (this.config.enablePerformanceMonitoring) {
                 const endTime = performance.now();
                 this.metrics.processingTime = endTime - startTime;
-                this.metrics.cpuUsage = (this.metrics.processingTime / (128 / 44.1)) * 100; // ~2.9ms for 128 samples at 44.1kHz
+                this.metrics.cpuUsage = (this.metrics.processingTime / (128 / (this.config.sampleRate! / 1000))) * 100;
             }
 
             return true;

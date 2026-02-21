@@ -269,16 +269,24 @@ export class PitchCorrector {
     }
 
     /**
-     * Perform autocorrelation pitch detection on a buffer
+     * Perform autocorrelation pitch detection on a buffer.
+     * @param buffer Input audio buffer
+     * @param sampleRate Audio sample rate
+     * @param internalBuffer Optional pre-allocated buffer for internal calculations to avoid allocations
      */
-    static detectPitch(buffer: Float32Array, sampleRate: number): PitchDetectionResult | null {
+    static detectPitch(
+        buffer: Float32Array, 
+        sampleRate: number, 
+        internalBuffer?: Float32Array
+    ): PitchDetectionResult | null {
         const bufferSize = buffer.length;
         const minPeriod = Math.floor(sampleRate / 1200); // Max frequency ~1200 Hz
         const maxPeriod = Math.floor(sampleRate / 80);   // Min frequency ~80 Hz
 
-        // Calculate autocorrelation
-        const autocorr = new Float32Array(maxPeriod + 1);
-    // Calculate energy (autocorrelation at lag 0)
+        // Use provided buffer or allocate if not provided (though for Worklet we should always provide)
+        const autocorr = internalBuffer || new Float32Array(maxPeriod + 1);
+        
+        // Calculate energy (autocorrelation at lag 0)
         let energy = 0;
         for (let i = 0; i < bufferSize; i++) {
             energy += buffer[i] * buffer[i];
