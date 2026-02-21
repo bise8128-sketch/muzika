@@ -186,6 +186,26 @@ export class AudioVisualizer {
     }
 
     /**
+     * Set Vocal Energy for real-time reactive visuals
+     */
+    setVocalEnergy(energy: number): void {
+        this.visualizerWorker?.postMessage({
+            type: 'config',
+            payload: { vocalEnergy: energy }
+        });
+    }
+
+    /**
+     * Set Vocal Theme based on voice preset
+     */
+    setVisualTheme(preset: import('../../types/audio').VoicePreset): void {
+        this.visualizerWorker?.postMessage({
+            type: 'config',
+            payload: { voicePreset: preset }
+        });
+    }
+
+    /**
      * Set auto quality mode
      */
     setAutoQuality(enabled: boolean): void {

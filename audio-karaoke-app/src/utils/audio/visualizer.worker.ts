@@ -17,7 +17,9 @@ interface VisualizerConfig {
     | "fluid"
     | "singstar";
   quality: "high" | "low";
-  theme: any; // Using any for now to avoid dragging in complex types, or we can duplicate essential theme props
+  theme: any; 
+  vocalEnergy: number;
+  voicePreset: string;
 }
 
 let canvas: OffscreenCanvas | null = null;
@@ -64,7 +66,31 @@ let config: VisualizerConfig = {
   mode: "bars",
   quality: "high",
   theme: {},
+  vocalEnergy: 0,
+  voicePreset: "original",
 };
+
+/**
+ * Get reactive colors based on voice preset
+ */
+function getAccentColors(): { primary: string; secondary: string; hue: number } {
+  const { voicePreset } = config;
+
+  switch (voicePreset) {
+    case 'robot':
+      return { primary: 'hsla(190, 100%, 60%, 1)', secondary: 'hsla(210, 100%, 40%, 1)', hue: 190 };
+    case 'deep':
+      return { primary: 'hsla(340, 100%, 50%, 1)', secondary: 'hsla(280, 100%, 30%, 1)', hue: 340 };
+    case 'high':
+      return { primary: 'hsla(300, 100%, 70%, 1)', secondary: 'hsla(260, 100%, 50%, 1)', hue: 300 };
+    case 'chipmunk':
+      return { primary: 'hsla(45, 100%, 60%, 1)', secondary: 'hsla(20, 100%, 50%, 1)', hue: 45 };
+    case 'harmony':
+      return { primary: 'hsla(50, 100%, 55%, 1)', secondary: 'hsla(35, 100%, 45%, 1)', hue: 50 };
+    default:
+      return { primary: 'hsla(280, 100%, 60%, 1)', secondary: 'hsla(260, 100%, 40%, 1)', hue: 280 };
+  }
+}
 
 // Handle messages from main thread
 self.onmessage = (e: MessageEvent) => {
@@ -302,24 +328,24 @@ function renderLoop() {
 function drawBars() {
   if (!ctx || !canvas) return;
 
+  const { primary, secondary, hue } = getAccentColors();
+  const energyScale = 1 + config.vocalEnergy * 0.5;
   const barWidth = (canvas.width / frequencyData.length) * 2.5;
   let barHeight: number;
   let x = 0;
 
   for (let i = 0; i < frequencyData.length; i++) {
-    barHeight = (frequencyData[i] / 255) * canvas.height;
+    barHeight = (frequencyData[i] / 255) * canvas.height * energyScale;
 
-    // Simple gradient for now
-    // Can make this more complex or pass theme colors
     const gradient = ctx.createLinearGradient(
       0,
       canvas.height - barHeight,
       0,
       canvas.height,
     );
-    const hue = (i / frequencyData.length) * 60 + 260; // Purple to Blue
-    gradient.addColorStop(0, `hsla(${hue}, 100%, 60%, 1)`);
-    gradient.addColorStop(1, `hsla(${hue}, 100%, 40%, 0.5)`);
+    
+    gradient.addColorStop(0, primary);
+    gradient.addColorStop(1, secondary);
 
     ctx.fillStyle = gradient;
     ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
@@ -331,29 +357,23 @@ function drawBars() {
 function drawWaveform() {
   if (!ctx || !canvas) return;
 
-  // Fill background with a very slight fade for trail effect (optional, or solid)
-  ctx.fillStyle = "rgba(20, 20, 20, 0.4)";
+  const { primary } = getAccentColors();
+  const energyScale = 1 + config.vocalEnergy * 0.8;
+
+  ctx.fillStyle = "rgba(10, 10, 15, 0.4)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.lineWidth = 3;
-  // Create a beautiful premium gradient for the waveform
-  const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-  // Cool cyan to purple gradient
-  gradient.addColorStop(0, "hsla(180, 100%, 60%, 1)");
-  gradient.addColorStop(0.5, "hsla(280, 100%, 60%, 1)");
-  gradient.addColorStop(1, "hsla(320, 100%, 60%, 1)");
-
-  ctx.strokeStyle = gradient;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "hsla(280, 100%, 50%, 0.5)";
+  ctx.lineWidth = 3 * energyScale;
+  ctx.strokeStyle = primary;
+  ctx.shadowBlur = 10 * energyScale;
+  ctx.shadowColor = primary;
   ctx.beginPath();
 
   const sliceWidth = canvas.width / timeDomainData.length;
   let x = 0;
 
   for (let i = 0; i < timeDomainData.length; i++) {
-    // timeDomainData contains floats roughly in [-1.0, 1.0]
-    const v = timeDomainData[i] * 0.5 + 0.5; // map to [0, 1]
+    const v = timeDomainData[i] * 0.5 * energyScale + 0.5;
     const y = v * canvas.height;
 
     if (i === 0) {
@@ -366,7 +386,7 @@ function drawWaveform() {
   }
 
   ctx.stroke();
-  ctx.shadowBlur = 0; // Reset
+  ctx.shadowBlur = 0;
 }
 
 function draw3DLandscape() {
@@ -476,6 +496,9 @@ function initParticles() {
 function updateAndDrawParticles() {
   if (!ctx || !canvas || !particles) return;
 
+  const { hue: accentHue } = getAccentColors();
+  const energyScale = 1 + config.vocalEnergy * 2;
+
   // Fade out
   ctx.fillStyle = "rgba(10, 10, 15, 0.2)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -485,10 +508,9 @@ function updateAndDrawParticles() {
     energy += frequencyData[i];
   }
   energy = energy / frequencyData.length;
-  const speedMultiplier = 1 + (energy / 255) * 5;
+  const speedMultiplier = (1 + (energy / 255) * 5) * energyScale;
 
   particles.forEach((p: Particle, i: number) => {
-    // Map frequency bin to particle
     const freqIndex = Math.floor(
       (i / particles!.length) * (frequencyData.length / 2),
     );
@@ -513,8 +535,8 @@ function updateAndDrawParticles() {
     if (p.y < 0) p.y = canvas!.height;
     if (p.y > canvas!.height) p.y = 0;
 
-    const size = p.size * (1 + freqValue / 255);
-    const hue = 200 + (freqValue / 255) * 100;
+    const size = p.size * (1 + freqValue / 255) * (energyScale * 0.5);
+    const hue = accentHue + (freqValue / 255) * 40;
 
     ctx!.beginPath();
     ctx!.arc(p.x, p.y, size, 0, Math.PI * 2);
