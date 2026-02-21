@@ -104,7 +104,7 @@
   ```
 
 ### AR-02: Extract Custom Hooks from Page Component
-- [ ] **Task**: Create dedicated hooks for complex state management
+- [x] **Task**: Create dedicated hooks for complex state management
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐ Medium (4-6 hours)
 - **Impact**: Better separation of concerns, reusable logic
@@ -117,7 +117,7 @@
   ```
 
 ### AR-03: Decompose KaraokePlayer Component
-- [ ] **Task**: Split `KaraokePlayer.tsx` (678 lines) into focused sub-components
+- [x] **Task**: Split `KaraokePlayer.tsx` (678 lines) into focused sub-components
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐⭐ High (8-12 hours)
 - **Impact**: Improves maintainability
@@ -325,7 +325,7 @@
 ## 🚀 DEVOPS / CI-CD
 
 ### DC-01: Set Up GitHub Actions CI Pipeline
-- [ ] **Task**: Create comprehensive CI workflow
+- [x] **Task**: Create comprehensive CI workflow
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐ Medium (4-6 hours)
 - **Impact**: Automated testing, quality gates
@@ -340,7 +340,7 @@
   ```
 
 ### DC-02: Implement Automated Deployment
-- [ ] **Task**: Set up CD pipeline for Vercel and Python backend
+- [x] **Task**: Set up CD pipeline for Vercel and Python backend
 - **Priority**: 🔴 HIGH
 - **Complexity**: ⭐⭐⭐ Medium (4-6 hours)
 - **Impact**: Automated releases

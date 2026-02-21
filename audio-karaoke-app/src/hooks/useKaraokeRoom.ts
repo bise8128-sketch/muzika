@@ -52,10 +52,11 @@ export function useKaraokeRoom(controller: PlaybackController | null): UseKaraok
         const isHost = room?.hostId === userIdRef.current;
         if (isHost) return; 
 
-        if (payload.songId && payload.songId !== controller.getAudioBuffers()?.[0]?.toString()) {
+        const currentSongId = controller.getSongId();
+        if (payload.songId && payload.songId !== currentSongId) {
             // Song change logic would go here (requires loading new song)
             // For now, we assume same song is loaded or ignore
-            console.log('Song change requested:', payload.songId);
+            console.warn('Room song mismatch. Expected:', currentSongId, 'Got:', payload.songId);
         }
 
         if (typeof payload.isPlaying === 'boolean') {

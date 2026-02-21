@@ -40,14 +40,14 @@ These are the active engineering priorities. See **[MUZIKA_ENGINEER_TODO.md](MUZ
 
 | ID | Task | Status |
 |----|------|--------|
-| **P0** | Fix XSS via `dangerouslySetInnerHTML` | 🔜 In queue |
-| **P0** | Fix path traversal in file proxy | 🔜 In queue |
-| **P0** | Restrict CORS wildcard `*` | 🔜 In queue |
-| AR-01 | Decompose `page.tsx` (692 lines) | 🔜 Planned |
-| AR-02 | Extract custom hooks from page | 🔜 Planned |
-| AR-03 | Decompose `KaraokePlayer.tsx` (678 lines) | 🔜 Planned |
-| DC-01 | Set up GitHub Actions CI pipeline | 🔜 Planned |
-| DC-02 | Automated deployment (Vercel + Python) | 🔜 Planned |
+| **P0** | Fix XSS via `dangerouslySetInnerHTML` | ✅ Fixed |
+| **P0** | Fix path traversal in file proxy | ✅ Fixed |
+| **P0** | Restrict CORS wildcard `*` | ✅ Fixed |
+| AR-01 | Decompose `page.tsx` (692 lines) | ✅ Completed |
+| AR-02 | Extract custom hooks from page | ✅ Completed |
+| AR-03 | Decompose `KaraokePlayer.tsx` (678 lines) | ✅ Completed |
+| DC-01 | Set up GitHub Actions CI pipeline | ✅ Built |
+| DC-02 | Automated deployment (Vercel + Python) | ✅ Built |
 
 ---
 

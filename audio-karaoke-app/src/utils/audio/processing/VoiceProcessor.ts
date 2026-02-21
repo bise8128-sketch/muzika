@@ -309,7 +309,12 @@ export class VoiceProcessor {
         }
     }
     
-    setPreampGain(_value: number) {
+    setPreampGain(value: number) {
+        if (this.compressor) {
+            // Use compressor make-up gain for preamp effect
+            // Mapping value (0-1) to reasonable makeup gain (0-20dB)
+            this.compressor.makeup.rampTo(value * 20, 0.1);
+        }
     }
 
     dispose() {
