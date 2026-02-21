@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { PlaybackController } from '@/utils/audio/playbackController';
-import { SeparationResult } from '@/types/audio';
+import { SeparationResult, PerformanceScore } from '@/types/audio';
 import { useSeparation } from '@/hooks/useSeparation';
 
 interface AudioContextType {
@@ -12,6 +12,8 @@ interface AudioContextType {
     loadResultFromStorage: (fileHash: string) => Promise<boolean>;
     isLoading: boolean;
     separation: ReturnType<typeof useSeparation>;
+    performanceScore: PerformanceScore | null;
+    setPerformanceScore: (score: PerformanceScore | null) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
+    const [performanceScore, setPerformanceScore] = useState<PerformanceScore | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const separation = useSeparation();
 
@@ -67,7 +70,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setActiveResult, 
             loadResultFromStorage,
             isLoading,
-            separation
+            separation,
+            performanceScore,
+            setPerformanceScore
         }}>
             {children}
         </AudioContext.Provider>

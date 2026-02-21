@@ -4,6 +4,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from '@/i18n/routing';
+import { useAudio } from '@/context/AudioProvider';
+import { useParams } from 'next/navigation';
 import { LRCData } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
@@ -48,6 +51,10 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 };
 
 const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
+    const router = useRouter();
+    const { id } = useParams();
+    const { setPerformanceScore } = useAudio();
+
     // UI State Management
     const { state: uiState, actions: uiActions } = useKaraokeUI();
     
@@ -116,6 +123,21 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             controller.setVoiceBuffer(recorder.recordedBuffer);
         }
     }, [recorder.recordedBuffer, controller]);
+
+    // Handle song end to show performance score
+    useEffect(() => {
+        const handleEnded = () => {
+            if (pitchAnalysis.overallScore) {
+                setPerformanceScore(pitchAnalysis.overallScore);
+                router.push(`/karaoke/${id}/score`);
+            }
+        };
+
+        controller.on('ended', handleEnded);
+        return () => {
+            controller.off('ended', handleEnded);
+        };
+    }, [controller, pitchAnalysis.overallScore, setPerformanceScore, router, id]);
 
     // Mix Bus Routing Setup
     useEffect(() => {

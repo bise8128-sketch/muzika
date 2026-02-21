@@ -9,16 +9,9 @@
  */
 
 import React from 'react';
-import type { PerformanceScore, PerformanceGrade, PitchAnalysisResult } from '@/types/audio';
+import type { PitchAnalysisResult } from '@/types/audio';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GRADE_COLORS: Record<PerformanceGrade, string> = {
-    S: '#fbbf24', // amber
-    A: '#34d399', // emerald
-    B: '#60a5fa', // blue
-    C: '#f97316', // orange
-    D: '#ef4444', // red
-};
 
 // ─── Sub-components ───────────────────────────────────────────────
 
@@ -100,76 +93,6 @@ const HitFeedback: React.FC<HitFeedbackProps> = ({ hitType }) => {
     );
 };
 
-interface GradeCardProps {
-    score: PerformanceScore;
-}
-
-const GradeCard: React.FC<GradeCardProps> = ({ score }) => {
-    const color = GRADE_COLORS[score.grade];
-
-    return (
-        <motion.div 
-            initial={{ opacity: 0, scale: 0.9, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, scale: 1, backdropFilter: 'blur(12px)' }}
-            className="absolute inset-0 flex items-center justify-center bg-black/40 z-20 rounded-2xl"
-        >
-            <div className="text-center space-y-6 p-8 relative overflow-hidden">
-                {/* Glow Background */}
-                <div 
-                    className="absolute inset-0 -z-10 blur-[100px] opacity-20"
-                    style={{ background: color }}
-                />
-
-                <div className="space-y-1">
-                    <motion.div 
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40"
-                    >
-                        Performance Grade
-                    </motion.div>
-                    <motion.div 
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: 'spring', delay: 0.3 }}
-                        className="text-8xl font-black italic" 
-                        style={{ color, textShadow: `0 0 50px ${color}80` }}
-                    >
-                        {score.grade}
-                    </motion.div>
-                </div>
-
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="grid grid-cols-2 gap-4"
-                >
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                        <div className="text-2xl font-bold text-white">{score.overallAccuracy}%</div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/30">Accuracy</div>
-                    </div>
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                        <div className="text-2xl font-bold text-white">{score.longestStreak}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/30">Max Combo</div>
-                    </div>
-                </motion.div>
-
-                <motion.button
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white text-sm font-bold rounded-full border border-white/20 transition-all uppercase tracking-widest"
-                >
-                    Back to Laboratory
-                </motion.button>
-            </div>
-        </motion.div>
-    );
-};
 
 // ─── Main Component ───────────────────────────────────────────────
 
@@ -178,7 +101,6 @@ interface PitchVisualizerProps {
     currentPitch: number;
     currentCombo: number;
     lastHitType: 'perfect' | 'great' | 'good' | 'miss' | null;
-    overallScore: PerformanceScore | null;
     pitchHistory: PitchAnalysisResult[];
     isListening: boolean;
 }
@@ -188,7 +110,6 @@ export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
     currentPitch,
     currentCombo,
     lastHitType,
-    overallScore,
     pitchHistory,
     isListening,
 }) => {
@@ -301,8 +222,6 @@ export const PitchVisualizer: React.FC<PitchVisualizerProps> = ({
                 {isListening && <HitFeedback hitType={lastHitType} />}
             </AnimatePresence>
 
-            {/* Grade card (shown after stop) */}
-            {overallScore && !isListening && <GradeCard score={overallScore} />}
 
             <canvas 
                 ref={canvasRef}
