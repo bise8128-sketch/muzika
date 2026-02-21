@@ -196,6 +196,16 @@ export class AudioVisualizer {
     }
 
     /**
+     * Set Reference Pitch Map for Note Highway
+     */
+    setReferencePitchMap(map: { timestamp: number; pitch: number; midi: number }[]): void {
+        this.visualizerWorker?.postMessage({
+            type: 'reference_pitch_map',
+            payload: map
+        });
+    }
+
+    /**
      * Set Vocal Theme based on voice preset
      */
     setVisualTheme(preset: import('../../types/audio').VoicePreset): void {

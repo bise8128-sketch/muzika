@@ -29,6 +29,7 @@ import { useKaraokeEngine } from '@/hooks/useKaraokeEngine';
 import { useVisualizerOrchestrator } from '@/hooks/useVisualizerOrchestrator';
 import { useVoiceTransform } from '@/hooks/useVoiceTransform';
 import { useLyricSync } from '@/hooks/useLyricSync';
+import { useReferencePitchMap } from '@/hooks/useReferencePitchMap';
 
 // Sub-components
 import { KaraokeDisplay } from './Visualizer/KaraokeDisplay';
@@ -108,6 +109,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const useRoomHook = useKaraokeRoom(controller);
     const useVoiceHook = useVoiceTransform();
     const lyricSync = useLyricSync(controller);
+    const { pitchMap } = useReferencePitchMap(controller);
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -193,6 +195,12 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             visualizerInstance.setPitchHistory(pitchAnalysis.pitchHistory);
         }
     }, [pitchAnalysis.pitchHistory, visualizerInstance, pitchAnalysis.isListening]);
+
+    useEffect(() => {
+        if (visualizerInstance && pitchMap.length > 0) {
+            visualizerInstance.setReferencePitchMap(pitchMap);
+        }
+    }, [visualizerInstance, pitchMap]);
 
     useEffect(() => {
         if (visualizerInstance && pitchAnalysis.isListening && lyrics) {

@@ -58,6 +58,7 @@ for (let i = 0; i < fftSize; i++) {
 // SingStar specific state
 let latestPitchHistory: any[] = [];
 let latestPitchTargets: any[] = [];
+let referencePitchMap: { timestamp: number; pitch: number; midi: number }[] = [];
 const VISIBLE_HISTORY = 100;
 const MIDI_RANGE = 36;
 const MIDI_MIN = 36;
@@ -142,6 +143,10 @@ self.onmessage = (e: MessageEvent) => {
 
     case "pitch_targets":
       latestPitchTargets = payload;
+      break;
+
+    case "reference_pitch_map":
+      referencePitchMap = payload;
       break;
   }
 };
@@ -565,7 +570,7 @@ function drawSingStar() {
   context.fillStyle = "rgba(10, 10, 15, 0.4)";
   context.fillRect(0, 0, w, h);
 
-  // Grid lines
+  // Grid lines (Horizontal Octaves)
   context.strokeStyle = "rgba(255,255,255,0.05)";
   context.lineWidth = 1;
   for (let midi = MIDI_MIN; midi <= MIDI_MIN + MIDI_RANGE; midi += 12) {
@@ -580,77 +585,109 @@ function drawSingStar() {
 
   // Time-based rendering for rhythm game feel
   const now = latestPitchHistory[latestPitchHistory.length - 1].timestamp;
-  const currentX = w * 0.3; // Current time is at 30% of screen width
-  const pixelsPerSecond = w * 0.25; // 4 seconds visible across the screen
+  // Position "NOW" line at 30% from the left to show more future
+  const currentX = w * 0.3;
+  // Zoom level: 4 seconds visible across the screen
+  const pixelsPerSecond = w * 0.25;
+
+  // Constrain visualizer to top 40% of screen to leave room for lyrics below
+  const trackTop = h * 0.05;
+  const trackBottom = h * 0.45;
+  const trackHeight = trackBottom - trackTop;
 
   const timeToX = (t: number) => currentX + (t - now) * pixelsPerSecond;
-  const midiToY = (m: number) => h - ((m - MIDI_MIN) / MIDI_RANGE) * h;
+  const midiToY = (m: number) => trackBottom - ((m - MIDI_MIN) / MIDI_RANGE) * trackHeight;
 
-  // 1. Draw upcoming target blocks
-  if (latestPitchTargets && latestPitchTargets.length > 0) {
-    context.shadowBlur = 15;
-    latestPitchTargets.forEach((target) => {
-      const x1 = timeToX(target.startTime);
-      const x2 = timeToX(target.endTime);
-      const y = midiToY(target.referenceMidi);
+  // Draw Highway Background Lane
+  context.fillStyle = "rgba(0, 0, 0, 0.3)";
+  context.fillRect(0, trackTop, w, trackHeight);
+  context.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(0, trackTop);
+  context.lineTo(w, trackTop);
+  context.moveTo(0, trackBottom);
+  context.lineTo(w, trackBottom);
+  context.stroke();
 
-      // Only draw if visible
-      if (x2 > 0 && x1 < w) {
-        const width = Math.max(x2 - x1, 10);
+  // --- 1. Draw Reference Highway (The "Snake") ---
+  if (referencePitchMap && referencePitchMap.length > 0) {
+    // Determine visible window
+    const startTime = now - 1.5; // Look back 1.5s
+    const endTime = now + 4.5;   // Look ahead 4.5s (more future)
+    
+    // Binary search/Index approximation for performance (assuming sorted timestamps)
+    // For now, simple filter since map size isn't massive (a few thousand points)
+    // Optimization: find start index
+    let startIndex = 0;
+    // Find roughly where to start (optimization for long arrays)
+    if (referencePitchMap.length > 1000) {
+        const estIndex = Math.floor((startTime / (referencePitchMap[referencePitchMap.length-1].timestamp)) * referencePitchMap.length);
+        startIndex = Math.max(0, Math.min(estIndex - 500, referencePitchMap.length - 1));
+    }
 
-        // Check if currently hitting this target
-        const isHit =
-          now >= target.startTime &&
-          now <= target.endTime &&
-          Math.abs(
-            latestPitchHistory[latestPitchHistory.length - 1].detectedMidi -
-              target.referenceMidi,
-          ) <= 1.5;
+    context.lineCap = "round";
+    context.lineJoin = "round";
 
-        context.fillStyle = isHit
-          ? "rgba(250, 204, 21, 0.4)"
-          : "rgba(255, 255, 255, 0.15)";
-        context.strokeStyle = isHit
-          ? "rgba(250, 204, 21, 0.9)"
-          : "rgba(255, 255, 255, 0.4)";
-        context.shadowColor = isHit
-          ? "rgba(250, 204, 21, 0.8)"
-          : "rgba(255, 255, 255, 0.2)";
-        context.lineWidth = 2;
-
-        // Rounded rectangle for block
-        context.beginPath();
-        context.roundRect(x1, y - 10, width, 20, 8);
-        context.fill();
-        context.stroke();
-      }
-    });
-    context.shadowBlur = 0;
-  }
-
-  const visibleData = latestPitchHistory.slice(-VISIBLE_HISTORY);
-
-  // 2. Draw continuous reference pitch (Glowing dotted line) if no targets
-  if (!latestPitchTargets || latestPitchTargets.length === 0) {
-    context.setLineDash([8, 8]);
-    context.shadowBlur = 10;
-    context.shadowColor = "rgba(52, 211, 153, 0.8)";
-    context.strokeStyle = "rgba(52, 211, 153, 0.8)";
-    context.lineWidth = 3;
+    // Draw the "Glow" (Outer path)
+    context.shadowBlur = 20;
+    context.shadowColor = "rgba(59, 130, 246, 0.5)"; // Blue glow
+    context.strokeStyle = "rgba(59, 130, 246, 0.3)";
+    context.lineWidth = 12; // Thick highway
     context.beginPath();
-    visibleData.forEach((d, i) => {
-      if (d.referenceMidi <= 0) return;
-      const x = timeToX(d.timestamp);
-      const y = midiToY(d.referenceMidi);
-      if (i === 0 || visibleData[i - 1].referenceMidi <= 0) {
-        context.moveTo(x, y);
-      } else {
-        context.lineTo(x, y);
-      }
-    });
+
+    let started = false;
+    for (let i = startIndex; i < referencePitchMap.length; i++) {
+        const p = referencePitchMap[i];
+        if (p.timestamp > endTime) break;
+        if (p.timestamp < startTime) continue;
+        
+        // Skip silence/invalid pitch
+        if (p.midi <= 0) {
+            started = false;
+            continue;
+        }
+
+        const x = timeToX(p.timestamp);
+        const y = midiToY(p.midi);
+
+        if (!started) {
+            context.moveTo(x, y);
+            started = true;
+        } else {
+            context.lineTo(x, y);
+        }
+    }
     context.stroke();
-    context.setLineDash([]);
-    context.shadowBlur = 0; // reset
+
+    // Draw the "Core" (Inner path)
+    context.shadowBlur = 0;
+    context.strokeStyle = "rgba(96, 165, 250, 0.8)"; // Brighter blue
+    context.lineWidth = 4;
+    context.beginPath();
+
+    started = false;
+    for (let i = startIndex; i < referencePitchMap.length; i++) {
+        const p = referencePitchMap[i];
+        if (p.timestamp > endTime) break;
+        if (p.timestamp < startTime) continue;
+        
+        if (p.midi <= 0) {
+            started = false;
+            continue;
+        }
+
+        const x = timeToX(p.timestamp);
+        const y = midiToY(p.midi);
+
+        if (!started) {
+            context.moveTo(x, y);
+            started = true;
+        } else {
+            context.lineTo(x, y);
+        }
+    }
+    context.stroke();
   }
 
   // Draw user pitch trail with aesthetic gradient
