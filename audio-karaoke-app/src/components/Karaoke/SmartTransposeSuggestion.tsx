@@ -33,7 +33,8 @@ export const SmartTransposeSuggestion: React.FC<SmartTransposeSuggestionProps> =
             const timer = setTimeout(() => setIsVisible(true), 1500); // Delay for dramatic effect
             return () => clearTimeout(timer);
         } else {
-            setIsVisible(false);
+            // Use requestAnimationFrame to avoid synchronous setState warning
+            requestAnimationFrame(() => setIsVisible(false));
         }
     }, [detectedKey, suggestedShift, hasBeenDismissed]);
 

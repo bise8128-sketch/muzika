@@ -3,6 +3,8 @@
  * Manages persistent user preferences in localStorage
  */
 
+import { VocalRangeType } from '../audio/vocalRange';
+
 export type LyricTheme = 'modern' | 'classic' | 'neon' | 'retro';
 
 export interface UserSettings {
