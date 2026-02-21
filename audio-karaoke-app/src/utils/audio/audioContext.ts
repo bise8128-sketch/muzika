@@ -12,6 +12,13 @@ let gainNode: GainNode | null = null;
 let workletManager: AudioWorkletManager | null = null;
 let isInteractionListenerAttached = false;
 
+export interface WorkletMetrics {
+    processingTime: number;
+    memoryUsage: number;
+    cpuUsage: number;
+    count: number;
+}
+
 function setupUserInteractionListeners(ctx: AudioContext) {
     if (typeof window === 'undefined' || isInteractionListenerAttached) return;
 
@@ -48,7 +55,7 @@ export function getAudioContext(): AudioContext {
     }
 
     if (!audioContext) {
-        const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null);
+        const AudioContextClass = (typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null) as typeof AudioContext | null;
         if (!AudioContextClass) {
             throw new AudioContextError('AudioContext is not supported in this browser.', true);
         }
@@ -139,12 +146,11 @@ export function setWorkletBypass(bypass: boolean): void {
         manager.setBypass(bypass);
     }
 }
-
 /**
  * Set callback for performance metrics from AudioWorklet
  * @param callback - Function to call with metrics data
  */
-export function onWorkletMetricsUpdate(callback: (metrics: any) => void): void {
+export function onWorkletMetricsUpdate(callback: (metrics: WorkletMetrics) => void): void {
     const manager = getWorkletManager();
     if (manager) {
         manager.onMetricsUpdate(callback);
@@ -154,7 +160,7 @@ export function onWorkletMetricsUpdate(callback: (metrics: any) => void): void {
 /**
  * Get average performance metrics from AudioWorklet
  */
-export function getWorkletAverageMetrics(): any | null {
+export function getWorkletAverageMetrics(): WorkletMetrics | null {
     const manager = getWorkletManager();
     if (manager) {
         return manager.getAverageMetrics();
@@ -225,7 +231,8 @@ export function isWebAudioSupported(): boolean {
  */
 export function isAudioWorkletSupported(): boolean {
     if (typeof window === 'undefined') return false;
-    return !!(window.AudioContext && (window.AudioContext.prototype as any).audioWorklet);
+    const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
+    return !!(AudioContextClass && AudioContextClass.prototype.audioWorklet);
 }
 
 /**
@@ -243,4 +250,40 @@ export async function getWorkletNode(): Promise<AudioWorkletNode | null> {
         return manager.getWorkletNode();
     }
     return null;
+}
+
+/**
+ * Initialize microphone input stream
+ */
+export async function getMicrophoneStream(): Promise<MediaStream> {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+        return stream;
+    } catch (err) {
+        console.error('[AudioContext] Failed to get microphone stream', err);
+        throw new AudioProcessingError('Microphone access denied or not available.');
+    }
+}
+
+/**
+ * Create a PitchDetector node and load its worklet
+ */
+export async function createPitchDetectorNode(ctx: AudioContext): Promise<AudioWorkletNode> {
+    try {
+        const workletUrl = new URL('./pitchDetector.worklet.ts', import.meta.url);
+        await ctx.audioWorklet.addModule(workletUrl);
+        
+        return new AudioWorkletNode(ctx, 'pitch-detector', {
+            processorOptions: { sampleRate: ctx.sampleRate }
+        });
+    } catch (err) {
+        console.error('[AudioContext] Failed to create pitch detector node', err);
+        throw new AudioProcessingError('Failed to initialize pitch detection engine.');
+    }
 }

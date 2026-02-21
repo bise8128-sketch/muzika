@@ -183,6 +183,15 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const voicePreset = useVoiceHook.currentPreset;
 
     useEffect(() => {
+        if (uiState.isStageMode && playback.isPlaying) {
+            pitchAnalysis.startAnalysis();
+        } else if (!uiState.isStageMode && pitchAnalysis.isListening) {
+            // Optional: stop if leaving stage mode, but maybe keep it if user toggled it manually
+            // Let's stop it for now to save resources unless it was explicit
+        }
+    }, [uiState.isStageMode, playback.isPlaying, pitchAnalysis.startAnalysis]);
+
+    useEffect(() => {
         if (pitchAnalysis.isListening && visualizerInstance) {
             visualizerInstance.setMode('singstar');
         } else if (visualizerInstance) {

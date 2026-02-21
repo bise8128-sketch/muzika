@@ -15,10 +15,16 @@ import type {
   StemSettings,
   StemPreset,
   StemType,
+  PitchAnalysisResult,
+  PerformanceScore,
+  PitchTarget,
 } from "../../../types/audio";
+import type { KeyInfo } from "../keyDetection";
 import type { ReverbProcessor } from "../reverbProcessor";
 import type { EchoProcessor } from "../echoProcessor";
 import type { PitchCorrector } from "../pitchCorrection";
+import { getMicrophoneStream, createPitchDetectorNode } from "../audioContext";
+import { analyzeDetectedPitch, getPerformanceScore, generatePitchTargets } from "../pitchAnalysis";
 
 const BUFFER_SIZE = 4096;
 
@@ -54,6 +60,14 @@ export class PlaybackController {
   private leftoverLeft: Float32Array | null = null;
   private leftoverRight: Float32Array | null = null;
   private leftoverIndex: number = 0;
+
+  // Vocal Performance Analysis
+  private micStream: MediaStream | null = null;
+  private micSource: MediaStreamAudioSourceNode | null = null;
+  private pitchDetector: AudioWorkletNode | null = null;
+  private performanceHistory: PitchAnalysisResult[] = [];
+  private currentKey: KeyInfo | null = null;
+  private isAnalyzing: boolean = false;
 
   constructor() {
     this.audioContext = getAudioContext();
@@ -264,6 +278,114 @@ export class PlaybackController {
 
   getIsPlaying(): boolean {
     return this.isPlaying;
+  }
+
+  // ─── Vocal Performance Analysis ─────────────────────────
+  /**
+   * Start microphone analysis
+   */
+  async startMicAnalysis(keyInfo?: KeyInfo | null): Promise<void> {
+    if (this.isAnalyzing) return;
+    this.currentKey = keyInfo || null;
+
+    try {
+      this.micStream = await getMicrophoneStream();
+      this.micSource = this.audioContext.createMediaStreamSource(this.micStream);
+      this.pitchDetector = await createPitchDetectorNode(this.audioContext);
+
+      // Connect mic to detector
+      this.micSource.connect(this.pitchDetector);
+      
+      this.performanceHistory = [];
+      this.isAnalyzing = true;
+
+      // Handle pitch data from worklet
+      this.pitchDetector.port.onmessage = (event) => {
+        if (event.data.type === 'pitch_data' && this.isPlaying) {
+          const { frequency, confidence } = event.data;
+          const currentTime = this.getCurrentTime();
+          
+          // Get reference pitch at current time from vocal buffer
+          const refVocals = this.getVocalsAtTime(currentTime);
+          
+          const result = analyzeDetectedPitch(
+            frequency,
+            confidence,
+            refVocals,
+            currentTime,
+            this.currentKey
+          );
+
+          if (result) {
+            this.performanceHistory.push(result);
+            this.events.emit("pitch-analysis", result);
+          }
+        }
+      };
+
+      this.events.emit("mic-started");
+    } catch (err) {
+      console.error("[PlaybackCore] Failed to start microphone analysis", err);
+      this.isAnalyzing = false;
+      throw err;
+    }
+  }
+
+  stopMicAnalysis(): void {
+    if (!this.isAnalyzing) return;
+
+    if (this.pitchDetector) {
+      this.pitchDetector.disconnect();
+      this.pitchDetector = null;
+    }
+
+    if (this.micSource) {
+      this.micSource.disconnect();
+      this.micSource = null;
+    }
+
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(t => t.stop());
+      this.micStream = null;
+    }
+
+    this.isAnalyzing = false;
+    this.events.emit("mic-stopped");
+  }
+
+  getPerformanceScore(): PerformanceScore {
+    return getPerformanceScore(this.performanceHistory);
+  }
+
+  getPerformanceHistory(): PitchAnalysisResult[] {
+    return this.performanceHistory;
+  }
+
+  /**
+   * Helper to get the detected pitch of the vocal stem at a specific time.
+   * This is used as the target for scoring.
+   */
+  private getVocalsAtTime(time: number): { pitch: number; midi: number } | null {
+    // Find vocal buffer
+    const vocalBuffer = this.audioBuffers.find((_, i) => this.stemStates[i]?.type === 'vocals');
+    if (!vocalBuffer) return null;
+
+    // Use a utility to sample pitch from the reference buffer
+    // For real-time scoring, we should probably pre-calculate this or keep a small cache
+    // For now, call the analyzer (it will slice a small window)
+    try {
+        const { getReferencePitchAtTime } = require("../pitchAnalysis");
+        return getReferencePitchAtTime(vocalBuffer, time);
+    } catch (err) {
+        return null; // pitchAnalysis might not be fully available or throw
+    }
+  }
+
+  async getPitchTargets(count: number = 8): Promise<PitchTarget[]> {
+    const vocalBuffer = this.audioBuffers.find((_, i) => this.stemStates[i]?.type === 'vocals');
+    // Note: This requires LRC data which isn't directly held here. 
+    // This method might need to be orchestrated by a hook or KaraokePlayer.
+    return []; 
   }
 
   // ─── Events (delegated) ────────────────────────────────────────
