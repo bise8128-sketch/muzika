@@ -2,13 +2,17 @@
  * MidiExporter - Orchestrates Audio to MIDI conversion.
  */
 
-import { MidiWriter, MidiNoteEvent } from './midiWriter';
+import { MidiWriter, MidiEvent, MidiNoteEvent, MidiMetaEvent } from './midiWriter';
 import { downloadBlob } from './audioExporter';
+import { parseLRC } from '../karaoke/lrcParser';
+import { KeyInfo } from './keyDetectionCore';
 
 export interface MidiExportOptions {
     onProgress?: (progress: number) => void;
     minNoteDurationMs?: number;
     velocity?: number;
+    lrcContent?: string;
+    keyInfo?: KeyInfo;
 }
 
 export class MidiExporter {
@@ -40,7 +44,14 @@ export class MidiExporter {
         }
 
         // 2. Consolidate frames into discrete MIDI notes
-        const events = this.transcribeToMidiEvents(pitchMap, audioBuffer.sampleRate, minNoteDurationMs, velocity);
+        const events = this.transcribeToMidiEvents(
+            pitchMap,
+            audioBuffer.sampleRate,
+            minNoteDurationMs,
+            velocity,
+            options.lrcContent,
+            options.keyInfo
+        );
 
         // 3. Generate SMF binary
         const writer = new MidiWriter();
@@ -93,13 +104,44 @@ export class MidiExporter {
         pitchMap: { timestamp: number; pitch: number; midi: number }[],
         sampleRate: number,
         minDurationMs: number,
-        velocity: number
-    ): MidiNoteEvent[] {
-        const events: MidiNoteEvent[] = [];
+        velocity: number,
+        lrcContent?: string,
+        keyInfo?: KeyInfo
+    ): MidiEvent[] {
+        const events: MidiEvent[] = [];
         const ppq = 480;
         const bpm = 120;
         const ticksPerSec = (bpm / 60) * ppq; // standard BPM 120
 
+        // 1. Add Key Signature if provided
+        if (keyInfo) {
+            const keyBytes = this.getKeySignatureBytes(keyInfo);
+            events.push({
+                ticks: 0,
+                type: 'meta',
+                subtype: 0x59, // Key Signature
+                data: keyBytes
+            });
+        }
+
+        // 2. Add Lyrics if provided
+        if (lrcContent) {
+            const parsedLrc = parseLRC(lrcContent);
+            if (parsedLrc && parsedLrc.lines) {
+                parsedLrc.lines.forEach(line => {
+                    // LyricLine uses startTime in seconds
+                    const ticks = Math.round(line.startTime * ticksPerSec);
+                    events.push({
+                        ticks: ticks,
+                        type: 'meta',
+                        subtype: 0x05, // Lyric
+                        data: line.text
+                    });
+                });
+            }
+        }
+
+        // 3. Process Note Events
         const minDurationTicks = (minDurationMs / 1000) * ticksPerSec;
         
         let currentNoteMidi: number | null = null;
@@ -129,7 +171,7 @@ export class MidiExporter {
             const roundedMidi = Math.round(frame.midi);
             const ticks = frame.timestamp * ticksPerSec;
 
-            const isNewNote = currentNoteMidi === null || 
+            const isNewNote = currentNoteMidi === null ||
                              roundedMidi !== currentNoteMidi ||
                              (i > 0 && frame.timestamp - pitchMap[i-1].timestamp > GAP_THRESHOLD_SEC);
 
@@ -151,5 +193,53 @@ export class MidiExporter {
         }
 
         return events;
+    }
+
+    private static getKeySignatureBytes(keyInfo: KeyInfo): number[] {
+        const sfMap: { [key: string]: number } = {
+            'C': 0, 'Am': 0,
+            'G': 1, 'Em': 1,
+            'D': 2, 'Bm': 2,
+            'A': 3, 'F#m': 3,
+            'E': 4, 'C#m': 4,
+            'B': 5, 'G#m': 5,
+            'F#': 6, 'D#m': 6, 'Gb': -6, 'Ebm': -6,
+            'C#': 7, 'A#m': 7, 'Db': -5, 'Bbm': -5,
+            'F': -1, 'Dm': -1,
+            'Bb': -2, 'Gm': -2,
+            'Eb': -3, 'Cm': -3,
+            'Ab': -4, 'Fm': -4,
+            'Cb': -7, 'Abm': -7
+        };
+
+        // Normalize tonic
+        const tonic = keyInfo.tonic.replace('♯', '#').replace('♭', 'b');
+        
+        let lookupKey = tonic;
+        if (keyInfo.scale === 'minor') {
+            lookupKey += 'm';
+        }
+
+        let sf = sfMap[lookupKey];
+        
+        // Fallback or handle enharmonics if undefined
+        if (sf === undefined) {
+             sf = 0;
+        }
+
+        const mi = keyInfo.scale === 'minor' ? 1 : 0;
+        
+        // sf is signed int8. JS numbers are doubles.
+        // Need to convert negative numbers to 2's complement byte?
+        // No, MidiWriter likely handles simple numbers, but let's check writeVLQ...
+        // Wait, data bytes in MidiMetaEvent are passed as `number[]`.
+        // If I pass -1, will `data.push(-1)` work?
+        // `Uint8Array` or normal array push? Normal array.
+        // But when writing to Uint8Array later, it expects 0-255.
+        // So I must convert -1 to 255, -2 to 254, etc.
+        
+        const sfByte = sf < 0 ? 256 + sf : sf;
+        
+        return [sfByte, mi];
     }
 }
