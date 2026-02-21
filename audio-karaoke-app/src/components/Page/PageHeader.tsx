@@ -3,6 +3,8 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import LanguageSwitcher from '@/components/UI/LanguageSwitcher';
 import { apiClient } from '@/api/ApiClient';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
+import { SyncStatus } from '@/utils/storage/SyncManager';
 
 function BackendStatus() {
   const t = useTranslations('BackendStatus');
@@ -50,6 +52,28 @@ interface PageHeaderProps {
   onShowModels: () => void;
   onShowSettings: () => void;
 }
+
+const SyncStatusIndicator = () => {
+  const { status, isSyncing } = useSyncStatus();
+  
+  if (status === 'idle' && !isSyncing) return null;
+
+  const colors: Record<SyncStatus, string> = {
+    syncing: 'text-primary animate-spin',
+    error: 'text-rose-500',
+    offline: 'text-amber-500',
+    idle: 'text-emerald-500'
+  };
+
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-medium ${colors[status]}`}>
+      <svg className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      <span className="capitalize">{status}</span>
+    </div>
+  );
+};
 
 export function PageHeader({
   onRestart,
@@ -105,7 +129,10 @@ export function PageHeader({
             {t('privacy')}
           </a>
 
-          <BackendStatus />
+          <div className="flex items-center gap-4">
+            <SyncStatusIndicator />
+            <BackendStatus />
+          </div>
 
           <button
             onClick={onShowSettings}

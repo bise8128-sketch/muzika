@@ -26,11 +26,20 @@ export class IndexedDBSongRepository implements ISongRepository {
     }
 
     async create(song: SongEntry): Promise<number> {
-        return await db.songs.add(song);
+        const id = await db.songs.add({ ...song, isDirty: true });
+        this.triggerSync();
+        return id;
     }
 
     async update(id: number | string, updates: Partial<SongEntry>): Promise<void> {
-        await db.songs.update(Number(id), updates);
+        await db.songs.update(Number(id), { ...updates, isDirty: true });
+        this.triggerSync();
+    }
+
+    private triggerSync() {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('muzika-data-change'));
+        }
     }
 
     async updateLastPlayed(id: number | string): Promise<void> {
@@ -60,14 +69,24 @@ export class IndexedDBPlaylistRepository implements IPlaylistRepository {
     }
 
     async create(playlist: Playlist): Promise<number> {
-        return await db.playlists.add(playlist);
+        const id = await db.playlists.add({ ...playlist, isDirty: true });
+        this.triggerSync();
+        return id;
     }
 
     async update(id: number | string, updates: Partial<Playlist>): Promise<void> {
         await db.playlists.update(Number(id), {
             ...updates,
+            isDirty: true,
             updatedAt: Date.now()
         });
+        this.triggerSync();
+    }
+
+    private triggerSync() {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('muzika-data-change'));
+        }
     }
 
     async delete(id: number | string): Promise<void> {
@@ -123,8 +142,13 @@ export class IndexedDBQueueRepository implements IQueueRepository {
         await db.queue.clear();
         await db.queue.add({
             ...queue,
+            isDirty: true,
             updatedAt: Date.now()
         });
+        
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('muzika-data-change'));
+        }
     }
 }
 

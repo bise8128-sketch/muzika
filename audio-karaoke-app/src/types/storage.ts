@@ -62,6 +62,11 @@ export interface SongEntry {
     updatedAt?: number;
     playCount?: number;
     lastPlayedAt?: number;
+
+    // Sync Metadata
+    serverSyncedAt?: number;
+    isDirty?: boolean;
+    serverId?: string | number;
 }
 
 export interface StorageQuota {
@@ -101,6 +106,11 @@ export interface Playlist {
     createdAt: number;
     updatedAt: number;
     isDefault?: boolean;
+
+    // Sync Metadata
+    serverSyncedAt?: number;
+    isDirty?: boolean;
+    serverId?: string | number;
 }
 
 /**
@@ -113,6 +123,11 @@ export interface QueueState {
     shuffleMode: 'off' | 'on';
     repeatMode: 'off' | 'all' | 'one';
     updatedAt: number;
+
+    // Sync Metadata
+    serverSyncedAt?: number;
+    isDirty?: boolean;
+    serverId?: string | number;
 }
 
 /**

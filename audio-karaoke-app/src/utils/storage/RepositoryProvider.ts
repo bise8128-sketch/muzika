@@ -42,4 +42,17 @@ export class RepositoryProvider {
     static get settings(): ISettingsRepository {
         return this.useServer ? new ServerSettingsRepository() : new LocalStorageSettingsRepository();
     }
+
+    // Explicit accessors for SyncManager to always get Server repositories
+    static getServerSongs(): ISongRepository {
+        return new ServerSongRepository();
+    }
+
+    static getServerPlaylists(): IPlaylistRepository {
+        return new ServerPlaylistRepository();
+    }
+
+    static getServerQueue(): IQueueRepository {
+        return new ServerQueueRepository();
+    }
 }
