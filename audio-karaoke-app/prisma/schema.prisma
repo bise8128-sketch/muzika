@@ -2,7 +2,7 @@
 // It is designed to be compatible with Prisma ORM, but can also serve as a reference for SQL or NoSQL implementations.
 
 datasource db {
-  provider = "postgresql" // or "sqlite", "mysql"
+  provider = "postgresql"
 }
 
 generator client {
@@ -13,6 +13,16 @@ generator client {
 enum SongType {
   AI_SEPARATED
   DIRECT_KARAOKE
+}
+
+// Enum for stem types
+enum StemType {
+  VOCALS
+  DRUMS
+  BASS
+  OTHER
+  PIANO
+  GUITAR
 }
 
 // Main Song Entry model
@@ -74,6 +84,10 @@ model SongVersion {
   echoEnabled     Boolean   @default(false)
   echoFeedback    Float     @default(0)
 
+  // Relations
+  stemSettings    StemSetting[]
+  mixerPresets    MixerPreset[]
+
   createdAt       DateTime  @default(now())
   
   @@unique([songId, versionName])
@@ -117,4 +131,48 @@ model LeaderboardRecord {
   @@index([songId])
   @@index([score(sort: Desc)])
   @@index([createdAt])
+}
+
+// Per-stem configuration (Volume, Pan, Effects)
+model StemSetting {
+  id              String      @id @default(cuid())
+  
+  // Relations
+  songVersionId   String?
+  songVersion     SongVersion? @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  
+  presetId        String?
+  preset          MixerPreset? @relation(fields: [presetId], references: [id], onDelete: Cascade)
+
+  // Configuration
+  type            StemType
+  volume          Float       @default(1.0)
+  panning         Float       @default(0.0) // -1.0 to 1.0
+  muted           Boolean     @default(false)
+  solo            Boolean     @default(false)
+  
+  // Effect Sends
+  reverbSend      Float       @default(0.0)
+  echoSend        Float       @default(0.0)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Mixer configurations that can be saved and swapped
+model MixerPreset {
+  id              String      @id @default(cuid())
+  name            String      // e.g., "Stadium Vocals", "Dry Mix"
+  isUserDefault   Boolean     @default(false)
+
+  // Relations
+  songVersionId   String
+  songVersion     SongVersion @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  
+  stemSettings    StemSetting[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([songVersionId, name])
 }

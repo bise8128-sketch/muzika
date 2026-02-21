@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { SongEntry, FilterType, SortOption, SortOrder } from '@/types/storage';
-import { songsStorage } from '@/utils/storage/songsStorage';
+import { RepositoryProvider } from '@/utils/storage/RepositoryProvider';
+import { songsStorage } from '@/utils/storage/songsStorage'; // Kept for migrateToOpfs
 import { useRouter } from '@/i18n/routing';
 import { LibraryPlayer } from './LibraryPlayer';
 import { SearchBar } from './SearchBar';
@@ -139,8 +140,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
         e.stopPropagation();
         if (!id) return;
         if (confirm('Are you sure you want to delete this song?')) {
-            await songsStorage.deleteSong(id);
-            // No need for loadSongs() anymore as useLiveQuery is reactive!
+            await RepositoryProvider.songs.delete(id);
         }
     };
 
@@ -173,7 +173,7 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
         if (selectedSongs.size === 0) return;
         if (confirm(`Are you sure you want to delete ${selectedSongs.size} song(s)?`)) {
             for (const id of selectedSongs) {
-                await songsStorage.deleteSong(id);
+                await RepositoryProvider.songs.delete(id);
             }
             setSelectedSongs(new Set());
             setIsSelectionMode(false);
