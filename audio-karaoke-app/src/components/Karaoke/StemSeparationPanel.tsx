@@ -33,13 +33,13 @@ export const StemSeparationPanel: React.FC<StemSeparationPanelProps> = ({
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 z-200 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm"
             >
                 <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
                     {/* Header */}
                     <div className="p-6 border-b border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
                         <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg shadow-purple-500/20">
+                            <div className="p-3 bg-linear-to-r from-primary to-blue-600 rounded-2xl shadow-lg shadow-primary/20">
                                 <Mic2 className="w-5 h-5 text-white" />
                             </div>
                             <div>
@@ -90,7 +90,7 @@ export const StemSeparationPanel: React.FC<StemSeparationPanelProps> = ({
                                 {/* Progress Bar */}
                                 <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                                     <motion.div
-                                        className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400"
+                                       className="h-full bg-linear-to-r from-primary via-blue-400 to-primary bg-[length:200%_100%] rounded-full shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${progress?.percentage || 0}%` }}
                                         transition={{ duration: 0.5, ease: "easeOut" }}

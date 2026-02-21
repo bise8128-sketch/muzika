@@ -60,7 +60,7 @@ export function useAppState(options: UseAppStateOptions) {
       send({ type: 'PROCESS_ERROR', error: separationError || 'Unknown separation error' });
       alert(`Error: ${separationError || 'Unknown error'}`);
     }
-  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh, send]);
+  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh, send, router]);
 
 
   const handleRestart = useCallback(() => {
