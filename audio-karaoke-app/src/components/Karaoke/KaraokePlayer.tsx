@@ -114,7 +114,9 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         visualSettings: uiState.visualSettings,
         canvasRef,
         vocalsVolume: playback.vocalsVolume,
-        instrumentalVolume: playback.instrumentalVolume
+        instrumentalVolume: playback.instrumentalVolume,
+        vocalEnergy: pitchAnalysis.energy,
+        voicePreset: useVoiceHook.currentPreset
     });
 
     // Cleanup and Sync

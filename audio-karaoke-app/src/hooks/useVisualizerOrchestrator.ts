@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { VisualSettings } from '@/types/karaoke';
+import { VoicePreset } from '@/types/audio';
 import { getWorkletManager } from '@/utils/audio/audioContext';
 import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 
@@ -10,6 +11,8 @@ interface UseVisualizerOrchestratorProps {
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
     vocalsVolume: number;
     instrumentalVolume: number;
+    vocalEnergy?: number;
+    voicePreset?: string;
 }
 
 export const useVisualizerOrchestrator = ({
@@ -17,7 +20,9 @@ export const useVisualizerOrchestrator = ({
     visualSettings,
     canvasRef,
     vocalsVolume,
-    instrumentalVolume
+    instrumentalVolume,
+    vocalEnergy = 0,
+    voicePreset = 'original'
 }: UseVisualizerOrchestratorProps) => {
     const visualizerRef = useRef<AudioVisualizer | null>(null);
     const [visualizerInstance, setVisualizerInstance] = useState<AudioVisualizer | null>(null);
@@ -90,6 +95,18 @@ export const useVisualizerOrchestrator = ({
             gainNodes.forEach(node => visualizerRef.current?.setSource(node));
         }
     }, [controller, vocalsVolume, instrumentalVolume]);
+
+    useEffect(() => {
+        if (visualizerRef.current) {
+            visualizerRef.current.setVocalEnergy(vocalEnergy);
+        }
+    }, [vocalEnergy]);
+
+    useEffect(() => {
+        if (visualizerRef.current && voicePreset) {
+            visualizerRef.current.setVisualTheme(voicePreset as VoicePreset);
+        }
+    }, [voicePreset]);
 
     return visualizerInstance;
 };
