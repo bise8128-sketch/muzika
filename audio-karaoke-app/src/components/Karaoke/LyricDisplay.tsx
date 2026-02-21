@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { LRCData, VisualSettings } from '@/types/karaoke';
+import { LRCData, VisualSettings, StageTheme } from '@/types/karaoke';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence, useTransform, useSpring } from 'framer-motion';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
@@ -17,6 +17,7 @@ interface LyricDisplayProps {
     currentLineIndex: number;
     currentWordIndex: number;
     theme?: LyricTheme;
+    stageTheme?: StageTheme;
     visualSettings?: VisualSettings;
     visualizer?: AudioVisualizer | null;
     isStageMode?: boolean;
@@ -64,6 +65,7 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     currentLineIndex,
     currentWordIndex,
     theme = 'modern',
+    stageTheme = 'neon-tokyo',
     visualSettings,
     visualizer,
     isStageMode = false
@@ -72,6 +74,15 @@ export const LyricDisplay: React.FC<LyricDisplayProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+    // Determine lyric theme based on stage theme if in stage mode
+    const activeTheme = isStageMode 
+        ? (
+            stageTheme === 'neon-tokyo' ? 'neon' :
+            stageTheme === 'acoustic-lounge' ? 'classic' :
+            'modern'
+        )
+        : theme;
+    
     // Ghost Mode Logic
     const { bass, energy, treble } = useAudioReactivity(visualizer || null);
     const [isMobile, setIsMobile] = React.useState(false);
