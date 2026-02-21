@@ -1,39 +1,48 @@
 /**
  * Muzika Service Worker
- *
- * Caching strategies:
- *   1. Shell (cache-first) — HTML, CSS, JS, fonts
- *   2. Models (cache-first) — ONNX models, WASM binaries
- *   3. Audio (network-first) — processed audio blobs
+ * Refined for premium offline support and ML model caching.
  */
 
-const CACHE_VERSION = 'v1';
-const SHELL_CACHE  = `muzika-shell-${CACHE_VERSION}`;
-const MODEL_CACHE  = `muzika-models-${CACHE_VERSION}`;
-const AUDIO_CACHE  = `muzika-audio-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v2';
+const SHELL_CACHE = `muzika-shell-${CACHE_VERSION}`;
+const MODEL_CACHE = `muzika-models-${CACHE_VERSION}`;
+const ASSET_CACHE = `muzika-assets-${CACHE_VERSION}`;
 
-const SHELL_URLS = [
+const OFFLINE_URL = '/offline.html';
+
+const INITIAL_CACHED_RESOURCES = [
   '/',
+  OFFLINE_URL,
   '/manifest.json',
+  '/sw-register.js',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 // ── Install ────────────────────────────────────────────────────────
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS))
+    caches.open(SHELL_CACHE).then((cache) => {
+      return cache.addAll(INITIAL_CACHED_RESOURCES);
+    })
   );
   self.skipWaiting();
 });
 
-// ── Activate — clean old caches ────────────────────────────────────
+// ── Activate ───────────────────────────────────────────────────────
 
 self.addEventListener('activate', (event) => {
-  const keepCaches = new Set([SHELL_CACHE, MODEL_CACHE, AUDIO_CACHE]);
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !keepCaches.has(k)).map((k) => caches.delete(k)))
-    )
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (![SHELL_CACHE, MODEL_CACHE, ASSET_CACHE].includes(key)) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
   );
   self.clients.claim();
 });
@@ -41,31 +50,54 @@ self.addEventListener('activate', (event) => {
 // ── Fetch ──────────────────────────────────────────────────────────
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Skip cross-origin requests (except HF for models)
+  const isHF = url.hostname === 'huggingface.co' || url.hostname.endsWith('hf.co');
+  if (url.origin !== self.location.origin && !isHF) return;
+  if (request.method !== 'GET') return;
 
-  // 1. Models & WASM — cache-first, immutable
-  if (url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/')) {
-    event.respondWith(cacheFirst(event.request, MODEL_CACHE));
+  // 1. Models & WASM — Cache First (Immutable)
+  if (isHF || url.pathname.startsWith('/models/') || url.pathname.startsWith('/wasm/')) {
+    event.respondWith(cacheFirst(request, MODEL_CACHE));
     return;
   }
 
-  // 2. Static assets (JS/CSS/fonts) — cache-first
-  if (isStaticAsset(url.pathname)) {
-    event.respondWith(cacheFirst(event.request, SHELL_CACHE));
+  // 2. Static Assets — Stale While Revalidate
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    /\.(js|css|woff2?|ttf|png|jpg|webp|svg|ico)$/.test(url.pathname)
+  ) {
+    event.respondWith(staleWhileRevalidate(request, ASSET_CACHE));
     return;
   }
 
-  // 3. Audio files — network-first (user always wants fresh results)
-  if (url.pathname.startsWith('/audio/') || url.pathname.startsWith('/api/')) {
-    // Don't cache API calls or audio
+  // 3. Navigation — Network First with Offline Fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache the page for next time
+          const copy = response.clone();
+          caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => {
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) return cachedResponse;
+          return caches.match(OFFLINE_URL);
+        })
+    );
     return;
   }
 
-  // 4. Navigation / everything else — network-first with shell fallback
-  event.respondWith(networkFirst(event.request, SHELL_CACHE));
+  // Generic Strategy: Network First
+  event.respondWith(
+    fetch(request).catch(async () => {
+      return caches.match(request);
+    })
+  );
 });
 
 // ── Strategies ─────────────────────────────────────────────────────
@@ -76,31 +108,26 @@ async function cacheFirst(request, cacheName) {
 
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (response && response.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
     return response;
-  } catch {
-    return new Response('Offline', { status: 503 });
+  } catch (err) {
+    return new Response('Offline model access failed', { status: 503 });
   }
 }
 
-async function networkFirst(request, cacheName) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  const fetched = fetch(request).then((response) => {
+    if (response && response.status === 200) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch {
-    const cached = await caches.match(request);
-    return cached || new Response('Offline', { status: 503 });
-  }
-}
+  }).catch(() => null);
 
-function isStaticAsset(pathname) {
-  return /\.(js|css|woff2?|ttf|eot|svg|png|jpg|webp|ico)$/.test(pathname) ||
-    pathname.startsWith('/_next/static/');
+  return cached || fetched;
 }

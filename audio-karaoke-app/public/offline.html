@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline | Muzika</title>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --accent: #7c3aed;
+        --text: #ffffff;
+        --muted: rgba(255, 255, 255, 0.4);
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+        overflow: hidden;
+      }
+      .container {
+        max-width: 400px;
+        padding: 2rem;
+        position: relative;
+      }
+      .glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+        opacity: 0.2;
+        filter: blur(40px);
+        z-index: -1;
+      }
+      .icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        display: block;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0 0 1rem;
+        letter-spacing: -0.02em;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.6;
+        margin-bottom: 2rem;
+      }
+      .button {
+        display: inline-block;
+        background: var(--accent);
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        transition:
+          transform 0.2s,
+          background 0.2s;
+        box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        background: #6d28d9;
+      }
+      .status {
+        margin-top: 3rem;
+        font-size: 0.8rem;
+        font-style: italic;
+        color: var(--accent);
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="glow"></div>
+    <div class="container">
+      <span class="icon">📡</span>
+      <h1>You're Offline</h1>
+      <p>
+        Muzika is designed to work without a connection, but the page you
+        requested hasn't been cached yet. Your local Library and Pitch Analysis
+        remain fully functional!
+      </p>
+      <a href="/" class="button">Go to Dashboard</a>
+      <div class="status">AI Engine: READY (Always Available)</div>
+    </div>
+    <script>
+      // Check connectivity periodically
+      window.addEventListener("online", () => {
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>
