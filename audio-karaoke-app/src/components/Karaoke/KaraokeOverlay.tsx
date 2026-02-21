@@ -6,6 +6,7 @@ import { PitchAnalysisResult } from '@/types/audio';
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { AudioVisualizer } from '@/utils/audio/audioVisualizer';
 import { KaraokeUIState, KaraokeUIActions } from '@/hooks/useKaraokeUI';
+import { usePlayback } from '@/hooks/usePlayback';
 
 import { LyricsContainer } from './Visualizer/LyricsContainer';
 import { KaraokeToolbar } from './Visualizer/KaraokeToolbar';

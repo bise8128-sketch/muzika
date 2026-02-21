@@ -6,36 +6,40 @@ import type { StemSettings } from '@/types/audio';
 // Mock implementation of PlaybackController
 const createMockController = (): PlaybackController => {
   let stems: StemSettings[] = [
-    { type: 'vocals', label: 'Vocals', volume: 1.0, muted: false, solo: false, icon: '🎤' },
-    { type: 'drums', label: 'Drums', volume: 0.8, muted: false, solo: false, icon: '🥁' },
-    { type: 'bass', label: 'Bass', volume: 0.8, muted: false, solo: false, icon: '🎸' },
-    { type: 'other', label: 'Other', volume: 0.7, muted: false, solo: false, icon: '🎹' },
+    { type: 'vocals', label: 'Vocals', volume: 1.0, muted: false, solo: false, icon: '🎤', panning: 0, reverbSend: 0.1, echoSend: 0 },
+    { type: 'drums', label: 'Drums', volume: 0.8, muted: false, solo: false, icon: '🥁', panning: -0.2, reverbSend: 0, echoSend: 0 },
+    { type: 'bass', label: 'Bass', volume: 0.8, muted: false, solo: false, icon: '🎸', panning: 0.2, reverbSend: 0, echoSend: 0 },
+    { type: 'other', label: 'Other', volume: 0.7, muted: false, solo: false, icon: '🎹', panning: 0, reverbSend: 0.05, echoSend: 0.1 },
   ];
 
   return {
     getStemStates: () => [...stems],
+    getStemLevels: () => stems.map(() => Math.random() * 0.5),
     setStemVolume: (index: number, volume: number) => {
       stems[index] = { ...stems[index], volume };
-      console.log(`Set volume for stem ${index} to ${volume}`);
+    },
+    setStemPanning: (index: number, pan: number) => {
+      stems[index] = { ...stems[index], panning: pan };
+    },
+    setStemReverbSend: (index: number, amount: number) => {
+      stems[index] = { ...stems[index], reverbSend: amount };
+    },
+    setStemEchoSend: (index: number, amount: number) => {
+      stems[index] = { ...stems[index], echoSend: amount };
     },
     toggleStemMute: (index: number) => {
       stems[index] = { ...stems[index], muted: !stems[index].muted };
-      console.log(`Toggled mute for stem ${index}`);
     },
     toggleStemSolo: (index: number) => {
       stems[index] = { ...stems[index], solo: !stems[index].solo };
-      console.log(`Toggled solo for stem ${index}`);
     },
     applyStemPreset: (preset: string) => {
-      console.log(`Applied preset: ${preset}`);
-      // Mock logic for presets
       if (preset === 'karaoke') {
         stems[0].muted = true;
       } else if (preset === 'full-mix') {
         stems.forEach(s => s.muted = false);
       }
     },
-    // Add other required methods as no-ops if needed by the interface but not used in the component
   } as unknown as PlaybackController;
 };
 
