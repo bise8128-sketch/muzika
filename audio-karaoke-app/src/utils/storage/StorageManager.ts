@@ -22,6 +22,34 @@ export class StorageManager {
     }
 
     /**
+     * Check storage status and log warnings if high usage detected.
+     */
+    static async checkStorageHealth(): Promise<boolean> {
+        if (typeof navigator === 'undefined' || !('storage' in navigator)) return true;
+
+        try {
+            const estimate = await navigator.storage.estimate();
+            const usage = estimate.usage || 0;
+            const quota = estimate.quota || 0;
+            const percentage = quota > 0 ? (usage / quota) * 100 : 0;
+
+            if (percentage > 90) {
+                console.warn(`[StorageManager] Storage critical: ${percentage.toFixed(1)}% used. Triggering proactive eviction.`);
+                await audioCache.evictOldestIfNeeded(0.5); // Force clear to 500MB if we're near hard quota
+                return false;
+            } else if (percentage > 70) {
+                console.info(`[StorageManager] Storage warning: ${percentage.toFixed(1)}% used. Proactive background eviction may run.`);
+                await audioCache.evictOldestIfNeeded(1); // Standard 1GB limit
+            }
+            return true;
+        } catch (e) {
+            console.error('[StorageManager] Health check failed:', e);
+            return true;
+        }
+    }
+
+
+    /**
      * Check if it passes quotas.
      */
     static async validateStorage(fileSize: number): Promise<boolean> {
@@ -77,7 +105,7 @@ export class StorageManager {
             // First validate storage is available
             await this.validateStorage(file.size);
             
-            await db.audioFiles.put({
+            await (db as any).audioFiles.put({
                 id: fileId,
                 data: file,
                 name: file.name,
