@@ -5,9 +5,12 @@ import { EffectsPanel } from './EffectsPanel';
 import { StemIsolationPanel } from './StemIsolationPanel';
 import { PitchVisualizer } from './PitchVisualizer';
 import { HarmonyGuidePanel } from './HarmonyGuidePanel';
+import { ThemeSelector } from './UI/ThemeSelector';
 import { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import { KeyInfo } from '@/utils/audio/keyDetection';
 import { HarmonySuggestion, HarmonyMatchResult } from '@/utils/audio/harmonyGuide';
+import { Palette, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface EffectsControllerProps {
     controller: PlaybackController;
@@ -77,6 +80,7 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
     const t = useTranslations('KaraokePlayer');
     const [showPitchAnalysis, setShowPitchAnalysis] = useState(false);
     const [showHarmonyGuide, setShowHarmonyGuide] = useState(false);
+    const [showThemePanel, setShowThemePanel] = useState(false);
 
     return (
         <div className="flex flex-col gap-4">
@@ -100,8 +104,9 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
 
             <StemIsolationPanel controller={controller} />
 
-            <div className="space-y-2">
-                <div className="flex items-center gap-3">
+            <div className="space-y-4">
+                {/* Visual Analysis Toggles */}
+                <div className="flex flex-wrap gap-3">
                     <button
                         onClick={() => {
                             if (pitchAnalysis.isListening) {
@@ -113,66 +118,114 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                             pitchAnalysis.isListening
-                                ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500/40'
+                                ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500/40 shadow-lg shadow-purple-500/20'
                                 : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
                         }`}
                     >
                         🎯 {pitchAnalysis.isListening ? t('stopAnalysis') || 'Stop Analysis' : t('pitchAnalysis') || 'Pitch Analysis'}
                     </button>
+
+                    <button
+                        onClick={() => setShowHarmonyGuide(!showHarmonyGuide)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            showHarmonyGuide
+                                ? 'bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/40 shadow-lg shadow-amber-500/20'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                        }`}
+                    >
+                        🎶 Harmony Guide
+                    </button>
+
+                    <button
+                        onClick={() => setShowThemePanel(!showThemePanel)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            showThemePanel
+                                ? 'bg-primary/30 text-primary ring-1 ring-primary/40 shadow-lg shadow-primary/20'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                        }`}
+                    >
+                        <Palette className="w-4 h-4" />
+                        Themes
+                    </button>
+
                     {pitchAnalysis.overallScore && (
                         <button
                             onClick={() => {
                                 pitchAnalysis.resetAnalysis();
                                 setShowPitchAnalysis(false);
                             }}
-                            className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                            className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors"
                         >
-                            {t('resetScore') || 'Reset'}
+                            {t('resetScore') || 'Reset Score'}
                         </button>
                     )}
-                    {pitchAnalysis.error && (
-                        <span className="text-xs text-red-400">{pitchAnalysis.error}</span>
-                    )}
                 </div>
-                {showPitchAnalysis && (
-                    <PitchVisualizer
-                        currentScore={pitchAnalysis.currentScore}
-                        currentPitch={pitchAnalysis.currentPitch}
-                        overallScore={pitchAnalysis.overallScore}
-                        pitchHistory={pitchAnalysis.pitchHistory}
-                        isListening={pitchAnalysis.isListening}
-                    />
-                )}
-            </div>
 
-            {/* Harmony Guide */}
-            <div className="space-y-2">
-                <button
-                    onClick={() => setShowHarmonyGuide(!showHarmonyGuide)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        showHarmonyGuide
-                            ? 'bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/40'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
-                    }`}
-                >
-                    🎶 Harmony Guide
-                </button>
-                {showHarmonyGuide && (
-                    <HarmonyGuidePanel
-                        detectedKey={detectedKey}
-                        harmonyEnabled={harmonyGuide.harmonyEnabled}
-                        onToggleHarmony={harmonyGuide.setHarmonyEnabled}
-                        suggestions={harmonyGuide.getSuggestions(
-                            pitchAnalysis.pitchHistory.length > 0
-                                ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
-                                : 0
-                        )}
-                        lastMatch={harmonyGuide.lastMatch}
-                        totalHarmonyHits={harmonyGuide.totalHarmonyHits}
-                        harmonyBonus={pitchAnalysis.overallScore?.harmonyBonus ?? 0}
-                        onClose={() => setShowHarmonyGuide(false)}
-                    />
-                )}
+                {/* Feedback Panel (Pitch Visualizer) */}
+                <AnimatePresence>
+                    {showPitchAnalysis && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <PitchVisualizer
+                                currentScore={pitchAnalysis.currentScore}
+                                currentPitch={pitchAnalysis.currentPitch}
+                                overallScore={pitchAnalysis.overallScore}
+                                pitchHistory={pitchAnalysis.pitchHistory}
+                                isListening={pitchAnalysis.isListening}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Floating Overlays */}
+                <AnimatePresence mode="wait">
+                    {showThemePanel && (
+                        <motion.div
+                            key="theme-panel"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="fixed bottom-32 right-8 z-50 w-80 glass-premium border border-white/10 rounded-[2.5rem] shadow-2xl p-2"
+                        >
+                            <button 
+                                onClick={() => setShowThemePanel(false)}
+                                className="absolute top-6 right-6 p-2 text-white/20 hover:text-white/60 transition-colors z-10"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <ThemeSelector />
+                        </motion.div>
+                    )}
+
+                    {showHarmonyGuide && (
+                        <motion.div
+                            key="harmony-panel"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="fixed bottom-32 right-8 z-50 w-96 glass-premium border border-white/10 rounded-[2.5rem] shadow-2xl"
+                        >
+                            <HarmonyGuidePanel
+                                detectedKey={detectedKey}
+                                harmonyEnabled={harmonyGuide.harmonyEnabled}
+                                onToggleHarmony={harmonyGuide.setHarmonyEnabled}
+                                suggestions={harmonyGuide.getSuggestions(
+                                    pitchAnalysis.pitchHistory.length > 0
+                                        ? pitchAnalysis.pitchHistory[pitchAnalysis.pitchHistory.length - 1].referenceMidi
+                                        : 0
+                                )}
+                                lastMatch={harmonyGuide.lastMatch}
+                                totalHarmonyHits={harmonyGuide.totalHarmonyHits}
+                                harmonyBonus={pitchAnalysis.overallScore?.harmonyBonus ?? 0}
+                                onClose={() => setShowHarmonyGuide(false)}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
