@@ -1,6 +1,6 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { Serwist, NetworkOnly, CacheFirst } from "serwist";
 
 // This declares the value of `injectionPoint` to TypeScript.
 // `injectionPoint` is the string that will be replaced by the
@@ -24,27 +24,32 @@ const serwist = new Serwist({
     // IndexedDB manages these, we do not want to fill the SW Cache
     {
       matcher: ({ url }) => url.pathname.startsWith("/models/"),
-      handler: "NetworkOnly",
+      handler: new NetworkOnly(),
     },
 
     // 2. Bypass API backend (FastAPI)
     {
       matcher: ({ url }) => url.port === "8000" || url.pathname.startsWith("/api/"),
-      handler: "NetworkOnly",
+      handler: new NetworkOnly(),
     },
 
     // 3. Cache WASM binaries with CacheFirst
     {
       matcher: ({ url }) =>
         url.pathname.startsWith("/wasm/") || url.pathname.startsWith("/ffmpeg/"),
-      handler: "CacheFirst",
-      options: {
+      handler: new CacheFirst({
         cacheName: "wasm-assets",
-        expiration: {
-          maxEntries: 20,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-      },
+        plugins: [
+          {
+            cacheWillUpdate: async ({ response }) => {
+              if (response && response.status === 200) {
+                return response;
+              }
+              return null;
+            },
+          }
+        ]
+      }),
     },
 
     // 4. Default caching strategy for everything else (Next.js assets)
