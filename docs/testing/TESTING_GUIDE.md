@@ -8,7 +8,7 @@
 ## Overview
 
 | Stage | Tool | Command | Time |
-|-------|------|---------|------|
+| :--- | :--- | :--- | :--- |
 | 1. Python Backend | pytest | `pytest tests/ -v` | ~5s |
 | 2. Frontend Unit | Jest | `npm test` | ~15s |
 | 3. E2E Browser | Playwright | `npx playwright test` | ~2min |
@@ -38,7 +38,7 @@ pytest tests/test_websocket.py -v
 **✅ Pass criteria:** All 36 tests green. No import errors, no crashes.
 
 | Test File | What It Covers |
-|-----------|---------------|
+| :--- | :--- |
 | `test_endpoints.py` | Health, models, upload, download, separation, jobs, library, file serving |
 | `test_job_lifecycle.py` | Job states: pending → processing → completed/failed, Redis fallback |
 | `test_websocket.py` | Room connect, broadcast, multi-user, disconnect, cleanup |
@@ -65,7 +65,7 @@ npm test -- --coverage
 **✅ Pass criteria:** 60+ tests all green. Coverage report generated in `coverage/`.
 
 | Test File | What It Covers |
-|-----------|---------------|
+| :--- | :--- |
 | `backend-upload.test.ts` | File upload proxy, no-file error, backend failure |
 | `backend-download.test.ts` | Download proxy, circuit breaker, unreachable |
 | `python-processing.test.ts` | Validation, separation, URL download flow |
@@ -102,7 +102,7 @@ npx playwright test e2e/accessibility.spec.ts
 **✅ Pass criteria:** All specs pass on Chromium. No page crashes, no unhandled errors.
 
 | Spec File | What It Simulates |
-|-----------|-------------------|
+| :--- | :--- |
 | `full-journey.spec.ts` | Upload → separation → results → karaoke player → settings |
 | `error-recovery.spec.ts` | Upload fails, backend offline, separation timeout |
 | `settings-and-preferences.spec.ts` | Open/close settings, keyboard navigation |
@@ -135,7 +135,7 @@ INTEGRATION=true npx playwright test e2e/integration.spec.ts --headed
 
 **What:** Every push to `main`/`develop` and every PR automatically runs all tests.
 
-```
+```text
 Push/PR → GitHub Actions triggers:
 
   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
@@ -147,7 +147,6 @@ Push/PR → GitHub Actions triggers:
                    ┌──────▼──────┐
                    │    e2e      │
                    │ Playwright  │
-                   │ Chromium    │
                    └─────────────┘
 ```
 
@@ -168,9 +167,12 @@ git push origin main
 
 ---
 
-## Debugging Tips
+## Debugging
+
+Comprehensive debugging instructions can be found in **[DEBUGGING_STRATEGY.md](./DEBUGGING_STRATEGY.md)**.
 
 ### Playwright failures
+
 ```bash
 # Run with full trace for post-mortem debugging
 npx playwright test --trace on
@@ -180,6 +182,7 @@ npx playwright show-trace test-results/trace.zip
 ```
 
 ### Jest failures
+
 ```bash
 # Run with verbose output
 npm test -- --verbose
@@ -189,6 +192,7 @@ npm test -- src/utils/__tests__/lrcParser.test.ts
 ```
 
 ### pytest failures
+
 ```bash
 # Run with output capture disabled (see print statements)
 pytest tests/ -v -s

@@ -59,11 +59,8 @@ export default async function RootLayout({
           </ThemeProvider>
         </NextIntlClientProvider>
         {/* 
-          Security fix (P0 #1): Replaced dangerouslySetInnerHTML inline script with
-          next/script src= reference to avoid XSS risk from raw HTML injection.
-          The external file public/sw-register.js contains the same SW registration logic.
+          Service Worker is automatically registered by @serwist/next
         */}
-        <Script src="/sw-register.js" strategy="lazyOnload" />
       </body>
     </html>
   );
