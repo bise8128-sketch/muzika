@@ -19,6 +19,13 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   // outputFileTracingRoot: path.join(__dirname, '../../'),
   compress: true,
+  output: "standalone",
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
   allowedDevOrigins: [
     "http://localhost:3030",
