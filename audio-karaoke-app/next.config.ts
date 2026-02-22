@@ -4,13 +4,6 @@ import { fileURLToPath } from "url";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import createNextIntlPlugin from "next-intl/plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
-import withSerwistInit from "@serwist/next";
-
-const withSerwist = withSerwistInit({
-  swSrc: "src/app/sw.ts",
-  swDest: "public/sw.js",
-  disable: process.env.NODE_ENV === "development",
-});
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -179,11 +172,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSerwist(
-  withNextIntl(
-    withBundleAnalyzer({
-      enabled: process.env.ANALYZE === "true",
-      openAnalyzer: false,
-    })(nextConfig),
-  ),
+export default withNextIntl(
+  withBundleAnalyzer({
+    enabled: process.env.ANALYZE === "true",
+    openAnalyzer: false,
+  })(nextConfig),
 );

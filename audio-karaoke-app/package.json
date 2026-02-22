@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n \"NEXT,PYTHON\" -c \"cyan,green\" \"npm:dev:next\" \"npm:dev:python\"",
+    "dev": "concurrently -n \"NEXT,SERWIST,PYTHON\" -c \"cyan,magenta,green\" \"npm:dev:next\" \"serwist build --watch\" \"npm:dev:python\"",
     "dev:next": "next dev --webpack --experimental-next-config-strip-types -p 3030",
     "dev:python": "bash ../python-audio-cli/start-backend.sh",
     "dev:next-only": "next dev --webpack --experimental-next-config-strip-types -p 3030",
-    "build": "next build",
+    "build": "next build && serwist build",
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
