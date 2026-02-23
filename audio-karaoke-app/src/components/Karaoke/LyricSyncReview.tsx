@@ -23,6 +23,7 @@ interface LyricSyncReviewProps {
     onAccept: (lines: LyricLine[]) => void;
     onReject: () => void;
     onStartSync: () => void;
+    onSeek?: (time: number) => void;
 }
 
 const formatTime = (seconds: number): string => {
@@ -40,6 +41,7 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
     onAccept,
     onReject,
     onStartSync,
+    onSeek,
 }) => {
     const t = useTranslations('LyricSync');
     const [editedLines, setEditedLines] = useState<LyricLine[] | null>(null);
@@ -160,7 +162,12 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
             {/* Lines list */}
             <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
                 {editedLines.map((line, idx) => (
-                    <div key={idx} className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group">
+                    <div 
+                        key={idx} 
+                        onDoubleClick={() => onSeek?.(line.startTime)}
+                        title={t('doubleClickSeek') || 'Double-click to seek playback'}
+                        className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group cursor-pointer"
+                    >
                         {/* Timestamp */}
                         <span className="font-mono text-xs text-purple-400/70 min-w-[65px]">
                             {formatTime(line.startTime)}

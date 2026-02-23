@@ -236,11 +236,13 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         {lines.map((line, index) => (
                             <div
                                 key={index}
-                                className={`p-4 rounded-2xl transition-all border ${index === activeLineIndex
+                                onDoubleClick={() => controller.setCurrentTime(line.startTime)}
+                                title={t('doubleClickSeek') || 'Double-click to seek'}
+                                className={`p-4 rounded-2xl transition-all border cursor-pointer ${index === activeLineIndex
                                     ? 'bg-primary/20 border-primary text-white'
                                     : index < activeLineIndex
-                                        ? 'bg-white/10 border-white/5 text-white/80'
-                                        : 'bg-white/5 border-transparent text-white/40'
+                                        ? 'bg-white/10 border-white/5 text-white/80 hover:bg-white/20'
+                                        : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10'
                                     }`}
                             >
                                 <div className="flex justify-between">
