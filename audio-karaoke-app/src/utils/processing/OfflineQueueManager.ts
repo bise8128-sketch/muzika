@@ -16,12 +16,13 @@ class OfflineQueueManager {
         const fileHash = await audioCache.hashFile(file);
         
         const job: ProcessingJob = {
+            fileId: fileHash,
             fileHash,
             fileName: file.name,
             modelId,
             status: 'queued',
             progress: 0,
-            addedAt: Date.now(),
+            createdAt: Date.now(),
             artist: metadata?.artist,
             title: metadata?.title || file.name.replace(/\.[^/.]+$/, ""),
             duration: metadata?.duration
@@ -29,11 +30,12 @@ class OfflineQueueManager {
 
         const id = await db.processingQueue.add(job);
         
-        // Save file to storage for background worker
-        await db.files.add({
-            hash: fileHash,
+        // Save file to storage for background worker (table is audioFiles)
+        await db.audioFiles.add({
+            id: fileHash,
             data: file,
-            name: file.name
+            name: file.name,
+            createdAt: Date.now()
         });
 
         this.processNext();
@@ -60,10 +62,10 @@ class OfflineQueueManager {
             await db.processingQueue.update(job.id!, { status: 'processing', startedAt: Date.now() });
 
             // Fetch original file from db.audioFiles
-            const fileRecord = await db.files.get(job.fileHash);
+            const fileRecord = await db.audioFiles.get(job.fileHash);
             if (!fileRecord) throw new Error('File not found in storage');
 
-            const modelInfo = MODELS.find(m => m.id === job.modelId);
+            const modelInfo = Object.values(MODELS).find(m => m.id === job.modelId);
             if (!modelInfo) throw new Error('Model configuration not found');
 
             console.log(`[OfflineQueueManager] Starting job ${job.id} for file ${job.fileName}`);
@@ -101,15 +103,14 @@ class OfflineQueueManager {
             }
 
             // Mark completed
-            await db.processingQueue.update(job.id, {
+            await db.processingQueue.update(job.id!, {
                 status: 'completed',
-                progress: 100,
                 completedAt: Date.now()
             });
 
             console.log(`[OfflineQueueManager] Completed job ${job.id}`);
             
-            // Send notification
+            // Notify user
             notificationManager.notifyJobComplete(job.fileName, job.fileHash, job.modelId).catch(console.error);
             
             // Dispatch a global event so UI components (like the mixer) know to reload
@@ -122,9 +123,10 @@ class OfflineQueueManager {
         } catch (error) {
             const errMatch = error instanceof Error ? error.message : String(error);
             console.error(`[OfflineQueueManager] Job ${job.id} failed:`, error);
-            await db.processingQueue.update(job.id, {
+            await db.processingQueue.update(job.id!, {
                 status: 'failed',
-                error: errMatch
+                error: errMatch,
+                completedAt: Date.now()
             });
         } finally {
             this.isProcessing = false;

@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ModelInfo } from '@/types/model';
 import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 import { separateAudio } from '@/utils/ml/separateAudio';
+import { db } from '@/utils/storage/audioDatabase';
+import { LyricService } from '@/utils/karaoke/LyricService';
 
 export interface SeparationState {
     isProcessing: boolean;
@@ -32,7 +34,8 @@ export function useSeparation() {
     const separate = useCallback(async (
         file: File,
         modelInfo: ModelInfo,
-        skipCache: boolean = false
+        skipCache: boolean = false,
+        metadata?: { artist?: string; title?: string; duration?: number }
     ) => {
         // Reset state
         setState({
@@ -67,15 +70,46 @@ export function useSeparation() {
                 },
             });
 
+            // Automatic Lyric Alignment (Unified Service)
+            let lyrics: string | undefined;
+            try {
+                const title = metadata?.title || file.name.replace(/\.[^/.]+$/, "");
+                const artist = metadata?.artist;
+                const duration = metadata?.duration;
+
+                console.log(`[useSeparation] Acquiring lyrics for ${title}`);
+                const lrc = await LyricService.acquireLyrics(result.vocals, {
+                    artist,
+                    title,
+                    duration
+                });
+                
+                if (lrc) {
+                    lyrics = lrc;
+                    // Also update the cache if it was just saved
+                    await db.cachedAudio
+                        .where('[fileHash+modelUsed]')
+                        .equals([result.fileHash, modelInfo.id])
+                        .modify({ lyrics: lrc });
+                }
+            } catch (lyricError) {
+                console.warn('[useSeparation] Failed to acquire lyrics:', lyricError);
+            }
+
+            const resultWithLyrics = {
+                ...result,
+                lyrics
+            };
+
             setState(s => ({
                 ...s,
                 isProcessing: false,
                 status: 'completed',
                 message: 'Separation completed successfully!',
-                result,
+                result: resultWithLyrics,
             }));
 
-            return result;
+            return resultWithLyrics;
 
         } catch (error: unknown) {
             if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {

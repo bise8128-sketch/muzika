@@ -1,6 +1,7 @@
 /**
  * IndexedDB storage type definitions
  */
+import type { ExtractedMetadata } from './schema';
 
 export interface CachedAudio {
     id?: number;
@@ -31,7 +32,7 @@ export interface ProcessingLog {
 
 export interface ProcessingJob {
     id?: number;
-    fileId: string;           // Reference to audioFiles
+    fileId: string;           // Reference to audioFiles (usually fileHash)
     fileName: string;         // Human readable name for UI
     fileHash: string;         // Hash to check if already cached
     modelId: string;          // e.g. 'htdemucs'
@@ -54,25 +55,25 @@ export interface SongEntry {
     type: 'ai_separated' | 'direct_karaoke';
     title: string;
     artist?: string;
-    versionName: string;      // e.g., "Original", "Lowered Key", "Fast Remix"
-
-    // Enhanced Metadata
-    album?: string;
-    genre?: string[];
-    year?: number;
-    bpm?: number;
-    key?: string;
-
-    // Audio Data - Hybrid Storage Support
-    instrumentalPath?: string; // Path to OPFS file
-    vocalPath?: string;       // Path to OPFS file
+    versionName?: string; // e.g. "Original", "Live", "Remix"
+    
+    // Performance stats
+    lastScore?: number;
+    highScore?: number;
+    
+    // File references
+    originalHash: string;
+    modelUsed?: string;   // e.g. "htdemucs"
+    
+    // Decoupled Storage references (OPFS or IndexedDB IDs)
+    vocalFileId?: string;
+    instrumentalFileId?: string;
     
     // Legacy / Buffer Data (Deprecated for new entries)
     instrumentalData?: ArrayBuffer;
     vocalData?: ArrayBuffer;
 
     // Metadata & Settings
-    originalHash: string;
     pitchAdjustment: number;  // semitones
     tempoMultiplier: number;  // e.g., 1.1 for +10%
     duration: number;
@@ -87,6 +88,12 @@ export interface SongEntry {
     serverSyncedAt?: number;
     isDirty?: boolean;
     serverId?: string | number;
+
+    // Lyrics
+    lyrics?: string;
+
+    // Additional metadata from extraction
+    metadata?: ExtractedMetadata;
 }
 
 export interface StorageQuota {

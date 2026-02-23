@@ -126,7 +126,8 @@ export function usePageOrchestrator() {
       router.push(`/process/${fileHash}`);
       
       send({ type: 'PROCESS_START' });
-      await separation.separate(file, modelInfo);
+      const fileMetadata = metadata ? metadata[0] : undefined;
+      await separation.separate(file, modelInfo, false, fileMetadata);
     } catch (e) {
       console.error("Upload/Separation failed immediately:", e);
       send({ type: 'UPLOAD_ERROR', error: String(e) });

@@ -147,19 +147,6 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                             genre: tags.common.genre,
                         };
 
-                        // Attempt to fetch lyrics if artist/title available
-                        if (metadata.artist && metadata.title) {
-                            console.log(`[AudioUpload] Fetching lyrics for ${metadata.artist} - ${metadata.title}`);
-                            LyricFetcher.fetchLyrics(metadata.artist, metadata.title, metadata.duration)
-                                .then(lyrics => {
-                                    if (lyrics) {
-                                        console.log(`[AudioUpload] Lyrics found for ${metadata.title}`);
-                                        // Store lyrics in a temporary way or pass to onUpload? 
-                                        // The current db schema stores lyrics in CachedAudio (hash + model)
-                                        // We'll handle storage in SongsStorage or 
-                                    }
-                                });
-                        }
                         return metadata;
                     } catch (err) {
                         console.warn('Metadata extraction failed for:', file.name, err);
