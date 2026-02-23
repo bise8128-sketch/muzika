@@ -15,7 +15,6 @@ const config: Config = {
     setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
-        '^next-intl/routing$': '<rootDir>/node_modules/next-intl/dist/esm/production/routing.js',
     },
     collectCoverageFrom: [
         'src/**/*.{js,jsx,ts,tsx}',
@@ -28,7 +27,7 @@ const config: Config = {
         '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)',
     ],
     transformIgnorePatterns: [
-        '/node_modules/(?!(soundtouchjs|music-metadata-browser|pitch-shift|@distube|next-intl|use-intl|@next-intl)/)',
+        '/node_modules/(?!(soundtouchjs|music-metadata-browser|pitch-shift|@distube|next-intl|use-intl|@next-intl|@xenova|@huggingface)/)',
     ],
 };
 

@@ -29,7 +29,6 @@
     "@sentry/nextjs": "^10.39.0",
     "@serwist/next": "^9.5.6",
     "@types/react-window": "^1.8.8",
-    "@xenova/transformers": "^2.17.2",
     "@xstate/react": "^6.0.0",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
@@ -53,6 +52,7 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@huggingface/hub": "^2.10.3",
     "@next/bundle-analyzer": "^16.1.6",
     "@playwright/test": "^1.58.2",
     "@prisma/client": "^5.22.0",
@@ -68,6 +68,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@xenova/transformers": "^2.17.2",
     "concurrently": "^9.2.1",
     "copy-webpack-plugin": "^12.0.2",
     "cross-env": "^10.1.0",

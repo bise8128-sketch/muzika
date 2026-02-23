@@ -51,6 +51,18 @@ jest.mock('next-intl/navigation', () => ({
     })),
 }));
 
+jest.mock('@xenova/transformers', () => ({
+    pipeline: jest.fn().mockResolvedValue(() => Promise.resolve([{ text: 'mocked text', start: 0, end: 1 }])),
+    env: {
+        allowLocalModels: true,
+        useBrowserCache: false,
+    },
+}));
+
+jest.mock('@huggingface/hub', () => ({
+    downloadFile: jest.fn().mockResolvedValue(new ArrayBuffer(0)),
+}));
+
 // Polyfill for fetch (missing in Node < 18 or some Jest environments)
 if (!global.fetch) {
     (global as any).fetch = jest.fn().mockImplementation(() => 
