@@ -1,10 +1,9 @@
 import { useEffect, useCallback } from 'react';
 import type { SeparationResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playbackController';
-import { useRouter } from '@/i18n/routing';
 import { useAudio } from '@/context/AudioProvider';
 
-export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
+export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'syncing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
 
 interface UseAppStateOptions {
   separationStatus: 'idle' | 'processing' | 'completed' | 'error';
@@ -20,23 +19,14 @@ interface UseAppStateOptions {
 
 export function useAppState(options: UseAppStateOptions) {
   const {
-    separationStatus,
-    separationResult,
-    separationError,
-    autoStartKaraoke,
-    controller,
-    onHistoryRefresh,
     onResetSeparation,
     onClearRestoredResult,
     restoredResult,
+    separationResult,
+    controller,
   } = options;
 
-  const router = useRouter();
   const { machineState: state, send } = useAudio();
-
-  // State transitions are now handled globally in AudioProvider via useEffect
-
-
 
   const handleRestart = useCallback(() => {
     send({ type: 'RESET' });
@@ -48,19 +38,20 @@ export function useAppState(options: UseAppStateOptions) {
     const activeResult = separationResult || restoredResult;
     if (activeResult && controller) {
       controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
-      router.push(`/karaoke/${activeResult.fileHash}`);
+      // Routing is now handled by AudioProvider watching machine state
     }
     send({ type: 'START_KARAOKE' });
-  }, [separationResult, restoredResult, controller, send, router]);
+  }, [separationResult, restoredResult, controller, send]);
 
   // Actions exposed to UI
-  const setViewState = useCallback((view: 'upload' | 'processing' | 'results' | 'karaoke' | 'models' | 'batch') => {
+  const setViewState = useCallback((view: 'upload' | 'processing' | 'syncing' | 'results' | 'karaoke' | 'models' | 'batch') => {
     if (view === 'upload') send({ type: 'RESET' }); // rough mapping
     if (view === 'processing') send({ type: 'PROCESS_START' });
     if (view === 'results') send({ type: 'RESTORE_SESSION' }); // hacky mapping for now
     if (view === 'karaoke') send({ type: 'START_KARAOKE' });
     if (view === 'models') send({ type: 'VIEW_MODELS' });
     if (view === 'batch') send({ type: 'START_BATCH' });
+    if (view === 'syncing') send({ type: 'START_SYNCING' });
   }, [send]);
 
   // The active result is whichever was most recently produced
@@ -71,6 +62,7 @@ export function useAppState(options: UseAppStateOptions) {
     if (state.matches('idle')) return 'upload';
     if (state.matches('uploading')) return 'upload'; // UI might show uploading state in upload view
     if (state.matches('processing')) return 'processing';
+    if (state.matches('syncing')) return 'syncing';
     if (state.matches('batchProcessing')) return 'batch';
     if (state.matches('results')) return 'results';
     if (state.matches('karaoke')) return 'karaoke';

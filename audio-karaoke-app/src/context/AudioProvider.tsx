@@ -7,6 +7,8 @@ import { useSeparation } from '@/hooks/useSeparation';
 import { useRouter } from '@/i18n/routing';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
+import { useLyricSync } from '@/hooks/useLyricSync'; // Added to allow Syncing
+import { usePathname } from 'next/navigation';
 
 interface AudioContextType {
     controller: PlaybackController | null;
@@ -15,6 +17,7 @@ interface AudioContextType {
     loadResultFromStorage: (fileHash: string) => Promise<boolean>;
     isLoading: boolean;
     separation: ReturnType<typeof useSeparation>;
+    lyricSync: ReturnType<typeof useLyricSync>;
     performanceScore: PerformanceScore | null;
     setPerformanceScore: (score: PerformanceScore | null) => void;
     machineState: any; // Using any briefly for brevity in this complex migration
@@ -32,26 +35,60 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
     const [performanceScore, setPerformanceScore] = useState<PerformanceScore | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    
     const separation = useSeparation();
+    const lyricSync = useLyricSync(controller); // Add sync hook to context
     const [machineState, send] = useMachine(appMachine);
+    
     const router = useRouter();
+    const pathname = usePathname();
 
-    // Global side-effects for state machine transitions
+    // 1. Separation completion pushes state forward
     useEffect(() => {
         if (separation.status === 'completed' && separation.result) {
-            // Success navigation
-            const result = separation.result;
-            send({ type: 'PROCESS_COMPLETE' });
-
-            // We don't have access to settings here easily, so we can use a simpler approach
-            // or just rely on the machine state to drive the UI.
-            // For now, let's keep it simple: redirect to results
-            router.push(`/results/${result.fileHash}`);
+            send({ type: 'PROCESS_COMPLETE', fileHash: separation.result.fileHash });
         } else if (separation.status === 'error') {
             console.error("Global Separation Error:", separation.error);
             send({ type: 'PROCESS_ERROR', error: separation.error || 'Unknown error' });
         }
-    }, [separation.status, separation.result, separation.error, send, router]);
+    }, [separation.status, separation.result, separation.error, send]);
+
+    // 2. LyricSync completion pushes state forward
+    useEffect(() => {
+        if (machineState.matches('syncing')) {
+            if (lyricSync.result) {
+                // Keep the active result updated with the new lyrics
+                if (activeResult) {
+                  // This allows UI to show the resolved lyrics seamlessly
+                }
+                send({ type: 'SYNC_COMPLETE' });
+            } else if (lyricSync.error) {
+                send({ type: 'SYNC_ERROR', error: lyricSync.error });
+            }
+        }
+    }, [machineState.value, lyricSync.result, lyricSync.error, send, activeResult]);
+
+    // 3. Centralized Navigation driven by Machine State
+    useEffect(() => {
+        const fileHash = machineState.context.fileHash;
+        
+        if (machineState.matches('results') && fileHash) {
+            const expectedPath = `/results/${fileHash}`;
+            if (!pathname.includes(expectedPath)) {
+                router.push(expectedPath);
+            }
+        } else if (machineState.matches('karaoke') && fileHash) {
+            const expectedPath = `/karaoke/${fileHash}`;
+            if (!pathname.includes(expectedPath)) {
+                router.push(expectedPath);
+            }
+        } else if (machineState.matches('idle') && fileHash) {
+            // Check if we need to reset URL
+            if (pathname !== '/') {
+                router.push('/');
+            }
+        }
+    }, [machineState.value, machineState.context.fileHash, router, pathname]);
 
     useEffect(() => {
         return () => {
@@ -67,17 +104,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         
         setIsLoading(true);
         try {
-            // Check if we already have it in memory to avoid redundant loads
             if (activeResult?.fileHash === fileHash) {
                 return true;
             }
-
-            // In a real app, we'd fetch the buffers from songsStorage/audioCache
-            // For now, we utilize the existing history management logic implicitly 
-            // but this provider makes the result globally accessible.
-            
-            // Note: songsStorage stores paths/metadata, audioCache stores raw buffers.
-            // This is a simplified placeholder for the route-based restoration logic.
             return true; 
         } catch (error) {
             console.error('Failed to load result from storage:', error);
@@ -95,6 +124,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             loadResultFromStorage,
             isLoading,
             separation,
+            lyricSync,
             performanceScore,
             setPerformanceScore,
             machineState,
