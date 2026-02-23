@@ -297,6 +297,11 @@ export class EffectsChain {
         this.pitchCorrector.setCorrectionAmount(correctionAmount);
     }
 
+    async setPitchCorrectionVocalAccuracy(accuracy: number): Promise<void> {
+        if (!this.pitchCorrector.isReady()) await this.pitchCorrector.initialize();
+        this.pitchCorrector.setVocalAccuracy(accuracy);
+    }
+
     getPitchCorrector(): PitchCorrector {
         return this.pitchCorrector;
     }
