@@ -89,7 +89,7 @@ class OfflineQueueManager {
             console.log(`[OfflineQueueManager] Completed job ${job.id}`);
             
             // Send notification
-            notificationManager.notifyJobComplete(job.fileName).catch(console.error);
+            notificationManager.notifyJobComplete(job.fileName, job.fileHash, job.modelId).catch(console.error);
             
             // Dispatch a global event so UI components (like the mixer) know to reload
             if (typeof window !== 'undefined') {

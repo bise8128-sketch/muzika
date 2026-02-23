@@ -72,7 +72,16 @@ serwist.addEventListeners();
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || "/";
+  
+  const { url, fileHash } = event.notification.data || {};
+  let urlToOpen = url || "/";
+
+  // Handle specific actions
+  if (event.action === 'download' && fileHash) {
+    urlToOpen = `/karaoke/${fileHash}?action=download`;
+  } else if (event.action === 'play-now' && fileHash) {
+    urlToOpen = `/karaoke/${fileHash}`;
+  }
 
   event.waitUntil(
     self.clients
@@ -82,7 +91,7 @@ self.addEventListener("notificationclick", (event) => {
       })
       .then((windowClients) => {
         for (const client of windowClients) {
-          if (client.url === urlToOpen && "focus" in client) {
+          if (client.url.includes(urlToOpen) && "focus" in client) {
             return client.focus();
           }
         }

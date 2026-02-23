@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useAudio } from '@/context/AudioProvider';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { LRCData } from '@/types/karaoke';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
@@ -57,6 +57,7 @@ export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
 const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const router = useRouter();
     const { id } = useParams();
+    const searchParams = useSearchParams();
     const { setPerformanceScore } = useAudio();
 
     // UI State Management
@@ -247,6 +248,25 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
             visualizerInstance.setPitchTargets(targets);
         }
     }, [lyrics, lyricState.lineIndex, visualizerInstance, pitchAnalysis.isListening, controller]);
+
+    // Handle auto-download from notification action
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'download' && machineState.matches('ready') && !isExportingAudio) {
+            handleAudioDownload('mp3', {
+                pitch,
+                tempo,
+                bass: playback.bass,
+                mid: playback.mid,
+                treble: playback.treble,
+                volumes: [playback.vocalsVolume, playback.instrumentalVolume]
+            });
+            
+            // Clean up URL to avoid re-triggering on refresh
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, [searchParams, machineState.value, isExportingAudio, handleAudioDownload, pitch, tempo, playback]);
 
     // Initialize volume from settings
     useEffect(() => {

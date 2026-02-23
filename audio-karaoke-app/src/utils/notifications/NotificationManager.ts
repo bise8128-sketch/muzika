@@ -67,12 +67,29 @@ class NotificationManager {
     /**
      * Send a notification specifically for a completed audio job
      */
-    async notifyJobComplete(fileName: string): Promise<void> {
+    async notifyJobComplete(fileName: string, fileHash: string, modelId: string): Promise<void> {
+        const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const jobUrl = origin ? `${origin}/karaoke/${fileHash}` : undefined;
+
         await this.sendNotification('Separation Complete!', {
             body: `"${fileName}" is ready for karaoke.`,
-            tag: `muzika-job-${fileName}`,
+            tag: `muzika-job-${fileHash}`,
             renotify: true,
-            data: { url: typeof window !== 'undefined' ? window.location.origin : undefined }
+            data: { 
+                url: jobUrl,
+                fileHash,
+                modelId
+            },
+            actions: [
+                {
+                    action: 'play-now',
+                    title: 'Play Now'
+                },
+                {
+                    action: 'download',
+                    title: 'Download'
+                }
+            ]
         } as NotificationOptions);
     }
 
