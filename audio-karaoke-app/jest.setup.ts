@@ -115,6 +115,16 @@ class AudioContextMock {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).webkitAudioContext = AudioContextMock;
 
+// Mock HTMLAudioElement.canPlayType
+if (typeof HTMLAudioElement !== 'undefined') {
+    HTMLAudioElement.prototype.canPlayType = jest.fn((mimeType: string) => {
+        if (['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/aac'].includes(mimeType)) {
+            return 'probably';
+        }
+        return '';
+    }) as any;
+}
+
 // Clean up IndexedDB after each test to prevent state leakage
 afterEach(async () => {
     if (typeof indexedDB !== 'undefined' && indexedDB.databases) {

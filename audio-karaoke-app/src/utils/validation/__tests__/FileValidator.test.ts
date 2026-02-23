@@ -39,8 +39,10 @@ describe('FileValidator', () => {
     });
 
     it('should validate a valid file', async () => {
+        console.log('DEBUG TEST: starting should validate a valid file');
         const file = new File(['dummy content'], 'song.mp3', { type: 'audio/mpeg' });
         const result = await validator.validate(file);
+        console.log('DEBUG TEST: result', result);
         expect(result.isValid).toBe(true);
         expect(result.errors).toHaveLength(0);
     });
