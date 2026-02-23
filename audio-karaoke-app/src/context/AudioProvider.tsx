@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { SeparationResult, PerformanceScore } from '@/types/audio';
 import { useSeparation } from '@/hooks/useSeparation';
+import { useMachine } from '@xstate/react';
+import { appMachine } from '@/state/appMachine';
 
 interface AudioContextType {
     controller: PlaybackController | null;
@@ -14,6 +16,8 @@ interface AudioContextType {
     separation: ReturnType<typeof useSeparation>;
     performanceScore: PerformanceScore | null;
     setPerformanceScore: (score: PerformanceScore | null) => void;
+    machineState: any; // Using any briefly for brevity in this complex migration
+    send: (event: any) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -28,6 +32,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [performanceScore, setPerformanceScore] = useState<PerformanceScore | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const separation = useSeparation();
+    const [machineState, send] = useMachine(appMachine);
 
     useEffect(() => {
         return () => {
@@ -72,7 +77,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             isLoading,
             separation,
             performanceScore,
-            setPerformanceScore
+            setPerformanceScore,
+            machineState,
+            send
         }}>
             {children}
         </AudioContext.Provider>

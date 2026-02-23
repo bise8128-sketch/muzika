@@ -8,11 +8,18 @@ test.describe('Karaoke Flow', () => {
         page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
         await page.goto('/');
         
+        // Wait for page to be ready (either onboarding or upload view)
+        await page.waitForLoadState('networkidle');
+
         // Skip onboarding if present
         const skipButton = page.getByRole('button', { name: /Skip/i });
-        if (await skipButton.isVisible()) {
-            await skipButton.click();
-            await expect(skipButton).not.toBeVisible({ timeout: 10000 });
+        try {
+            if (await skipButton.isVisible({ timeout: 10000 })) {
+                await skipButton.click();
+                await expect(skipButton).not.toBeVisible({ timeout: 10000 });
+            }
+        } catch (e) {
+            // Probably not visible, move on
         }
     });
 

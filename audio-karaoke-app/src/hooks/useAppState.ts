@@ -1,9 +1,8 @@
 import { useEffect, useCallback } from 'react';
 import type { SeparationResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playbackController';
-import { useMachine } from '@xstate/react';
-import { appMachine } from '@/state/appMachine';
 import { useRouter } from '@/i18n/routing';
+import { useAudio } from '@/context/AudioProvider';
 
 export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
 
@@ -33,7 +32,7 @@ export function useAppState(options: UseAppStateOptions) {
   } = options;
 
   const router = useRouter();
-  const [state, send] = useMachine(appMachine);
+  const { machineState: state, send } = useAudio();
 
   // React to separation completion
   useEffect(() => {
