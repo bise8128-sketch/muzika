@@ -46,12 +46,10 @@ export class FileValidator {
 
         // MIME Type
         const detectedType = await this.detectMimeType(file);
-        console.log(`DEBUG: detectMimeType result: ${detectedType}`);
         if (!this.config.allowedTypes.includes(detectedType)) {
             result.isValid = false;
             result.errors.push(`File type '${detectedType}' is not supported. Allowed types: ${this.config.allowedTypes.join(', ')}.`);
         } else if (!this.isCodecSupported(detectedType)) {
-            console.log(`DEBUG: isCodecSupported failed for ${detectedType}`);
             result.isValid = false;
             result.errors.push(`MIME type '${detectedType}' is technically allowed but not supported by your browser's audio engine.`);
         }
@@ -96,13 +94,11 @@ export class FileValidator {
                 const duration = await this.getAudioDuration(file);
 
                 if (this.config.audioConstraints.minDuration && duration < this.config.audioConstraints.minDuration) {
-                    console.log(`DEBUG: duration ${duration} < minDuration ${this.config.audioConstraints.minDuration}`);
                     result.isValid = false;
                     result.errors.push(`Audio is too short (${duration.toFixed(1)}s). Minimum: ${this.config.audioConstraints.minDuration}s.`);
                 }
 
                 if (this.config.audioConstraints.maxDuration && duration > this.config.audioConstraints.maxDuration) {
-                    console.log(`DEBUG: duration ${duration} > maxDuration ${this.config.audioConstraints.maxDuration}`);
                     result.isValid = false;
                     result.errors.push(`Audio is too long (${duration.toFixed(1)}s). Maximum: ${this.config.audioConstraints.maxDuration}s.`);
                 }
@@ -133,9 +129,7 @@ export class FileValidator {
     private async detectMimeType(file: File): Promise<string> {
         const fallback = file.type;
         try {
-            console.log(`DEBUG: detectMimeType starting for ${file.name}, type ${file.type}`);
             const buffer = await file.slice(0, 12).arrayBuffer();
-            console.log(`DEBUG: buffer length: ${buffer.byteLength}`);
             const arr = new Uint8Array(buffer);
             
             // Convert to hex string for easier matching
@@ -169,7 +163,6 @@ export class FileValidator {
             // Starts with FF F1 or FF F9
             if (hex.startsWith('FFF1') || hex.startsWith('FFF9')) return 'audio/aac';
 
-            console.log(`DEBUG: detectedType: ${fallback}, hex start: ${hex.slice(0, 10)}`);
             return fallback;
         } catch (e) {
             console.warn('Magic number detection failed', e);
@@ -186,7 +179,6 @@ export class FileValidator {
         // Use standard Audio element to check support
         const audio = document.createElement('audio');
         const support = audio.canPlayType(mimeType);
-        console.log(`DEBUG: canPlayType(${mimeType}) = ${support}`);
         return support === 'probably' || support === 'maybe';
     }
 
