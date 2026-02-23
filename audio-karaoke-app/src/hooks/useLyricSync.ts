@@ -9,6 +9,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SyncProgress, SyncResult } from '@/utils/ml/lyricSync';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
+import { audioCache } from '@/utils/storage/audioCache';
+import { lyricSyncCache } from '@/utils/storage/lyricSyncCache';
 
 interface LyricSyncState {
     isProcessing: boolean;
@@ -57,18 +59,44 @@ export function useLyricSync(controller: PlaybackController) {
             error: null,
         });
 
-        const worker = getWorker();
+        const runSync = async () => {
+            const file = controller.getOriginalFile();
+            const modelUsed = 'whisper-tiny-en'; // Match worker config
+            let fileHash = '';
 
-        worker.onmessage = (e: MessageEvent) => {
+            if (file) {
+                fileHash = await audioCache.hashFile(file);
+                // Check cache first
+                const cachedSync = await lyricSyncCache.getCachedSync(fileHash, modelUsed);
+                if (cachedSync) {
+                    setState(prev => ({
+                        ...prev,
+                        isProcessing: false,
+                        result: cachedSync,
+                        progress: { stage: 'done', progress: 1, message: 'Loaded from cache!' },
+                    }));
+                    return;
+                }
+            }
+
+            const worker = getWorker();
+
+        worker.onmessage = async (e: MessageEvent) => {
             const { type, payload } = e.data;
 
             if (type === 'PROGRESS') {
                 setState(prev => ({ ...prev, progress: payload as SyncProgress }));
             } else if (type === 'RESULT') {
+                const syncResult = payload as SyncResult;
+                if (fileHash) {
+                    // Fire and forget cache save
+                    lyricSyncCache.cacheSyncResult(fileHash, modelUsed, syncResult).catch(() => {});
+                }
+                
                 setState(prev => ({
                     ...prev,
                     isProcessing: false,
-                    result: payload as SyncResult,
+                    result: syncResult,
                     progress: { stage: 'done', progress: 1, message: 'Done!' },
                 }));
             } else if (type === 'ERROR') {
@@ -85,6 +113,9 @@ export function useLyricSync(controller: PlaybackController) {
             type: 'TRANSCRIBE',
             payload: { audioData, sampleRate, lyrics },
         });
+        };
+
+        runSync();
     }, [controller, getWorker]);
 
     // Cancel processing

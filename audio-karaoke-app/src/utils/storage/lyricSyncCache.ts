@@ -30,7 +30,10 @@ export class LyricSyncCache {
                 .first();
 
             if (existing) {
-                await db.lyricSyncCache.update(existing.id!, cacheData);
+                await db.lyricSyncCache.update(existing.id!, {
+                    processedAt: cacheData.processedAt,
+                    result: cacheData.result
+                });
             } else {
                 await db.lyricSyncCache.add(cacheData);
             }

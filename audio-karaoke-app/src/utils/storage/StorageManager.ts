@@ -1,6 +1,7 @@
 import { audioCache } from './audioCache';
 import { modelStorage } from './modelStorage';
 import { db } from './audioDatabase';
+import { lyricSyncCache } from './lyricSyncCache';
 import { StorageQuotaError, FileValidationError } from '../../errors';
 
 export class StorageManager {
@@ -15,7 +16,10 @@ export class StorageManager {
         // (Better to lose cached stems than to fail processing/loading models)
         await audioCache.clearAudioCache();
         
-        // 2. Clear old models (keep only the most recent ones)
+        // 2. Clear ML Alignments cache
+        await lyricSyncCache.clearCache();
+        
+        // 3. Clear old models (keep only the most recent ones)
         await modelStorage.evictOldestIfNeeded(2, 0.5); // Aggressive model cleanup
         
         console.log('[StorageManager] Emergency cleanup complete');
