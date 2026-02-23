@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useAudio } from '@/context/AudioProvider';
 
