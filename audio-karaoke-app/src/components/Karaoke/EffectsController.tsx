@@ -159,6 +159,14 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         Themes
                     </button>
 
+                    <button
+                        onClick={() => setShowMixer(!showMixer)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            showMixer
+                                ? 'bg-cyan-500/30 text-cyan-300 ring-1 ring-cyan-500/40 shadow-lg shadow-cyan-500/20'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
+                        }`}
+                    >
                         <Sliders className="w-4 h-4" />
                         Studio Mixer
                     </button>
