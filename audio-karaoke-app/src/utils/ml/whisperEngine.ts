@@ -89,9 +89,13 @@ export class WhisperEngine {
             }
         }
 
-        return {
-            text: output.text,
-            segments
-        };
+    /**
+     * Transcribe audio data and return LRC formatted string.
+     */
+    async transcribeToLrc(audio: Float32Array): Promise<string> {
+        const result = await this.transcribe(audio);
+        return LrcGenerator.generate(result.segments);
     }
 }
+
+import { LrcGenerator } from '../karaoke/LrcGenerator';
