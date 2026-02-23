@@ -22,23 +22,24 @@ test.describe('Karaoke Flow', () => {
         await expect(fileInput).toBeAttached();
         
         await fileInput.setInputFiles('e2e/fixtures/dummy.mp3');
-
-        // 2. Wait for processing progress
-        // Should catch the toast or progress bar
-        await expect(page.getByText(/Separating Audio/i)).toBeVisible({ timeout: 10000 });
-        // "Running AI models..." might be replaced instantly by "Loading model...", so skip checking for specific transient message
-
-        // 3. Wait for player to appear
-        // The player header or play button should be visible
-        // We look for a play button or the "Original" preset label
-        const playerContainer = page.locator('.glass-premium'); // Main visualizer/player container
-        await expect(playerContainer).toBeVisible({ timeout: 60000 });
         
-        // 4. Check controls
-        const playButton = page.getByTitle('Play/Pause'); // Assuming title prop or aria-label
-        // Or look for lucide-react Play icon
-        // Let's look for known elements in the player interface
-        await expect(page.getByText('Original')).toBeVisible(); // Default preset
+        // 2. Wait for ProcessingView to appear
+        // This is more robust than checking URL patterns during redirects
+        await expect(page.getByTestId('processing-view')).toBeVisible({ timeout: 60000 });
+
+        // 3. Wait for processing progress
+        await expect(page.getByText(/Separating Audio/i)).toBeVisible({ timeout: 20000 });
+
+        // 4. Wait for player/results to appear
+        // The orchestrator redirects to /results/[hash] or /karaoke/[hash] when done
+        await expect(page).toHaveURL(/\/(results|karaoke)\//, { timeout: 120000 });
+
+        // 5. Wait for player container
+        const playerContainer = page.locator('.glass-premium'); 
+        await expect(playerContainer).toBeVisible({ timeout: 30000 });
+        
+        // 6. Check controls
+        await expect(page.getByText('Original')).toBeVisible(); 
         
         // 5. Test basic interaction
         // Play
