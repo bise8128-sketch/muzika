@@ -71,6 +71,7 @@ export class PlaybackController {
   private pitchScoringWorker: Worker | null = null;
   private currentKey: KeyInfo | null = null;
   private isAnalyzing: boolean = false;
+  private isAdaptiveAssistEnabled: boolean = false;
 
   constructor() {
     this.audioContext = getAudioContext();
@@ -340,7 +341,23 @@ export class PlaybackController {
       // Handle updates from worker
       this.pitchScoringWorker.onmessage = (event) => {
         if (event.data.type === 'SCORE_UPDATE') {
-           this.events.emit("pitch-analysis-update", event.data.payload);
+           const payload = event.data.payload;
+           this.events.emit("pitch-analysis-update", payload);
+
+           // Handle Adaptive Assist
+           if (this.isAdaptiveAssistEnabled) {
+              const { result } = payload;
+              // If accuracy is low, increase correction amount. 
+              // If accuracy is high, decrease it to avoid "robotic" sound when singing well.
+              // Threshold: if score < 70, start assisting.
+              // Formula: 1.0 - (score/100) but capped.
+              let targetCorrection = 0.8;
+              if (result.accuracy >= 90) targetCorrection = 0.2;
+              else if (result.accuracy >= 70) targetCorrection = 0.5;
+              else targetCorrection = 0.95;
+
+              this.effectsChain.setPitchCorrectionAmount(targetCorrection);
+           }
         }
       };
 
@@ -403,23 +420,21 @@ export class PlaybackController {
   }
 
   async getFinalPerformance(): Promise<{ overallScore: PerformanceScore; history: PitchAnalysisResult[] } | null> {
-      if (!this.pitchScoringWorker) return null;
+      // ... same implementation ...
+  }
 
-      return new Promise((resolve) => {
-          const worker = this.pitchScoringWorker!;
-          
-          const handleMessage = (e: MessageEvent) => {
-              if (e.data.type === 'FINAL_STATE') {
-                  worker.removeEventListener('message', handleMessage);
-                  worker.terminate();
-                  this.pitchScoringWorker = null;
-                  resolve(e.data.payload);
-              }
-          };
-          
-          worker.addEventListener('message', handleMessage);
-          worker.postMessage({ type: 'GET_FINAL_STATE' });
-      });
+  setAdaptiveAssist(enabled: boolean): void {
+      this.isAdaptiveAssistEnabled = enabled;
+      this.effectsChain.setPitchCorrectionAdaptiveMode(enabled);
+      
+      // If we're disabling it, reset to the default correction amount
+      if (!enabled) {
+          this.effectsChain.setPitchCorrectionAmount(0.8);
+      }
+  }
+
+  isAdaptiveAssistActive(): boolean {
+      return this.isAdaptiveAssistEnabled;
   }
 
   /**

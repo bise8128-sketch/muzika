@@ -50,6 +50,7 @@ export class PitchCorrector {
             retuneSpeed: 0.5,
             correctionAmount: 0.8,
             latency: 50,
+            adaptiveMode: false,
             ...settings
         };
     }
@@ -124,6 +125,7 @@ export class PitchCorrector {
                 referenceKey: this.settings.referenceKey,
                 retuneSpeed: this.settings.retuneSpeed,
                 correctionAmount: this.settings.correctionAmount,
+                adaptiveMode: this.settings.adaptiveMode,
                 sampleRate: this.audioContext.sampleRate
             }
         });
@@ -164,6 +166,14 @@ export class PitchCorrector {
      */
     setEnabled(enabled: boolean): void {
         this.settings.enabled = enabled;
+        this.sendConfiguration();
+    }
+
+    /**
+     * Enable or disable adaptive pitch correction
+     */
+    setAdaptiveMode(enabled: boolean): void {
+        this.settings.adaptiveMode = enabled;
         this.sendConfiguration();
     }
 

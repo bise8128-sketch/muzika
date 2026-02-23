@@ -94,6 +94,7 @@ export interface PitchCorrectionSettings {
     retuneSpeed: number; // 0.1 to 1.0 (slow to fast)
     correctionAmount: number; // 0 to 1
     latency: number; // processing latency in ms
+    adaptiveMode: boolean; // Dynamic adjustment based on score
 }
 
 /**
@@ -134,7 +135,8 @@ export const DEFAULT_AUDIO_EFFECTS: AudioEffectsSettings = {
         referenceKey: 0,
         retuneSpeed: 0.5,
         correctionAmount: 0.8,
-        latency: 50
+        latency: 50,
+        adaptiveMode: false
     }
 };
 

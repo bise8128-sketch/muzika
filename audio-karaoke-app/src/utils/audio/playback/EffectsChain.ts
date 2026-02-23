@@ -287,6 +287,11 @@ export class EffectsChain {
         this.pitchCorrector.setRetuneSpeed(retuneSpeed);
     }
 
+    async setPitchCorrectionAdaptiveMode(enabled: boolean): Promise<void> {
+        if (!this.pitchCorrector.isReady()) await this.pitchCorrector.initialize();
+        this.pitchCorrector.setAdaptiveMode(enabled);
+    }
+
     async setPitchCorrectionAmount(correctionAmount: number): Promise<void> {
         if (!this.pitchCorrector.isReady()) await this.pitchCorrector.initialize();
         this.pitchCorrector.setCorrectionAmount(correctionAmount);

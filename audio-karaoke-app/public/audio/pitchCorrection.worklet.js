@@ -14,8 +14,14 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
             referenceKey: 0,
             retuneSpeed: 0.5,
             correctionAmount: 0.8,
-            sampleRate: 44100
+            sampleRate: 44100,
+            adaptiveMode: false,
+            smoothingFactor: 0.1 // For smooth transitions between correction amounts
         };
+
+        // Smoothed state
+        this.currentCorrectionAmount = 0.8;
+        this.targetCorrectionAmount = 0.8;
 
         // Scale definitions (semitone intervals from root)
         this.scales = {
@@ -73,6 +79,14 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
      */
     updateConfig(newConfig) {
         this.config = { ...this.config, ...newConfig };
+        
+        // If correctionAmount is explicitly provided and we're not in adaptive mode, or if it's the first set
+        if (newConfig.correctionAmount !== undefined) {
+            this.targetCorrectionAmount = newConfig.correctionAmount;
+            if (!this.config.enabled) {
+                this.currentCorrectionAmount = this.targetCorrectionAmount;
+            }
+        }
     }
 
     /**
@@ -228,7 +242,7 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
 
         // Apply correction based on correction amount and retune speed
         // Retune speed controls how quickly the correction is applied (0.1 = slow, 1.0 = instant)
-        const effectiveRatio = 1 + (correctionRatio - 1) * this.config.correctionAmount * this.config.retuneSpeed;
+        const effectiveRatio = 1 + (correctionRatio - 1) * this.currentCorrectionAmount * this.config.retuneSpeed;
 
         // Apply time-domain pitch shifting using resampling
         const phase = 0;
@@ -279,7 +293,7 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
         const correctionRatio = targetFrequency / pitchResult.frequency;
 
         // Apply correction based on correction amount and retune speed
-        const effectiveRatio = 1 + (correctionRatio - 1) * this.config.correctionAmount * this.config.retuneSpeed;
+        const effectiveRatio = 1 + (correctionRatio - 1) * this.currentCorrectionAmount * this.config.retuneSpeed;
 
         // Apply time-domain pitch shifting using resampling
         for (let i = 0; i < buffer.length; i++) {
@@ -302,6 +316,13 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
      * Process audio
      */
     process(inputs, outputs, parameters) {
+        // Smooth correction amount
+        if (Math.abs(this.currentCorrectionAmount - this.targetCorrectionAmount) > 0.001) {
+            this.currentCorrectionAmount += (this.targetCorrectionAmount - this.currentCorrectionAmount) * this.config.smoothingFactor;
+        } else {
+            this.currentCorrectionAmount = this.targetCorrectionAmount;
+        }
+
         const startTime = performance.now();
 
         const input = inputs[0];
