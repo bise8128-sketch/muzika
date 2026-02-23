@@ -82,7 +82,7 @@ export const WhisperProgressIndicator: React.FC<WhisperProgressIndicatorProps> =
                             <motion.div
                                 className={`h-full bg-gradient-to-r ${bgGradient} rounded-full relative overflow-hidden`}
                                 initial={{ width: "0%" }}
-                                animate={{ width: \`\${percentage * 100}%\` }}
+                                animate={{ width: `${percentage * 100}%` }}
                                 transition={{ ease: "easeOut", duration: 0.3 }}
                             >
                                 {isProcessing && stage !== 'done' && (
