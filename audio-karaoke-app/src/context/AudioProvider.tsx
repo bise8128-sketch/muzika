@@ -64,9 +64,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 send({ type: 'SYNC_COMPLETE' });
             } else if (lyricSync.error) {
                 send({ type: 'SYNC_ERROR', error: lyricSync.error });
+            } else if (!lyricSync.isProcessing) {
+                // If we enter syncing but no sync is processing (e.g., no lyrics provided), skip it
+                send({ type: 'SYNC_COMPLETE' });
             }
         }
-    }, [machineState.value, lyricSync.result, lyricSync.error, send, activeResult]);
+    }, [machineState.value, lyricSync.result, lyricSync.error, lyricSync.isProcessing, send, activeResult]);
 
     // 3. Centralized Navigation driven by Machine State
     useEffect(() => {
