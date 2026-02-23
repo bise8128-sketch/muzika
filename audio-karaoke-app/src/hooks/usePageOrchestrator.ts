@@ -56,6 +56,13 @@ export function usePageOrchestrator() {
     }
   }, [processingResult, setActiveResult]);
 
+  const unifiedStatus = useMemo(() => {
+    if (isProcessing) return 'processing';
+    if (isError) return 'error';
+    if (processingResult) return 'completed';
+    return 'idle';
+  }, [isProcessing, isError, processingResult]);
+
   const activeResult = processingResult || history.restoredResult;
 
   const handleRestart = useCallback(() => {
