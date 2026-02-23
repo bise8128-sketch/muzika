@@ -12,6 +12,7 @@ export class AudioKaraokeDB extends Dexie {
     models!: Table<ModelStorageData, number>;
     cachedAudio!: Table<CachedAudio, number>;
     processingLogs!: Table<ProcessingLog, number>;
+    audioFiles!: Table<any, string>;
     songs!: Table<SongEntry, number>;
     playlists!: Table<Playlist, number>;
     queue!: Table<QueueState, number>;
@@ -51,7 +52,8 @@ export class AudioKaraokeDB extends Dexie {
             playlists: '++id, name, createdAt, updatedAt',
             queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt',
             performanceHistory: '++id, songId, fileHash, grade, score, createdAt',
-            processingQueue: '++id, fileId, status'
+            processingQueue: '++id, fileId, status',
+            audioFiles: 'id, name, createdAt'
         });
 
         // Version 6: Hybrid storage support (OPFS paths)
@@ -128,6 +130,7 @@ const createMockDB = (): any => ({
     models: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     cachedAudio: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => null, delete: async () => {} }) }), orderBy: () => ({ toArray: async () => [] }), add: async () => 0, update: async () => 0, delete: async () => {} },
     processingLogs: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    audioFiles: { toArray: async () => [], clear: async () => {}, count: async () => 0, get: async () => undefined, put: async () => '', where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => '', update: async () => 0, delete: async () => {} },
     songs: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     playlists: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     queue: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
