@@ -34,32 +34,8 @@ export function useAppState(options: UseAppStateOptions) {
   const router = useRouter();
   const { machineState: state, send } = useAudio();
 
-  // React to separation completion
-  useEffect(() => {
-    if (separationStatus === 'processing') {
-      // Typically handled by manual event, but sync here too
-      // send({ type: 'UPLOAD_COMPLETE' }); 
-      // Actually, separationStatus 'processing' means client-side is working
-    } else if (separationStatus === 'completed' && separationResult) {
-      onHistoryRefresh();
-      send({ type: 'PROCESS_COMPLETE' });
+  // State transitions are now handled globally in AudioProvider via useEffect
 
-      if (autoStartKaraoke && controller) {
-        controller.setAudioBuffers([separationResult.vocals, separationResult.instrumentals]);
-        if (separationResult.file) {
-          controller.setOriginalFile(separationResult.file);
-        }
-        send({ type: 'START_KARAOKE' });
-        router.push(`/karaoke/${separationResult.fileHash}`);
-      } else {
-        router.push(`/results/${separationResult.fileHash}`);
-      }
-    } else if (separationStatus === 'error') {
-      console.error("Separation Error:", separationError);
-      send({ type: 'PROCESS_ERROR', error: separationError || 'Unknown separation error' });
-      alert(`Error: ${separationError || 'Unknown error'}`);
-    }
-  }, [separationStatus, separationResult, autoStartKaraoke, controller, separationError, onHistoryRefresh, send, router]);
 
 
   const handleRestart = useCallback(() => {
