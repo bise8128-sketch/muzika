@@ -347,16 +347,7 @@ export class PlaybackController {
            // Handle Adaptive Assist
            if (this.isAdaptiveAssistEnabled) {
               const { result } = payload;
-              // If accuracy is low, increase correction amount. 
-              // If accuracy is high, decrease it to avoid "robotic" sound when singing well.
-              // Threshold: if score < 70, start assisting.
-              // Formula: 1.0 - (score/100) but capped.
-              let targetCorrection = 0.8;
-              if (result.accuracy >= 90) targetCorrection = 0.2;
-              else if (result.accuracy >= 70) targetCorrection = 0.5;
-              else targetCorrection = 0.95;
-
-              this.effectsChain.setPitchCorrectionAmount(targetCorrection);
+              this.effects.setPitchCorrectionVocalAccuracy(result.accuracy);
            }
         }
       };
