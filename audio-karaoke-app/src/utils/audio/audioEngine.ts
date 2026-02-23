@@ -45,32 +45,36 @@ export class AudioEngine {
      * Load audio from ArrayBuffer
      */
     async load(buffer: ArrayBuffer | Uint8Array) {
-        // Clone the buffer to avoid DataCloneError if the original is detached or read-only from IndexedDB
-        // This is necessary because decodeAudioData can detach the buffer, causing issues if re-used or if it's a SharedArrayBuffer without proper context
-        let bufferCopy: ArrayBuffer;
+        // Treat buffers as consumable where possible to prevent OOM on mobile.
+        // We only clone if it's a view that does not map 1:1 to its underlying buffer.
+        let bufferToDecode: ArrayBuffer | null = null;
 
-        if (buffer instanceof Uint8Array) {
-            // If it's a Uint8Array (view), slice it to get a fresh copy, then get the underlying buffer
-            // We use the view's slice to ensure we get exactly the data in the view
-            const viewCopy = new Uint8Array(buffer);
-            bufferCopy = viewCopy.buffer; 
-        } else if (buffer instanceof ArrayBuffer) {
-            bufferCopy = buffer.slice(0);
+        if (buffer instanceof ArrayBuffer) {
+            bufferToDecode = buffer;
+        } else if (buffer instanceof Uint8Array) {
+            if (buffer.byteOffset === 0 && buffer.byteLength === buffer.buffer.byteLength) {
+                bufferToDecode = buffer.buffer as ArrayBuffer;
+            } else {
+                bufferToDecode = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+            }
+        } else if (ArrayBuffer.isView(buffer)) {
+            const view = buffer as ArrayBufferView;
+            if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength) {
+                bufferToDecode = view.buffer as ArrayBuffer;
+            } else {
+                bufferToDecode = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+            }
         } else {
-             // Fallback for other view types if ever passed
-             // @ts-ignore
-             if (ArrayBuffer.isView(buffer)) {
-                 // @ts-ignore
-                 const viewCopy = new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
-                 bufferCopy = viewCopy.buffer;
-             } else {
-                 console.warn('[AudioEngine] Unknown buffer type, attempting to allow:', buffer);
-                 bufferCopy = buffer as ArrayBuffer;
-             }
+             console.warn('[AudioEngine] Unknown buffer type, attempting to allow:', buffer);
+             bufferToDecode = buffer as unknown as ArrayBuffer;
         }
         
         // Decode buffer
-        const audioBuffer = await context.decodeAudioData(bufferCopy);
+        const audioBuffer = await context.decodeAudioData(bufferToDecode!);
+        
+        // Dereference to allow Garbage Collection of the massive arraybuffer immediately
+        bufferToDecode = null;
+
         this.player.buffer = new ToneAudioBuffer(audioBuffer);
         this._duration = audioBuffer.duration;
         this.emit('load', { duration: this._duration });

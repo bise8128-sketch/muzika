@@ -23,6 +23,7 @@ class SessionWorker {
     private pendingReject: ((reason: Error) => void) | null = null;
     private progressHandler: ((progress: number) => void) | null = null;
     private inFlight = false;
+    private watchdogId: ReturnType<typeof setTimeout> | null = null;
 
     // Queue of sends waiting for the worker to become free
     private queue: Array<{
@@ -43,14 +44,37 @@ class SessionWorker {
         this.worker.onerror = (e: ErrorEvent) => this.handleError(e);
     }
 
+    private resetWatchdog(): void {
+        if (this.watchdogId) clearTimeout(this.watchdogId);
+        // If the worker is completely silent for 60 seconds (no progress, no response), assume it dropped the message.
+        this.watchdogId = setTimeout(() => {
+            if (this.inFlight) {
+                console.warn('[SessionWorker] Watchdog timeout: Worker silently dropped message or hung.');
+                this.pendingReject?.(new Error('Worker timeout: no response or progress for 60 seconds'));
+                this.pendingResolve = null;
+                this.pendingReject = null;
+                this.flushQueue();
+            }
+        }, 60000);
+    }
+
+    private clearWatchdog(): void {
+        if (this.watchdogId) {
+            clearTimeout(this.watchdogId);
+            this.watchdogId = null;
+        }
+    }
+
     private handleMessage(event: MessageEvent): void {
         const { type, payload } = event.data;
         if (type === 'ERROR' || type === 'FAILED') {
+            this.clearWatchdog();
             this.pendingReject?.(new Error(payload?.message || 'Unknown worker error'));
             this.pendingResolve = null;
             this.pendingReject = null;
             this.flushQueue();
         } else if (type === 'PROGRESS') {
+            this.resetWatchdog();
             const value = typeof payload === 'number'
                 ? payload
                 : (payload?.percentage ?? payload?.progress);
@@ -58,6 +82,7 @@ class SessionWorker {
             // PROGRESS does NOT complete the task — do NOT flush here
         } else {
             // SUCCESS / COMPLETE / STREAM_READY / CHUNK_PROCESSED / etc.
+            this.clearWatchdog();
             this.pendingResolve?.(payload);
             this.pendingResolve = null;
             this.pendingReject = null;
@@ -66,6 +91,7 @@ class SessionWorker {
     }
 
     private handleError(e: ErrorEvent): void {
+        this.clearWatchdog();
         this.pendingReject?.(new Error(`Worker error: ${e.message}`));
         this.pendingResolve = null;
         this.pendingReject = null;
@@ -73,9 +99,11 @@ class SessionWorker {
     }
 
     private flushQueue(): void {
-        this.inFlight = false;
-        if (this.queue.length === 0) return;
-        this.dispatch(this.queue.shift()!);
+        if (this.queue.length > 0) {
+            this.dispatch(this.queue.shift()!);
+        } else {
+            this.inFlight = false;
+        }
     }
 
     private dispatch(item: typeof this.queue[number]): void {
@@ -83,7 +111,16 @@ class SessionWorker {
         this.pendingResolve = item.resolve;
         this.pendingReject = item.reject;
         this.progressHandler = item.onProgress ?? null;
-        this.worker.postMessage({ type: item.type, payload: item.payload }, item.transferables);
+        this.resetWatchdog();
+        try {
+            this.worker.postMessage({ type: item.type, payload: item.payload }, item.transferables);
+        } catch (error) {
+            this.clearWatchdog();
+            this.pendingResolve = null;
+            this.pendingReject = null;
+            item.reject(error instanceof Error ? error : new Error(String(error)));
+            this.flushQueue();
+        }
     }
 
     send<TResult>(

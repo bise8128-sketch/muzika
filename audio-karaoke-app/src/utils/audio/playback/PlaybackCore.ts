@@ -163,6 +163,22 @@ export class PlaybackController {
       const currentTime = this.getCurrentTime();
       const destination = this.effects.getDestination();
 
+      let longestBufferIndex = -1;
+      let maxDuration = 0;
+      
+      this.audioBuffers.forEach((buffer, index) => {
+        if (buffer && buffer.duration > maxDuration) {
+          maxDuration = buffer.duration;
+          longestBufferIndex = index;
+        }
+      });
+      
+      // Also consider voice buffer
+      let voiceIsLongest = false;
+      if (this.voiceBuffer && this.voiceBuffer.duration > maxDuration) {
+        voiceIsLongest = true;
+      }
+
       this.audioBuffers.forEach((buffer, index) => {
         const stem = this.stemStates[index];
         const source = this.audioContext.createBufferSource();
@@ -205,12 +221,15 @@ export class PlaybackController {
         this.effects.connectSourceToEffects(analyser);
 
         source.start(0, currentTime);
-        source.onended = () => {
-          if (this.isPlaying) {
-            this.stop();
-            this.events.emit("ended");
-          }
-        };
+        
+        if (index === longestBufferIndex && !voiceIsLongest) {
+          source.onended = () => {
+            if (this.isPlaying) {
+              this.stop();
+              this.events.emit("ended");
+            }
+          };
+        }
 
         this.bufferSources.push(source);
         this.gainNodes[index] = gainNode;
@@ -233,6 +252,16 @@ export class PlaybackController {
         this.effects.connectSourceToEffects(voiceGain);
 
         voiceSource.start(0, currentTime);
+        
+        if (voiceIsLongest || longestBufferIndex === -1) {
+          voiceSource.onended = () => {
+            if (this.isPlaying) {
+              this.stop();
+              this.events.emit("ended");
+            }
+          };
+        }
+        
         this.bufferSources.push(voiceSource);
       }
 
