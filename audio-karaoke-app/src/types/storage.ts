@@ -29,6 +29,20 @@ export interface ProcessingLog {
     error?: string; // Keep for backward compatibility
 }
 
+export interface ProcessingJob {
+    id?: number;
+    fileId: string;           // Reference to audioFiles
+    fileName: string;         // Human readable name for UI
+    fileHash: string;         // Hash to check if already cached
+    modelId: string;          // e.g. 'htdemucs'
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    progress: number;
+    error?: string;
+    createdAt: number;
+    startedAt?: number;
+    completedAt?: number;
+}
+
 export interface SongEntry {
     id?: number;
     type: 'ai_separated' | 'direct_karaoke';

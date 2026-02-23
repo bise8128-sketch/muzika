@@ -4,7 +4,7 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { CachedAudio, ProcessingLog, SongEntry, Playlist, QueueState } from '@/types/storage';
+import type { CachedAudio, ProcessingLog, ProcessingJob, SongEntry, Playlist, QueueState } from '@/types/storage';
 import type { ModelStorageData } from '@/types/model';
 
 export class AudioKaraokeDB extends Dexie {
@@ -16,6 +16,7 @@ export class AudioKaraokeDB extends Dexie {
     playlists!: Table<Playlist, number>;
     queue!: Table<QueueState, number>;
     performanceHistory!: Table<any, number>;
+    processingQueue!: Table<ProcessingJob, number>;
 
     constructor() {
         super('AudioKaraokeDB');
@@ -31,7 +32,6 @@ export class AudioKaraokeDB extends Dexie {
             queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt'
         });
 
-        // Version 7: Performance history for leaderboards
         this.version(7).stores({
             models: '++id, modelId, name, version, downloadedAt',
             cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
@@ -40,6 +40,18 @@ export class AudioKaraokeDB extends Dexie {
             playlists: '++id, name, createdAt, updatedAt',
             queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt',
             performanceHistory: '++id, songId, fileHash, grade, score, createdAt'
+        });
+
+        // Version 8: Offline background processing queue
+        this.version(8).stores({
+            models: '++id, modelId, name, version, downloadedAt',
+            cachedAudio: '++id, fileHash, fileName, processedAt, [fileHash+modelUsed]',
+            processingLogs: '++id, fileHash, status, startedAt',
+            songs: '++id, type, title, artist, versionName, originalHash, createdAt, lastPlayedAt',
+            playlists: '++id, name, createdAt, updatedAt',
+            queue: '++id, currentIndex, shuffleMode, repeatMode, updatedAt',
+            performanceHistory: '++id, songId, fileHash, grade, score, createdAt',
+            processingQueue: '++id, fileId, status'
         });
 
         // Version 6: Hybrid storage support (OPFS paths)
@@ -79,6 +91,7 @@ export class AudioKaraokeDB extends Dexie {
         await this.songs.clear();
         await this.playlists.clear();
         await this.queue.clear();
+        await this.processingQueue.clear();
     }
 
     /**
@@ -118,6 +131,7 @@ const createMockDB = (): any => ({
     songs: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     playlists: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     queue: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
+    processingQueue: { toArray: async () => [], clear: async () => {}, count: async () => 0, where: () => ({ equals: () => ({ first: async () => undefined, delete: async () => {} }) }), add: async () => 0, update: async () => 0, delete: async () => {} },
     clearAll: async () => {},
     getDatabaseSize: async () => 0,
 });
