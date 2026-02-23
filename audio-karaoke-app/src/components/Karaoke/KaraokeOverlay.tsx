@@ -14,11 +14,15 @@ import { PanelsOverlay } from './Visualizer/PanelsOverlay';
 import { SmartTransposeSuggestion } from './SmartTransposeSuggestion';
 import { SettingsPanel } from '../UI/SettingsPanel';
 import { StemSeparationPanel } from './StemSeparationPanel';
-import { separateAudio } from '@/utils/ml/separateAudio';
 import { ModelType, MODELS } from '@/types/model';
 import { ProcessingProgress } from '@/types/audio';
 import { StateFrom } from 'xstate';
 import { karaokeMachine } from '@/machines/karaokeMachine';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/utils/storage/audioDatabase';
+import { offlineQueueManager } from '@/utils/processing/OfflineQueueManager';
+import { audioCache } from '@/utils/storage/audioCache';
+import { StorageManager } from '@/utils/storage/StorageManager';
 
 interface KaraokeOverlayProps {
     uiState: KaraokeUIState;
@@ -94,45 +98,83 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
 }) => {
     const t = useTranslations('KaraokePlayer');
 
-    // Stem Separation State
     const [showSeparation, setShowSeparation] = React.useState(false);
-    const [separationProgress, setSeparationProgress] = React.useState<ProcessingProgress | null>(null);
     const [separationError, setSeparationError] = React.useState<Error | null>(null);
 
-    // Auto-open separation panel if track is not separated
-    // This is a simplified logic – in a real app, you'd check if separate samples already exist
-    React.useEffect(() => {
-        const checkSeparation = async () => {
-             //- [x] Implementation: Separation Worker [/]
-             //- [x] Setup `Web Worker` for processing
-             //- [x] Integrate `transformers.js` (or similar library) for client-side separation
-             //- [x] Implement progress tracking and IndexedDB caching
-             // For this FI, we'll assume the existence of a 'Separate Stems' button or auto-trigger
+    // Reactive query for the current file's separation job
+    const activeJob = useLiveQuery(async () => {
+        const file = controller.getOriginalFile();
+        if (!file) return null;
+        const hash = await audioCache.hashFile(file);
+        const job = await db.processingQueue
+            .where('fileHash')
+            .equals(hash)
+            .last(); // get most recent
+        return job;
+    }, [controller]);
+
+    // Map `ProcessingJob` to `ProcessingProgress` for the UI
+    const separationProgress: ProcessingProgress | null = React.useMemo(() => {
+        if (!activeJob) return null;
+        return {
+            phase: activeJob.status === 'processing' ? 'separating' : (activeJob.status === 'completed' ? 'done' : activeJob.status) as any,
+            percentage: activeJob.progress,
+            message: activeJob.status === 'pending' ? 'Queued...' : `Background processing: ${Math.round(activeJob.progress)}%`,
+            currentSegment: 0,
+            totalSegments: 1,
+            executionBackend: 'wasm'
         };
-        checkSeparation();
-    }, []);
+    }, [activeJob]);
+
+    // Handle completed jobs - hot swap buffers
+    React.useEffect(() => {
+        const handleJobCompleted = async (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const file = controller.getOriginalFile();
+            if (!file) return;
+            const currentHash = await audioCache.hashFile(file);
+            
+            if (customEvent.detail?.fileHash === currentHash) {
+                // Job finished for our CURRENT song! Load from cache!
+                const cached = await audioCache.getCachedAudio(currentHash, MODELS[ModelType.DEMUCS].id);
+                if (cached) {
+                    controller.setAudioBuffers([cached.vocals.slice(0), cached.instrumentals.slice(0)]);
+                    console.log('Hot-swapped separated audio from background job!');
+                }
+            }
+        };
+
+        window.addEventListener('muzika-job-completed', handleJobCompleted);
+        return () => window.removeEventListener('muzika-job-completed', handleJobCompleted);
+    }, [controller]);
 
     const handleStartSeparation = async () => {
         setSeparationError(null);
-        setSeparationProgress({ phase: 'decoding', percentage: 0, message: 'Initializing...', currentSegment: 0, totalSegments: 0 });
         
         try {
-            // Use the new getOriginalFile method
             const file = controller.getOriginalFile();
-            
             if (!file) {
                 throw new Error('No audio file found for separation');
             }
 
-            const result = await separateAudio(file, {
-                modelInfo: MODELS[ModelType.DEMUCS],
-                onProgress: (p) => setSeparationProgress(p)
-            });
-
-            // Update controller with final buffers
-            controller.setAudioBuffers([result.vocals, result.instrumentals]);
-            setSeparationProgress({ phase: 'separating', percentage: 100, message: 'Complete!', currentSegment: 0, totalSegments: 0 });
+            const fileHash = await audioCache.hashFile(file);
             
+            // First, store the file in db.audioFiles so the background worker can read it
+            const fileId = `${fileHash}_${Date.now()}`;
+            await StorageManager.storeFile(file, fileId);
+
+            // Add job to the OfflineQueueManager
+            await offlineQueueManager.addJob(
+                fileId,
+                file.name,
+                fileHash,
+                MODELS[ModelType.DEMUCS].id
+            );
+            
+            // Allow user to close panel immediately
+            setShowSeparation(false);
+            
+            // (Optional) Toast notification that job was queued here...
         } catch (err) {
             setSeparationError(err instanceof Error ? err : new Error(String(err)));
         }

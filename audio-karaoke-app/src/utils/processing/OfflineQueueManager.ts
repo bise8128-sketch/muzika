@@ -1,7 +1,6 @@
 import { db } from '../storage/audioDatabase';
 import { separateAudio } from '../ml/separateAudio';
 import { MODELS } from '@/types/model';
-import { ProcessingJob } from '@/types/storage';
 
 class OfflineQueueManager {
     private isProcessing: boolean = false;
