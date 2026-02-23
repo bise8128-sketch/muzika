@@ -1,7 +1,9 @@
 import { db } from '../storage/audioDatabase';
 import { separateAudio } from '../ml/separateAudio';
-import { MODELS } from '@/types/model';
+import { MODELS, ModelType } from '@/types/model';
 import { notificationManager } from '../notifications/NotificationManager';
+import { resampleAudio } from '../audio/audioBufferUtils';
+import { WhisperEngine } from '../ml/whisperEngine';
 
 class OfflineQueueManager {
     private isProcessing: boolean = false;
@@ -69,7 +71,7 @@ class OfflineQueueManager {
             console.log(`[OfflineQueueManager] Starting job ${job.id} for file ${job.fileName}`);
 
             // Perform separation
-            await separateAudio(fileRecord.data as File, {
+            const result = await separateAudio(fileRecord.data as File, {
                 modelInfo,
                 onProgress: async (progress) => {
                     // Update progress in DB so UI can observe
@@ -78,6 +80,37 @@ class OfflineQueueManager {
                     });
                 }
             });
+
+            // Automatic Lyric Alignment (Transcription)
+            try {
+                console.log(`[OfflineQueueManager] Starting transcription for ${job.fileName}`);
+                // Resample vocals to 16kHz for Whisper
+                const resampled = await resampleAudio(result.vocals, 16000);
+                const monoData = resampled.getChannelData(0);
+
+                const whisper = new WhisperEngine();
+                // Load whisper-tiny model
+                await whisper.load({
+                    id: 'whisper-tiny-en',
+                    type: ModelType.WHISPER,
+                    name: 'Whisper Tiny (EN)',
+                    version: '1.0.0',
+                    size: 40 * 1024 * 1024
+                });
+
+                const lrc = await whisper.transcribeToLrc(monoData);
+
+                // Update the cachedAudio entry with generated lyrics
+                await db.cachedAudio
+                    .where('[fileHash+modelUsed]')
+                    .equals([job.fileHash, job.modelId])
+                    .modify({ lyrics: lrc });
+
+                console.log(`[OfflineQueueManager] Automatic lyric alignment complete for ${job.fileName}`);
+            } catch (transcriptionError) {
+                console.warn('[OfflineQueueManager] Lyric alignment failed:', transcriptionError);
+                // We don't fail the whole job if transcription fails, separation is still valid
+            }
 
             // Mark completed
             await db.processingQueue.update(job.id, {
