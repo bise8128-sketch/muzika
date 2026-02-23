@@ -4,12 +4,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { PlaybackController } from '@/utils/audio/playbackController';
 import { SeparationResult, PerformanceScore } from '@/types/audio';
 import { useSeparation } from '@/hooks/useSeparation';
-import { useRouter } from '@/i18n/routing';
+import { useRouter, usePathname } from '@/i18n/routing';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
 import { StateFrom, EventFrom } from 'xstate';
 import { useLyricSync } from '@/hooks/useLyricSync'; // Added to allow Syncing
-import { usePathname } from 'next/navigation';
 
 interface AudioContextType {
     controller: PlaybackController | null;
@@ -70,23 +69,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [machineState, machineState.value, lyricSync.result, lyricSync.error, lyricSync.isProcessing, send, activeResult]);
 
-// 3. Centralized Navigation driven by Machine State
+    // 3. Centralized Navigation driven by Machine State
     useEffect(() => {
         const fileHash = machineState.context.fileHash;
         
         if (machineState.matches('results') && fileHash) {
             const expectedPath = `/results/${fileHash}`;
-            if (!pathname.includes(expectedPath)) {
+            if (pathname !== expectedPath) {
                 router.push(expectedPath);
             }
         } else if (machineState.matches('karaoke') && fileHash) {
             const expectedPath = `/karaoke/${fileHash}`;
-            if (!pathname.includes(expectedPath)) {
+            if (pathname !== expectedPath) {
                 router.push(expectedPath);
             }
         } else if (machineState.matches('scoring') && fileHash) {
             const expectedPath = `/karaoke/${fileHash}/score`;
-            if (!pathname.includes(expectedPath)) {
+            if (pathname !== expectedPath) {
                 router.push(expectedPath);
             }
         } else if (machineState.matches('idle') && fileHash) {
