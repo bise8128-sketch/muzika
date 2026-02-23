@@ -95,6 +95,7 @@ export interface PitchCorrectionSettings {
     correctionAmount: number; // 0 to 1
     latency: number; // processing latency in ms
     adaptiveMode: boolean; // Dynamic adjustment based on score
+    vocalAccuracy?: number; // Current vocal accuracy (0-100)
 }
 
 /**
@@ -136,7 +137,8 @@ export const DEFAULT_AUDIO_EFFECTS: AudioEffectsSettings = {
         retuneSpeed: 0.5,
         correctionAmount: 0.8,
         latency: 50,
-        adaptiveMode: false
+        adaptiveMode: false,
+        vocalAccuracy: 100
     }
 };
 

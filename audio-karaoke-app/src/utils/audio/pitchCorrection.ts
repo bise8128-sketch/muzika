@@ -51,6 +51,7 @@ export class PitchCorrector {
             correctionAmount: 0.8,
             latency: 50,
             adaptiveMode: false,
+            vocalAccuracy: 100,
             ...settings
         };
     }
@@ -126,6 +127,7 @@ export class PitchCorrector {
                 retuneSpeed: this.settings.retuneSpeed,
                 correctionAmount: this.settings.correctionAmount,
                 adaptiveMode: this.settings.adaptiveMode,
+                vocalAccuracy: this.settings.vocalAccuracy,
                 sampleRate: this.audioContext.sampleRate
             }
         });
@@ -174,6 +176,14 @@ export class PitchCorrector {
      */
     setAdaptiveMode(enabled: boolean): void {
         this.settings.adaptiveMode = enabled;
+        this.sendConfiguration();
+    }
+
+    /**
+     * Set the vocal accuracy for adaptive pitch correction
+     */
+    setVocalAccuracy(accuracy: number): void {
+        this.settings.vocalAccuracy = Math.max(0, Math.min(100, accuracy));
         this.sendConfiguration();
     }
 
