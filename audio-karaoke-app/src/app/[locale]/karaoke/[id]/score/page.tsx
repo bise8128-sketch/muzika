@@ -5,20 +5,17 @@ import { useParams } from 'next/navigation';
 import { useAudio } from '@/context/AudioProvider';
 import { GradeDisplay } from '@/components/Karaoke/GradeDisplay';
 import { motion } from 'framer-motion';
-import { ArrowLeft, RotateCcw, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, RotateCcw, LayoutGrid, Trophy } from 'lucide-react';
 import { AccuracyHeatmap } from '@/components/Karaoke/AccuracyHeatmap';
 import { LeaderboardDisplay } from '@/components/Karaoke/LeaderboardDisplay';
 import { performanceStorage } from '@/utils/storage/performanceStorage';
-import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { ScoreSubmitForm } from '@/components/Karaoke/ScoreSubmitForm';
 import { LeaderboardOverlay } from '@/components/Karaoke/LeaderboardOverlay';
-import { Trophy } from 'lucide-react';
 
 export default function PerformanceScorePage() {
     const { id } = useParams();
     const { performanceScore, send } = useAudio();
-    const t = useTranslations('HomePage');
     const hasSaved = useRef(false);
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
 
