@@ -10,7 +10,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { AudioProvider } from "@/context/AudioProvider";
 import { ThemeAwareBackground } from "@/components/Visuals/ThemeAwareBackground";
 import Script from "next/script";
-
+import { SerwistProvider } from "@/app/serwist";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -49,18 +49,17 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
       >
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider>
-            <AudioProvider>
-              <MonitoringInit />
-              <ThemeAwareBackground />
-              {children}
-            </AudioProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
-        {/* 
-          Service Worker is automatically registered by @serwist/next
-        */}
+        <SerwistProvider swUrl="/sw.js">
+          <NextIntlClientProvider messages={messages}>
+            <ThemeProvider>
+              <AudioProvider>
+                <MonitoringInit />
+                <ThemeAwareBackground />
+                {children}
+              </AudioProvider>
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </SerwistProvider>
       </body>
     </html>
   );
