@@ -45,6 +45,10 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
         this.analysisBuffer = [];
         this.analysisBufferSize = 2048; // ~46ms at 44.1kHz
 
+        // YIN buffer
+        const maxPeriod = Math.floor(this.config.sampleRate / 80);
+        this.yinBuffer = new Float32Array(maxPeriod + 1);
+
         // Set up message handling
         this.port.onmessage = (event) => {
             this.handleMessage(event.data);
@@ -127,36 +131,67 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
         const minPeriod = Math.floor(sampleRate / 1200);
         const maxPeriod = Math.floor(sampleRate / 80);
 
-        // Calculate autocorrelation
-        const autocorr = new Float32Array(maxPeriod + 1);
-        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+        if (!this.yinBuffer || this.yinBuffer.length < maxPeriod + 1) {
+            this.yinBuffer = new Float32Array(maxPeriod + 1);
+        }
+        const yinBuffer = this.yinBuffer;
+
+        // 1. Difference function
+        for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;
             for (let i = 0; i < bufferSize - lag; i++) {
-                sum += buffer[i] * buffer[i + lag];
+                const delta = buffer[i] - buffer[i + lag];
+                sum += delta * delta;
             }
-            autocorr[lag] = sum;
+            yinBuffer[lag] = sum;
         }
 
-        // Find the peak
-        let peakLag = minPeriod;
-        let peakValue = autocorr[minPeriod];
+        // 2. Cumulative mean normalized difference
+        yinBuffer[0] = 1;
+        let runningSum = 0;
+        for (let lag = 1; lag <= maxPeriod; lag++) {
+            runningSum += yinBuffer[lag];
+            yinBuffer[lag] = yinBuffer[lag] * lag / (runningSum || 1);
+        }
 
-        for (let lag = minPeriod + 1; lag <= maxPeriod; lag++) {
-            if (autocorr[lag] > peakValue) {
-                peakValue = autocorr[lag];
-                peakLag = lag;
+        // 3. Absolute thresholding
+        const threshold = 0.15;
+        let peakLag = -1;
+        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+            if (yinBuffer[lag] < threshold) {
+                // Find local minimum
+                let r = lag;
+                while (r + 1 <= maxPeriod && yinBuffer[r + 1] < yinBuffer[r]) {
+                    r++;
+                }
+                peakLag = r;
+                break;
             }
         }
 
-        // Calculate confidence
-        const confidence = peakValue / (autocorr[0] + 1e-10);
+        if (peakLag === -1) {
+            return null;
+        }
+
+        // 4. Parabolic interpolation
+        let refinedLag = peakLag;
+        if (peakLag > 1 && peakLag < maxPeriod) {
+            const s0 = yinBuffer[peakLag - 1];
+            const s1 = yinBuffer[peakLag];
+            const s2 = yinBuffer[peakLag + 1];
+            const denominator = 2 * (s0 - 2 * s1 + s2);
+            if (denominator !== 0) {
+                refinedLag += (s0 - s2) / denominator;
+            }
+        }
+
+        const frequency = sampleRate / refinedLag;
+        const midiNote = this.frequencyToMidi(frequency);
+        const confidence = Math.max(0, 1.0 - yinBuffer[peakLag]);
 
         if (confidence < 0.3) {
             return null;
         }
-
-        const frequency = sampleRate / peakLag;
-        const midiNote = this.frequencyToMidi(frequency);
 
         return { frequency, midiNote, confidence };
     }

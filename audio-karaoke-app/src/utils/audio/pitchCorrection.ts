@@ -284,36 +284,60 @@ export class PitchCorrector {
         const maxPeriod = Math.floor(sampleRate / 80);   // Min frequency ~80 Hz
 
         // Use provided buffer or allocate if not provided (though for Worklet we should always provide)
-        const autocorr = internalBuffer || new Float32Array(maxPeriod + 1);
+        const yinBuffer = internalBuffer || new Float32Array(maxPeriod + 1);
         
-        // Calculate energy (autocorrelation at lag 0)
-        let energy = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            energy += buffer[i] * buffer[i];
-        }
-        autocorr[0] = energy;
-
-        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+        // 1. Difference function
+        for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;
             for (let i = 0; i < bufferSize - lag; i++) {
-                sum += buffer[i] * buffer[i + lag];
+                const delta = buffer[i] - buffer[i + lag];
+                sum += delta * delta;
             }
-            autocorr[lag] = sum;
+            yinBuffer[lag] = sum;
         }
 
-        // Find the peak in autocorrelation
-        let peakLag = minPeriod;
-        let peakValue = autocorr[minPeriod];
+        // 2. Cumulative mean normalized difference
+        yinBuffer[0] = 1;
+        let runningSum = 0;
+        for (let lag = 1; lag <= maxPeriod; lag++) {
+            runningSum += yinBuffer[lag];
+            yinBuffer[lag] = yinBuffer[lag] * lag / (runningSum || 1);
+        }
 
-        for (let lag = minPeriod + 1; lag <= maxPeriod; lag++) {
-            if (autocorr[lag] > peakValue) {
-                peakValue = autocorr[lag];
-                peakLag = lag;
+        // 3. Absolute thresholding
+        const threshold = 0.15;
+        let peakLag = -1;
+        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+            if (yinBuffer[lag] < threshold) {
+                // Find local minimum
+                let r = lag;
+                while (r + 1 <= maxPeriod && yinBuffer[r + 1] < yinBuffer[r]) {
+                    r++;
+                }
+                peakLag = r;
+                break;
             }
         }
 
-        // Calculate confidence based on peak height relative to zero lag
-        const confidence = peakValue / (autocorr[0] + 1e-10);
+        // If no pitch below threshold
+        if (peakLag === -1) {
+            return null;
+        }
+
+        // 4. Parabolic interpolation
+        let refinedLag = peakLag;
+        if (peakLag > 1 && peakLag < maxPeriod) {
+            const s0 = yinBuffer[peakLag - 1];
+            const s1 = yinBuffer[peakLag];
+            const s2 = yinBuffer[peakLag + 1];
+            const denominator = 2 * (s0 - 2 * s1 + s2);
+            if (denominator !== 0) {
+                refinedLag += (s0 - s2) / denominator;
+            }
+        }
+
+        // Calculate confidence
+        const confidence = Math.max(0, 1.0 - yinBuffer[peakLag]);
 
         // If confidence is too low, return null
         if (confidence < 0.3) {
@@ -321,7 +345,7 @@ export class PitchCorrector {
         }
 
         // Calculate frequency
-        const frequency = sampleRate / peakLag;
+        const frequency = sampleRate / refinedLag;
         const midiNote = PitchCorrector.frequencyToMidi(frequency);
 
         return {

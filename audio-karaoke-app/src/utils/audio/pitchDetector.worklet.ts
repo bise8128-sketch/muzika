@@ -44,12 +44,17 @@ class PitchDetectorProcessor extends AudioWorkletProcessor {
     private framesSinceLastPost: number = 0;
     private postInterval: number = 6; // roughly 60 fps for pitch detection (128 samples per frame * 6 = 768 samples) ~ 57fps.
 
+    private yinBuffer: Float32Array;
+
     constructor(options?: AudioWorkletNodeOptions) {
         super();
         this.sampleRateVal = options?.processorOptions?.sampleRate || 44100;
         this.ringBuffer = new PitchDetectorRingBuffer(this.bufferSize);
         this.analysisBuffer = new Float32Array(this.bufferSize);
         this.postInterval = 6; // Target ~60FPS for UI smoothness
+        
+        const maxPeriod = Math.floor(this.sampleRateVal / 80);
+        this.yinBuffer = new Float32Array(maxPeriod + 1);
     }
 
     process(inputs: Float32Array[][], _outputs: Float32Array[][]): boolean {
@@ -77,53 +82,60 @@ class PitchDetectorProcessor extends AudioWorkletProcessor {
 
         const minPeriod = Math.floor(sampleRate / 1200); // Max ~1200 Hz
         const maxPeriod = Math.floor(sampleRate / 80);   // Min ~80 Hz
+        const yinBuffer = this.yinBuffer;
 
-        const autocorr = new Float32Array(maxPeriod + 1);
-        let energy = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            energy += buffer[i] * buffer[i];
-        }
-        autocorr[0] = energy;
-
-        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+        // 1. Difference function
+        for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;
             for (let i = 0; i < bufferSize - lag; i++) {
-                sum += buffer[i] * buffer[i + lag];
+                const delta = buffer[i] - buffer[i + lag];
+                sum += delta * delta;
             }
-            autocorr[lag] = sum;
+            yinBuffer[lag] = sum;
         }
 
-        let peakLag = minPeriod;
-        let peakValue = autocorr[minPeriod];
+        // 2. Cumulative mean normalized difference
+        yinBuffer[0] = 1;
+        let runningSum = 0;
+        for (let lag = 1; lag <= maxPeriod; lag++) {
+            runningSum += yinBuffer[lag];
+            yinBuffer[lag] = yinBuffer[lag] * lag / (runningSum || 1);
+        }
 
-        for (let lag = minPeriod + 1; lag <= maxPeriod; lag++) {
-            if (autocorr[lag] > peakValue) {
-                peakValue = autocorr[lag];
-                peakLag = lag;
+        // 3. Absolute thresholding
+        const threshold = 0.15;
+        let peakLag = -1;
+        for (let lag = minPeriod; lag <= maxPeriod; lag++) {
+            if (yinBuffer[lag] < threshold) {
+                // Find local minimum
+                let r = lag;
+                while (r + 1 <= maxPeriod && yinBuffer[r + 1] < yinBuffer[r]) {
+                    r++;
+                }
+                peakLag = r;
+                break;
             }
         }
 
-        const confidence = peakValue / (autocorr[0] + 1e-10);
-
-        if (confidence < 0.3) {
+        if (peakLag === -1) {
             this.port.postMessage({ type: 'pitch_data', frequency: 0, confidence: 0 });
             return;
         }
 
-        // Parabolic interpolation for better precision
+        // 4. Parabolic interpolation
         let refinedLag = peakLag;
-        if (peakLag > minPeriod && peakLag < maxPeriod) {
-            const y1 = autocorr[peakLag - 1];
-            const y2 = autocorr[peakLag];
-            const y3 = autocorr[peakLag + 1];
-            // peak offset = (y1 - y3) / (2 * (y1 - 2*y2 + y3))
-            const denominator = 2 * (y1 - 2 * y2 + y3);
+        if (peakLag > 1 && peakLag < maxPeriod) {
+            const s0 = yinBuffer[peakLag - 1];
+            const s1 = yinBuffer[peakLag];
+            const s2 = yinBuffer[peakLag + 1];
+            const denominator = 2 * (s0 - 2 * s1 + s2);
             if (denominator !== 0) {
-                refinedLag += (y1 - y3) / denominator;
+                refinedLag += (s0 - s2) / denominator;
             }
         }
 
         const frequency = sampleRate / refinedLag;
+        const confidence = Math.max(0, 1.0 - yinBuffer[peakLag]);
 
         this.port.postMessage({ 
             type: 'pitch_data', 
