@@ -24,6 +24,7 @@ interface LyricSyncReviewProps {
     onReject: () => void;
     onStartSync: () => void;
     onSeek?: (time: number) => void;
+    currentTime?: number;
 }
 
 const formatTime = (seconds: number): string => {
@@ -42,9 +43,46 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
     onReject,
     onStartSync,
     onSeek,
+    currentTime = 0,
 }) => {
     const t = useTranslations('LyricSync');
     const [editedLines, setEditedLines] = useState<LyricLine[] | null>(null);
+    const listRef = React.useRef<HTMLDivElement>(null);
+
+    const playbackLineIndex = React.useMemo(() => {
+        if (!editedLines || !editedLines.length || currentTime === 0) return -1;
+        let idx = -1;
+        for (let i = 0; i < editedLines.length; i++) {
+            if (editedLines[i].startTime <= currentTime) {
+                idx = i;
+            } else {
+                break;
+            }
+        }
+        return idx;
+    }, [editedLines, currentTime]);
+
+    const lineProgress = React.useMemo(() => {
+        if (playbackLineIndex === -1 || !editedLines || playbackLineIndex >= editedLines.length) return 0;
+        const currentLine = editedLines[playbackLineIndex];
+        if (currentTime < currentLine.startTime) return 0;
+        
+        const endTime = playbackLineIndex < editedLines.length - 1 
+            ? editedLines[playbackLineIndex + 1].startTime 
+            : (currentLine.endTime || currentLine.startTime + 5);
+            
+        const duration = Math.max(0.1, endTime - currentLine.startTime);
+        return Math.min(1, Math.max(0, (currentTime - currentLine.startTime) / duration));
+    }, [currentTime, playbackLineIndex, editedLines]);
+
+    React.useEffect(() => {
+        if (playbackLineIndex >= 0 && listRef.current) {
+            const activeChild = listRef.current.children[playbackLineIndex] as HTMLElement;
+            if (activeChild) {
+                activeChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [playbackLineIndex]);
 
     // Initialize editable state from result
     React.useEffect(() => {
@@ -160,26 +198,34 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
             </div>
 
             {/* Lines list */}
-            <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
+            <div className="max-h-64 overflow-y-auto divide-y divide-white/5" ref={listRef}>
                 {editedLines.map((line, idx) => (
                     <div 
                         key={idx} 
                         onDoubleClick={() => onSeek?.(line.startTime)}
                         title={t('doubleClickSeek') || 'Double-click to seek playback'}
-                        className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group cursor-pointer"
+                        className={`flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group cursor-pointer relative overflow-hidden ${
+                            idx === playbackLineIndex ? 'bg-purple-500/10' : ''
+                        }`}
                     >
+                        {idx === playbackLineIndex && (
+                            <div 
+                                className="absolute top-0 left-0 h-full bg-purple-500/20 pointer-events-none"
+                                style={{ width: `${lineProgress * 100}%`, transition: 'width 100ms linear' }}
+                            />
+                        )}
                         {/* Timestamp */}
-                        <span className="font-mono text-xs text-purple-400/70 min-w-[65px]">
+                        <span className="font-mono text-xs text-purple-400/70 min-w-[65px] relative z-10">
                             {formatTime(line.startTime)}
                         </span>
 
                         {/* Lyric text */}
-                        <span className="flex-1 text-sm text-white/80 truncate">
+                        <span className="flex-1 text-sm text-white/80 truncate relative z-10">
                             {line.text}
                         </span>
 
                         {/* Fine-tune controls */}
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
                             <button
                                 onClick={() => handleTimestampChange(idx, Math.max(0, line.startTime - 0.1))}
                                 className="w-6 h-6 rounded bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60 text-xs flex items-center justify-center"

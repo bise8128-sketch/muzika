@@ -48,15 +48,44 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         }
     }, [progress, result]);
 
-    useEffect(() => {
-        if (editMode === 'sync' && containerRef.current) {
-            const activeChild = containerRef.current.children[activeLineIndex] as HTMLElement;
-            if (activeChild) {
-                // Keep the active line visually centered or in view
-                activeChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const playbackLineIndex = React.useMemo(() => {
+        if (!lines.length || currentTime === 0) return -1;
+        let idx = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].startTime <= currentTime) {
+                idx = i;
+            } else {
+                break;
             }
         }
-    }, [activeLineIndex, editMode]);
+        return idx;
+    }, [lines, currentTime]);
+
+    const lineProgress = React.useMemo(() => {
+        if (playbackLineIndex === -1 || playbackLineIndex >= lines.length) return 0;
+        const currentLine = lines[playbackLineIndex];
+        if (currentTime < currentLine.startTime) return 0;
+        
+        // Use next line's start time as end time if current line doesn't have an end time
+        const endTime = playbackLineIndex < lines.length - 1 
+            ? lines[playbackLineIndex + 1].startTime 
+            : (currentLine.endTime || currentLine.startTime + 5);
+            
+        const duration = Math.max(0.1, endTime - currentLine.startTime);
+        return Math.min(1, Math.max(0, (currentTime - currentLine.startTime) / duration));
+    }, [currentTime, playbackLineIndex, lines]);
+
+    useEffect(() => {
+        if (editMode === 'sync' && containerRef.current) {
+            const targetIndex = activeLineIndex >= lines.length ? playbackLineIndex : activeLineIndex;
+            if (targetIndex >= 0 && targetIndex < lines.length) {
+                const activeChild = containerRef.current.children[targetIndex] as HTMLElement;
+                if (activeChild) {
+                    activeChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+    }, [activeLineIndex, playbackLineIndex, editMode, lines.length]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
@@ -238,14 +267,23 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                                 key={index}
                                 onDoubleClick={() => controller.setCurrentTime(line.startTime)}
                                 title={t('doubleClickSeek') || 'Double-click to seek'}
-                                className={`p-4 rounded-2xl transition-all border cursor-pointer ${index === activeLineIndex
-                                    ? 'bg-primary/20 border-primary text-white'
-                                    : index < activeLineIndex
-                                        ? 'bg-white/10 border-white/5 text-white/80 hover:bg-white/20'
-                                        : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10'
+                                className={`p-4 rounded-2xl transition-all border cursor-pointer relative overflow-hidden ${
+                                    index === playbackLineIndex
+                                        ? 'bg-purple-500/20 border-purple-400/50 text-white shadow-[0_0_15px_rgba(168,85,247,0.15)] scale-[1.02]'
+                                        : index === activeLineIndex
+                                            ? 'bg-primary/20 border-primary text-white'
+                                            : index < activeLineIndex
+                                                ? 'bg-white/10 border-white/5 text-white/80 hover:bg-white/20'
+                                                : 'bg-white/5 border-transparent text-white/40 hover:bg-white/10'
                                     }`}
                             >
-                                <div className="flex justify-between">
+                                {index === playbackLineIndex && (
+                                    <div 
+                                        className="absolute top-0 left-0 h-full bg-purple-500/20 pointer-events-none"
+                                        style={{ width: `${lineProgress * 100}%`, transition: 'width 100ms linear' }}
+                                    />
+                                )}
+                                <div className="flex justify-between relative z-10">
                                     <span>{line.text || '♪'}</span>
                                     <span className="font-mono text-xs opacity-60">
                                         {line.startTime > 0 ? formatLRCTimestamp(line.startTime) : '--:--.--'}
