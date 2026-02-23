@@ -27,7 +27,6 @@ const Onboarding = dynamic(() => import('@/components/UI/Onboarding').then(mod =
 
 export default function Home() {
   const {
-    state,
     machineState,
     send,
     activeResult,
