@@ -165,14 +165,14 @@ export function useSeparation() {
             
             switch (type) {
                 case 'DOWNLOAD_START':
-                    setState(s => ({ ...s, message: `Starting model cache: ${payload.url.split('/').pop()}`, status: 'processing' }));
+                    setState(s => ({ ...s, message: `Starting model cache: ${payload.url.split('/').pop()}` }));
                     break;
                 case 'DOWNLOAD_COMPLETE':
-                    setState(s => ({ ...s, message: 'Model successfully cached for offline use.', status: 'completed' }));
-                    setTimeout(() => setState(s => ({ ...s, message: null, status: 'idle' })), 3000);
+                    setState(s => ({ ...s, message: 'Model successfully cached for offline use.' }));
+                    setTimeout(() => setState(s => ({ ...s, message: s.message === 'Model successfully cached for offline use.' ? null : s.message })), 3000);
                     break;
                 case 'DOWNLOAD_ERROR':
-                    setState(s => ({ ...s, error: `Cache failed: ${payload.error}`, status: 'error' }));
+                    setState(s => ({ ...s, error: `Cache failed: ${payload.error}` }));
                     break;
                 case 'CACHE_HIT':
                     console.log('[useSeparation] Offline Cache Hit:', payload.url);

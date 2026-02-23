@@ -31,8 +31,8 @@ test.describe('Karaoke Flow', () => {
         await expect(page.getByText(/Separating Audio/i)).toBeVisible({ timeout: 20000 });
 
         // 4. Wait for player/results to appear
-        // The orchestrator redirects to /results/[hash] or /karaoke/[hash] when done
-        await expect(page).toHaveURL(/\/(results|karaoke)\//, { timeout: 120000 });
+        // Use a longer timeout as this involves sequential Separation + Transcription (Whisper)
+        await expect(page).toHaveURL(/\/(results|karaoke)\//, { timeout: 300000 });
 
         // 5. Wait for player container
         const playerContainer = page.locator('.glass-premium'); 
