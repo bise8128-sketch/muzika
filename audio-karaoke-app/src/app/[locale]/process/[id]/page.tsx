@@ -28,7 +28,7 @@ export default function ProcessingPage() {
         <div className="animate-in fade-in duration-700">
             {isSyncing ? (
                 <ProcessingView
-                    progress={lyricSync.progress}
+                    progress={typeof lyricSync.progress === 'number' ? lyricSync.progress : (lyricSync.progress as any)?.percent ?? 0}
                     message={lyricSync.error ? `Sync Error: ${lyricSync.error}` : "Synchronizing lyrics..."}
                     status={lyricSync.isProcessing ? "syncing" : "completed"}
                 />
