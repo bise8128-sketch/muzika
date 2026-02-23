@@ -23,6 +23,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     const [editMode, setEditMode] = useState<'text' | 'sync'>('text');
     const [activeLineIndex, setActiveLineIndex] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const { startSync, progress, result, isProcessing } = useLyricSync(controller);
 
@@ -46,6 +47,16 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
             setActiveLineIndex(result.lines.length);
         }
     }, [progress, result]);
+
+    useEffect(() => {
+        if (editMode === 'sync' && containerRef.current) {
+            const activeChild = containerRef.current.children[activeLineIndex] as HTMLElement;
+            if (activeChild) {
+                // Keep the active line visually centered or in view
+                activeChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [activeLineIndex, editMode]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
@@ -221,7 +232,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                 </>
             ) : (
                 <div className="space-y-4">
-                    <div className="h-[400px] overflow-y-auto space-y-2 pr-2 no-scrollbar">
+                    <div ref={containerRef} className="h-[400px] overflow-y-auto space-y-2 pr-2 no-scrollbar">
                         {lines.map((line, index) => (
                             <div
                                 key={index}
