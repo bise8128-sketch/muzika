@@ -13,12 +13,6 @@ const nextConfig: NextConfig = {
   // outputFileTracingRoot: path.join(__dirname, '../../'),
   compress: true,
   output: "standalone",
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-  typescript: {
-    ignoreBuildErrors: false,
-  },
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
   allowedDevOrigins: [
     "http://localhost:3030",
