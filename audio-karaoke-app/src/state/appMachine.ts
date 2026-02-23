@@ -1,4 +1,5 @@
 import { setup, assign } from 'xstate';
+import type { PerformanceScore } from '@/types/audio';
 
 export const appMachine = setup({
   types: {
@@ -7,6 +8,7 @@ export const appMachine = setup({
       fileHash: string | null;
       selectedModelId: string | null;
       autoStartKaraoke: boolean;
+      performanceScore: PerformanceScore | null;
     },
     events: {} as
       | { type: 'UPLOAD_START' }
@@ -21,6 +23,8 @@ export const appMachine = setup({
       | { type: 'START_BATCH' }
       | { type: 'START_KARAOKE' }
       | { type: 'EXIT_KARAOKE' }
+      | { type: 'FINISH_SONG'; score: PerformanceScore | null }
+      | { type: 'EXIT_TO_RESULTS' }
       | { type: 'VIEW_MODELS' }
       | { type: 'BACK' }
       | { type: 'RETRY' }
@@ -63,6 +67,10 @@ export const appMachine = setup({
     clearContextData: assign({
       fileHash: null,
       error: null,
+      performanceScore: null,
+    }),
+    setPerformanceScore: assign({
+      performanceScore: ({ event }) => event.type === 'FINISH_SONG' ? event.score : null,
     }),
   },
 }).createMachine({
@@ -73,6 +81,7 @@ export const appMachine = setup({
     fileHash: null,
     selectedModelId: null,
     autoStartKaraoke: false,
+    performanceScore: null,
   },
   states: {
     idle: {
@@ -151,6 +160,21 @@ export const appMachine = setup({
     karaoke: {
       on: {
         EXIT_KARAOKE: 'results',
+        FINISH_SONG: {
+          target: 'scoring',
+          actions: 'setPerformanceScore',
+        },
+      },
+    },
+    scoring: {
+      on: {
+        RETRY: {
+          target: 'karaoke',
+          actions: 'clearContextData', // Specifically handles resetting for a retry without losing the file hash
+        },
+        EXIT_TO_RESULTS: {
+          target: 'results',
+        },
       },
     },
     models: {

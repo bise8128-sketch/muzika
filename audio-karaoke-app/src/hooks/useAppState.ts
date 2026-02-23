@@ -1,9 +1,9 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { SeparationResult } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playbackController';
 import { useAudio } from '@/context/AudioProvider';
 
-export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'syncing' | 'results' | 'karaoke' | 'batch' | 'models' | 'error';
+export type AppState = 'idle' | 'upload' | 'uploading' | 'processing' | 'syncing' | 'results' | 'karaoke' | 'scoring' | 'batch' | 'models' | 'error';
 
 interface UseAppStateOptions {
   separationStatus: 'idle' | 'processing' | 'completed' | 'error';
@@ -52,6 +52,7 @@ export function useAppState(options: UseAppStateOptions) {
     if (view === 'models') send({ type: 'VIEW_MODELS' });
     if (view === 'batch') send({ type: 'START_BATCH' });
     if (view === 'syncing') send({ type: 'START_SYNCING' });
+    // 'scoring' navigation is handled internally by FINISH_SONG
   }, [send]);
 
   // The active result is whichever was most recently produced
@@ -63,6 +64,7 @@ export function useAppState(options: UseAppStateOptions) {
     if (state.matches('uploading')) return 'upload'; // UI might show uploading state in upload view
     if (state.matches('processing')) return 'processing';
     if (state.matches('syncing')) return 'syncing';
+    if (state.matches('scoring')) return 'scoring';
     if (state.matches('batchProcessing')) return 'batch';
     if (state.matches('results')) return 'results';
     if (state.matches('karaoke')) return 'karaoke';

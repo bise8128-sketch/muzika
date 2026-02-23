@@ -34,7 +34,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
-    const [performanceScore, setPerformanceScore] = useState<PerformanceScore | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const separation = useSeparation();
     const lyricSync = useLyricSync(controller as PlaybackController); // Add sync hook to context
@@ -71,7 +70,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [machineState, machineState.value, lyricSync.result, lyricSync.error, lyricSync.isProcessing, send, activeResult]);
 
-    // 3. Centralized Navigation driven by Machine State
+// 3. Centralized Navigation driven by Machine State
     useEffect(() => {
         const fileHash = machineState.context.fileHash;
         
@@ -82,6 +81,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
         } else if (machineState.matches('karaoke') && fileHash) {
             const expectedPath = `/karaoke/${fileHash}`;
+            if (!pathname.includes(expectedPath)) {
+                router.push(expectedPath);
+            }
+        } else if (machineState.matches('scoring') && fileHash) {
+            const expectedPath = `/karaoke/${fileHash}/score`;
             if (!pathname.includes(expectedPath)) {
                 router.push(expectedPath);
             }
@@ -118,6 +122,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setIsLoading(false);
         }
     }, [controller, activeResult]);
+
+    // We no longer manage performanceScore locally, it's owned by appMachine
+    const performanceScore = machineState.context.performanceScore;
+    const setPerformanceScore = useCallback((_score: PerformanceScore | null) => {
+        // Keeping this function signature for backwards compatibility but we shouldn't use it directly anymore
+        // It's preferred to use send({ type: 'FINISH_SONG', score })
+        console.warn('Deprecated: Use send({ type: "FINISH_SONG", score }) instead of setPerformanceScore');
+    }, []);
 
     return (
         <AudioContext.Provider value={{ 

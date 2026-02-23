@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { useRouter } from '@/i18n/routing';
 import { useAudio } from '@/context/AudioProvider';
 import { GradeDisplay } from '@/components/Karaoke/GradeDisplay';
 import { motion } from 'framer-motion';
@@ -18,8 +17,7 @@ import { Trophy } from 'lucide-react';
 
 export default function PerformanceScorePage() {
     const { id } = useParams();
-    const router = useRouter();
-    const { performanceScore, setPerformanceScore } = useAudio();
+    const { performanceScore, send } = useAudio();
     const t = useTranslations('HomePage');
     const hasSaved = useRef(false);
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
@@ -56,7 +54,7 @@ export default function PerformanceScorePage() {
                     </p>
                 </div>
                 <button 
-                    onClick={() => router.push(`/karaoke/${id}`)}
+                    onClick={() => send({ type: 'RETRY' })}
                     className="px-6 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all"
                 >
                     Back to Studio
@@ -66,8 +64,7 @@ export default function PerformanceScorePage() {
     }
 
     const handleTryAgain = () => {
-        setPerformanceScore(null);
-        router.push(`/karaoke/${id}`);
+        send({ type: 'RETRY' });
     };
 
     return (
@@ -75,7 +72,7 @@ export default function PerformanceScorePage() {
             {/* Header Navigation */}
             <div className="flex items-center justify-between mb-8 px-4 max-w-5xl mx-auto">
                 <button
-                    onClick={() => router.push(`/results/${id}`)}
+                    onClick={() => send({ type: 'EXIT_TO_RESULTS' })}
                     className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
                 >
                     <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-all">
@@ -104,7 +101,7 @@ export default function PerformanceScorePage() {
                     transition={{ delay: 0.8 }}
                     className="mt-12 px-6"
                 >
-                    <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12 space-y-12">
+                    <div className="bg-white/2 border border-white/5 rounded-[2.5rem] p-8 md:p-12 space-y-12">
                         <AccuracyHeatmap history={performanceScore.history} />
                         
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -167,11 +164,11 @@ export default function PerformanceScorePage() {
                     </button>
                     
                     <button
-                        onClick={() => router.push('/library')}
+                        onClick={() => send({ type: 'EXIT_TO_RESULTS' })}
                         className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-3xl font-black uppercase tracking-widest transition-all"
                     >
                         <LayoutGrid className="w-5 h-5" />
-                        Next Song
+                        Next Song / Lab
                     </button>
                 </motion.div>
             </motion.div>

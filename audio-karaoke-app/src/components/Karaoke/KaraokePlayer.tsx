@@ -58,7 +58,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const router = useRouter();
     const { id } = useParams();
     const searchParams = useSearchParams();
-    const { setPerformanceScore } = useAudio();
+    const { setPerformanceScore, send: appSend } = useAudio();
 
     // UI State Management
     const { state: uiState, actions: uiActions } = useKaraokeUI();
@@ -174,8 +174,8 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     useEffect(() => {
         const handleEnded = () => {
             if (pitchAnalysis.overallScore) {
-                setPerformanceScore(pitchAnalysis.overallScore);
-                router.push(`/karaoke/${id}/score`);
+                // Dispatch event to app machine instead of routing directly
+                appSend({ type: 'FINISH_SONG', score: pitchAnalysis.overallScore });
             }
         };
 
@@ -183,7 +183,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         return () => {
             controller.off('ended', handleEnded);
         };
-    }, [controller, pitchAnalysis.overallScore, setPerformanceScore, router, id]);
+    }, [controller, pitchAnalysis.overallScore, appSend]);
 
     // Mix Bus Routing Setup
     useEffect(() => {
