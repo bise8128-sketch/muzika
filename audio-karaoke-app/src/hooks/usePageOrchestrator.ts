@@ -12,17 +12,18 @@ import { useModels } from '@/hooks/useModels';
 import { useHistoryManagement } from '@/hooks/useHistoryManagement';
 import { useAudioExport } from '@/hooks/useAudioExport';
 import { useServerProcessing } from '@/hooks/useServerProcessing';
-import { useAppState } from '@/hooks/useAppState';
 import { ExtractedMetadata } from '@/types/schema';
 
 export function usePageOrchestrator() {
   const router = useRouter();
   const { models: AVAILABLE_MODELS } = useModels();
 
-  const { 
-    controller, 
+  const {
+    controller,
     setActiveResult,
-    separation
+    separation,
+    machineState,
+    send
   } = useAudio();
 
   // UI state
@@ -55,27 +56,21 @@ export function usePageOrchestrator() {
     }
   }, [processingResult, setActiveResult]);
 
-  const unifiedStatus = useMemo(() => {
-    if (isProcessing) return 'processing';
-    if (isError) return 'error';
-    if (processingResult) return 'completed';
-    return 'idle';
-  }, [isProcessing, isError, processingResult]);
+  const activeResult = processingResult || history.restoredResult;
 
-  const { state, machineState, send, activeResult, handleRestart, handleTryKaraoke } = useAppState({
-    separationStatus: unifiedStatus,
-    separationResult: processingResult,
-    separationError: errorMessage,
-    autoStartKaraoke,
-    controller,
-    onHistoryRefresh: history.loadHistory,
-    onResetSeparation: () => {
-      separation.reset();
-      serverProcessing.reset();
-    },
-    onClearRestoredResult: history.clearRestoredResult,
-    restoredResult: history.restoredResult,
-  });
+  const handleRestart = useCallback(() => {
+    send({ type: 'RESET' });
+    separation.reset();
+    serverProcessing.reset();
+    history.clearRestoredResult();
+  }, [send, separation, serverProcessing, history]);
+
+  const handleTryKaraoke = useCallback(() => {
+    if (activeResult && controller) {
+      controller.setAudioBuffers([activeResult.vocals, activeResult.instrumentals]);
+    }
+    send({ type: 'START_KARAOKE' });
+  }, [activeResult, controller, send]);
 
   // Handlers
   const handleUrlSubmit = async (url: string) => {
@@ -164,7 +159,6 @@ export function usePageOrchestrator() {
   };
 
   return {
-    state,
     machineState,
     send,
     activeResult,
