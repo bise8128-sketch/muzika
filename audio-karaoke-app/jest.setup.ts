@@ -34,6 +34,23 @@ jest.mock('next-intl', () => ({
     NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+jest.mock('next-intl/routing', () => ({
+    defineRouting: jest.fn((config) => config),
+}));
+
+jest.mock('next-intl/navigation', () => ({
+    createNavigation: jest.fn(() => ({
+        Link: ({ children }: { children: React.ReactNode }) => children,
+        redirect: jest.fn(),
+        usePathname: jest.fn(() => '/'),
+        useRouter: jest.fn(() => ({
+            push: jest.fn(),
+            replace: jest.fn(),
+            prefetch: jest.fn(),
+        })),
+    })),
+}));
+
 // Polyfill for fetch (missing in Node < 18 or some Jest environments)
 if (!global.fetch) {
     (global as any).fetch = jest.fn().mockImplementation(() => 
