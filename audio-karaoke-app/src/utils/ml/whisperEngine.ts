@@ -4,6 +4,7 @@
  */
 
 import { pipeline, env } from '@xenova/transformers';
+import { LrcGenerator } from '../karaoke/LrcGenerator';
 
 // Configure transformers.js environments if needed (we'll fetch quantized from remote HF by default)
 env.allowLocalModels = false;
@@ -88,6 +89,11 @@ export class WhisperEngine {
                 });
             }
         }
+        return {
+            text: output.text,
+            segments
+        };
+    }
 
     /**
      * Transcribe audio data and return LRC formatted string.
@@ -97,5 +103,3 @@ export class WhisperEngine {
         return LrcGenerator.generate(result.segments);
     }
 }
-
-import { LrcGenerator } from '../karaoke/LrcGenerator';
