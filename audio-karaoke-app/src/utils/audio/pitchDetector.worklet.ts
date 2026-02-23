@@ -84,6 +84,15 @@ class PitchDetectorProcessor extends AudioWorkletProcessor {
         const maxPeriod = Math.floor(sampleRate / 80);   // Min ~80 Hz
         const yinBuffer = this.yinBuffer;
 
+        let energy = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            energy += buffer[i] * buffer[i];
+        }
+        if (energy < 1e-10) {
+            this.port.postMessage({ type: 'pitch_data', frequency: 0, confidence: 0 });
+            return;
+        }
+
         // 1. Difference function
         for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;

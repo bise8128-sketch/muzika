@@ -286,6 +286,15 @@ export class PitchCorrector {
         // Use provided buffer or allocate if not provided (though for Worklet we should always provide)
         const yinBuffer = internalBuffer || new Float32Array(maxPeriod + 1);
         
+        // Check for silence to prevent YIN algorithm from getting zero-difference everywhere
+        let energy = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            energy += buffer[i] * buffer[i];
+        }
+        if (energy < 1e-10) {
+            return null;
+        }
+
         // 1. Difference function
         for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;

@@ -136,6 +136,14 @@ class PitchCorrectionProcessor extends AudioWorkletProcessor {
         }
         const yinBuffer = this.yinBuffer;
 
+        let energy = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            energy += buffer[i] * buffer[i];
+        }
+        if (energy < 1e-10) {
+            return null;
+        }
+
         // 1. Difference function
         for (let lag = 1; lag <= maxPeriod; lag++) {
             let sum = 0;
