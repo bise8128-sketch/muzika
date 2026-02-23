@@ -18,6 +18,15 @@ export interface CachedAudio {
     lyrics?: string; // Raw LRC content
 }
 
+export interface LyricSyncCacheEntry {
+    id?: number;
+    fileHash: string; // SHA-256 of original file
+    modelUsed: string; // e.g. "whisper-tiny-en"
+    processedAt: number; // timestamp
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    result: any; // SyncResult
+}
+
 export interface ProcessingLog {
     id?: number;
     fileHash: string;
