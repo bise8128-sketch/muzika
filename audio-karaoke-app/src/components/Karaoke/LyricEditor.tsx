@@ -6,6 +6,7 @@ import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
 import { useTranslations } from 'next-intl';
 import { useLyricSync } from '@/hooks/useLyricSync';
 import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
+import { WhisperProgressIndicator } from './WhisperProgressIndicator';
 
 interface LyricEditorProps {
     currentTime: number;
@@ -140,19 +141,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                                 disabled={isProcessing || lines.length === 0}
                                 className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full text-sm font-medium transition-all flex items-center gap-2 border border-purple-500/30"
                             >
-                                {isProcessing ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
-                                        <span>{Math.round((progress?.progress || 0) * 100)}%</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        AI Auto-Sync
-                                    </>
-                                )}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                AI Auto-Sync
                             </button>
                             <button
                                 onClick={handlePaste}
@@ -187,12 +179,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
             </div>
 
             {editMode === 'text' ? (
-                <textarea
-                    value={rawText}
-                    onChange={handleTextChange}
-                    className="w-full h-[400px] bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-mono focus:ring-2 focus:ring-primary outline-none resize-none"
-                    placeholder={t('placeholder')}
-                />
+                <>
+                    <WhisperProgressIndicator progress={progress} isProcessing={isProcessing} />
+                    <textarea
+                        value={rawText}
+                        onChange={handleTextChange}
+                        className="w-full h-[400px] bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-mono focus:ring-2 focus:ring-primary outline-none resize-none"
+                        placeholder={t('placeholder')}
+                    />
+                </>
             ) : (
                 <div className="space-y-4">
                     <div className="h-[400px] overflow-y-auto space-y-2 pr-2 no-scrollbar">

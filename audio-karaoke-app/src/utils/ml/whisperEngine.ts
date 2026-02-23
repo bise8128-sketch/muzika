@@ -54,14 +54,25 @@ export class WhisperEngine {
      * Transcribe audio data. 
      * Expects mono Float32Array at 16kHz.
      */
-    async transcribe(audio: Float32Array): Promise<WhisperResult> {
+    async transcribe(audio: Float32Array, onProgress?: (progress: number) => void): Promise<WhisperResult> {
         if (!this.transcriber) throw new Error('WhisperEngine not loaded');
 
         // Execute inference natively using WebAssembly/WebGPU under the hood
         const output = await this.transcriber(audio, {
             chunk_length_s: 30,
             stride_length_s: 5,
-            return_timestamps: 'word'
+            return_timestamps: 'word',
+            callback_function: (beams: any[]) => {
+                if (onProgress && beams.length > 0) {
+                    // Estimate progress based on the decoded tokens.
+                    // This is a rough estimation since we don't know the final length.
+                    // A typical song might generate around 200-500 tokens. 
+                    const decodedTokens = beams[0].output_token_ids.length;
+                    const estimatedTotalTokens = 300; // Arbitrary estimate for visual feedback
+                    const progress = Math.min(decodedTokens / estimatedTotalTokens, 0.99); // Cap at 99% until fully done
+                    onProgress(progress * 100);
+                }
+            }
         });
 
         // The output chunks are at the word level because we asked for 'word' timestamps

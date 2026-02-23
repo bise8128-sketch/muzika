@@ -45,7 +45,15 @@ async function transcribeAudio(
     // 2. Transcribe
     onProgress({ stage: 'transcribing', progress: 0.3, message: 'Analyzing audio transcription...' });
     
-    const transcription = await engine.transcribe(audioData);
+    const transcription = await engine.transcribe(audioData, (inferenceProgress: number) => {
+        // Map 0-100 to 0.3-0.9 for the 'transcribing' stage
+        const mappedProgress = 0.3 + (inferenceProgress / 100) * 0.6;
+        onProgress({
+            stage: 'transcribing',
+            progress: mappedProgress,
+            message: `Analyzing audio... ${Math.round(inferenceProgress)}%`
+        });
+    });
     
     return transcription.segments as WhisperSegment[];
 }
