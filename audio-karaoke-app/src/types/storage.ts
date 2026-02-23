@@ -35,12 +35,18 @@ export interface ProcessingJob {
     fileName: string;         // Human readable name for UI
     fileHash: string;         // Hash to check if already cached
     modelId: string;          // e.g. 'htdemucs'
-    status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'queued';
     progress: number;
     error?: string;
     createdAt: number;
     startedAt?: number;
     completedAt?: number;
+    addedAt?: number;
+    
+    // Metadata for lyric fetching
+    artist?: string;
+    title?: string;
+    duration?: number;
 }
 
 export interface SongEntry {
