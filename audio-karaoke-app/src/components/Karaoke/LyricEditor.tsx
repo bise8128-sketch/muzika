@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { LRCData, LyricLine } from '@/types/karaoke';
 import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
+import { generateLRCContent, downloadLRCFile } from '@/utils/karaoke/lrcExport';
 import { useTranslations } from 'next-intl';
 import { useLyricSync } from '@/hooks/useLyricSync';
 import { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
@@ -85,24 +86,8 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     };
 
     const downloadLRC = () => {
-        let content = '';
-        if (initialLRC?.metadata) {
-            Object.entries(initialLRC.metadata).forEach(([key, value]) => {
-                content += `[${key}:${value}]\n`;
-            });
-        }
-
-        lines.forEach(line => {
-            content += `${formatLRCTimestamp(line.startTime)}${line.text}\n`;
-        });
-
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'lyrics.lrc';
-        a.click();
-        URL.revokeObjectURL(url);
+        const content = generateLRCContent(lines, initialLRC?.metadata);
+        downloadLRCFile(content, 'lyrics.lrc');
     };
 
     const handlePaste = async () => {

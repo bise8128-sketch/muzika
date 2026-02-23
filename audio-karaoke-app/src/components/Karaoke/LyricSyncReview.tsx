@@ -12,6 +12,7 @@
 import React, { useState, useCallback } from 'react';
 import type { LyricLine } from '@/types/karaoke';
 import type { SyncResult, SyncProgress } from '@/utils/ml/lyricSync';
+import { generateLRCContent, downloadLRCFile } from '@/utils/karaoke/lrcExport';
 import { useTranslations } from 'next-intl';
 
 interface LyricSyncReviewProps {
@@ -58,6 +59,12 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
             return updated;
         });
     }, []);
+
+    const handleExportLRC = useCallback(() => {
+        if (!editedLines) return;
+        const content = generateLRCContent(editedLines, { title: 'AI Synced Lyrics', by: 'Muzika' });
+        downloadLRCFile(content, 'synced_lyrics.lrc');
+    }, [editedLines]);
 
     // Processing view
     if (isProcessing && progress) {
@@ -125,6 +132,16 @@ export const LyricSyncReview: React.FC<LyricSyncReviewProps> = ({
                     </span>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={handleExportLRC}
+                        className="px-3 py-1.5 text-xs font-medium text-white/70 bg-white/10 rounded-lg hover:bg-white/20 transition-all flex items-center gap-1"
+                        title={t('exportLrc') || 'Export LRC File'}
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export
+                    </button>
                     <button
                         onClick={onReject}
                         className="px-3 py-1.5 text-xs font-medium text-white/50 bg-white/5 rounded-lg hover:bg-white/10 hover:text-white/70 transition-all"
