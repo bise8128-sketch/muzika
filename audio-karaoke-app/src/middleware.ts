@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
- 
+import createIntlMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
+
+const handleI18nRouting = createIntlMiddleware(routing);
+
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
   
@@ -19,35 +23,28 @@ export function middleware(request: NextRequest) {
     worker-src 'self' blob:;
   `.replace(/\s{2,}/g, ' ').trim()
  
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-nonce', nonce)
-  requestHeaders.set(
-    'Content-Security-Policy',
-    cspHeader
-  )
- 
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
-  response.headers.set(
-    'Content-Security-Policy',
-    cspHeader
-  )
+  // Let next-intl handle the routing first
+  const response = handleI18nRouting(request);
+  
+  // Set CSP and Nonce headers on the request for Server Components
+  request.headers.set('x-nonce', nonce)
+  request.headers.set('Content-Security-Policy', cspHeader)
+  
+  // Also pass the nonce in the response header for client-side injection
+  response.headers.set('x-nonce', nonce)
+  response.headers.set('Content-Security-Policy', cspHeader)
  
   return response
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
-  ],
-}
+    // Match all pathnames except for
+    // - … if they start with `/api`, `/_next` or `/_vercel`
+    // - … the ones containing a dot (e.g. `favicon.ico`)
+    '/((?!api|_next|_vercel|.*\\..*).*)',
+    // However, match all root locales
+    '/',
+    '/(bs|en)/:path*'
+  ]
+};
