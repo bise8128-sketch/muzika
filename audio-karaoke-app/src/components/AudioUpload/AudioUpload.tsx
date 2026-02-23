@@ -8,6 +8,8 @@ import { DirectKaraokeUpload } from './DirectKaraokeUpload';
 import { ExtractedMetadata } from '@/types/schema';
 import { ErrorBoundary } from '@/components/UI/ErrorBoundary';
 import { validateYouTubeUrl } from '@/utils/security/sanitize';
+import * as mm from 'music-metadata-browser';
+import { LyricFetcher } from '@/utils/karaoke/LyricFetcher';
 
 interface AudioUploadProps {
     onUpload: (files: File[], isKaraokeMode?: boolean, metadata?: ExtractedMetadata[]) => void;
@@ -132,7 +134,41 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
         if (files.length > 0) {
             const isValid = await validateFiles(files);
             if (isValid) {
-                onUpload(files, isKaraokeMode);
+                // Extract metadata and fetch lyrics in background
+                const metadataPromises = files.map(async (file) => {
+                    try {
+                        const tags = await mm.parseBlob(file);
+                        const metadata: ExtractedMetadata = {
+                            title: tags.common.title || file.name.replace(/\.[^/.]+$/, ""),
+                            artist: tags.common.artist,
+                            album: tags.common.album,
+                            duration: tags.format.duration,
+                            year: tags.common.year,
+                            genre: tags.common.genre,
+                        };
+
+                        // Attempt to fetch lyrics if artist/title available
+                        if (metadata.artist && metadata.title) {
+                            console.log(`[AudioUpload] Fetching lyrics for ${metadata.artist} - ${metadata.title}`);
+                            LyricFetcher.fetchLyrics(metadata.artist, metadata.title, metadata.duration)
+                                .then(lyrics => {
+                                    if (lyrics) {
+                                        console.log(`[AudioUpload] Lyrics found for ${metadata.title}`);
+                                        // Store lyrics in a temporary way or pass to onUpload? 
+                                        // The current db schema stores lyrics in CachedAudio (hash + model)
+                                        // We'll handle storage in SongsStorage or 
+                                    }
+                                });
+                        }
+                        return metadata;
+                    } catch (err) {
+                        console.warn('Metadata extraction failed for:', file.name, err);
+                        return { title: file.name.replace(/\.[^/.]+$/, "") };
+                    }
+                });
+
+                const metadataResults = await Promise.all(metadataPromises);
+                onUpload(files, isKaraokeMode, metadataResults);
             }
         }
     };

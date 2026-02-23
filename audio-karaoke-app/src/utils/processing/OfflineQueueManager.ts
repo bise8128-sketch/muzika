@@ -4,6 +4,9 @@ import { MODELS, ModelType } from '@/types/model';
 import { notificationManager } from '../notifications/NotificationManager';
 import { resampleAudio } from '../audio/audioBufferUtils';
 import { WhisperEngine } from '../ml/whisperEngine';
+import { LyricFetcher } from '../karaoke/LyricFetcher';
+import { audioCache } from '../storage/audioCache';
+import { ProcessingJob, ExtractedMetadata } from '@/types/storage';
 
 class OfflineQueueManager {
     private isProcessing: boolean = false;
@@ -11,23 +14,32 @@ class OfflineQueueManager {
     /**
      * Add a new job to the queue and instantly start processing if idle.
      */
-    async addJob(fileId: string, fileName: string, fileHash: string, modelId: string): Promise<number> {
-        const jobId = await db.processingQueue.add({
-            fileId,
-            fileName,
-            fileHash,
-            modelId,
-            status: 'pending',
-            progress: 0,
-            createdAt: Date.now()
-        });
+    async addJob(file: File, modelId: string, metadata?: ExtractedMetadata) {
+        const fileHash = await audioCache.hashFile(file);
         
-        // Trigger processing asynchronously
-        this.processNext().catch(err => {
-            console.error('[OfflineQueueManager] Background processing error:', err);
+        const job: ProcessingJob = {
+            fileHash,
+            fileName: file.name,
+            modelId,
+            status: 'queued',
+            progress: 0,
+            addedAt: Date.now(),
+            artist: metadata?.artist,
+            title: metadata?.title || file.name.replace(/\.[^/.]+$/, ""),
+            duration: metadata?.duration
+        };
+
+        const id = await db.processingQueue.add(job);
+        
+        // Save file to storage for background worker
+        await db.files.add({
+            hash: fileHash,
+            data: file,
+            name: file.name
         });
 
-        return jobId;
+        this.processNext();
+        return id;
     }
 
     /**
@@ -39,7 +51,7 @@ class OfflineQueueManager {
         // Find the oldest pending job
         const job = await db.processingQueue
             .where('status')
-            .equals('pending')
+            .equals('queued')
             .first();
 
         if (!job || !job.id) {
@@ -51,19 +63,19 @@ class OfflineQueueManager {
 
         try {
             // Mark as processing
-            await db.processingQueue.update(job.id, {
+            await db.processingQueue.update(job.id!, {
                 status: 'processing',
                 startedAt: Date.now(),
                 progress: 0
             });
 
             // Fetch original file from db.audioFiles
-            const fileRecord = await db.audioFiles.get(job.fileId);
+            const fileRecord = await db.files.get(job.fileHash);
             if (!fileRecord || !fileRecord.data) {
-                throw new Error(`File not found in storage for ID: ${job.fileId}`);
+                throw new Error(`File not found in storage for ID: ${job.fileHash}`);
             }
 
-            const modelInfo = Object.values(MODELS).find(m => m.id === job.modelId);
+            const modelInfo = MODELS.find(m => m.id === job.modelId);
             if (!modelInfo) {
                 throw new Error(`Unknown model ID: ${job.modelId}`);
             }
@@ -81,35 +93,46 @@ class OfflineQueueManager {
                 }
             });
 
-            // Automatic Lyric Alignment (Transcription)
+            // Automatic Lyric Alignment (Transcription or Fetching)
             try {
-                console.log(`[OfflineQueueManager] Starting transcription for ${job.fileName}`);
-                // Resample vocals to 16kHz for Whisper
-                const resampled = await resampleAudio(result.vocals, 16000);
-                const monoData = resampled.getChannelData(0);
+                let lrc: string | null = null;
 
-                const whisper = new WhisperEngine();
-                // Load whisper-tiny model
-                await whisper.load({
-                    id: 'whisper-tiny-en',
-                    type: ModelType.WHISPER,
-                    name: 'Whisper Tiny (EN)',
-                    version: '1.0.0',
-                    size: 40 * 1024 * 1024
-                });
+                // 1. Try fetching from LRCLIB first if we have metadata
+                if (job.artist && job.title) {
+                    console.log(`[OfflineQueueManager] Attempting to fetch lyrics for ${job.artist} - ${job.title}`);
+                    lrc = await LyricFetcher.fetchLyrics(job.artist, job.title, job.duration);
+                }
 
-                const lrc = await whisper.transcribeToLrc(monoData);
+                // 2. Fallback to Whisper transcription if fetching failed
+                if (!lrc) {
+                    console.log(`[OfflineQueueManager] Falling back to transcription for ${job.fileName}`);
+                    // Resample vocals to 16kHz for Whisper
+                    const resampled = await resampleAudio(result.vocals, 16000);
+                    const monoData = resampled.getChannelData(0);
 
-                // Update the cachedAudio entry with generated lyrics
-                await db.cachedAudio
-                    .where('[fileHash+modelUsed]')
-                    .equals([job.fileHash, job.modelId])
-                    .modify({ lyrics: lrc });
+                    const whisper = new WhisperEngine();
+                    await whisper.load({
+                        id: 'whisper-tiny-en',
+                        type: ModelType.WHISPER,
+                        name: 'Whisper Tiny (EN)',
+                        version: '1.0.0',
+                        size: 40 * 1024 * 1024
+                    });
 
-                console.log(`[OfflineQueueManager] Automatic lyric alignment complete for ${job.fileName}`);
+                    lrc = await whisper.transcribeToLrc(monoData);
+                }
+
+                if (lrc) {
+                    // Update the cachedAudio entry with generated lyrics
+                    await db.cachedAudio
+                        .where('[fileHash+modelUsed]')
+                        .equals([job.fileHash, job.modelId])
+                        .modify({ lyrics: lrc });
+                    
+                    console.log(`[OfflineQueueManager] Lyrics acquired for ${job.fileName}`);
+                }
             } catch (transcriptionError) {
-                console.warn('[OfflineQueueManager] Lyric alignment failed:', transcriptionError);
-                // We don't fail the whole job if transcription fails, separation is still valid
+                console.warn('[OfflineQueueManager] Lyric acquisition failed:', transcriptionError);
             }
 
             // Mark completed
