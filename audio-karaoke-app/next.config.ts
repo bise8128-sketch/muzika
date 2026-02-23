@@ -14,10 +14,10 @@ const nextConfig: NextConfig = {
   compress: true,
   output: "standalone",
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Add allowedDevOrigins to enable cross-origin requests from specific development origins.
   allowedDevOrigins: [
