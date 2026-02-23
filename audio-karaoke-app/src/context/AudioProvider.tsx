@@ -7,6 +7,7 @@ import { useSeparation } from '@/hooks/useSeparation';
 import { useRouter } from '@/i18n/routing';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
+import { StateFrom, EventFrom } from 'xstate';
 import { useLyricSync } from '@/hooks/useLyricSync'; // Added to allow Syncing
 import { usePathname } from 'next/navigation';
 
@@ -20,8 +21,8 @@ interface AudioContextType {
     lyricSync: ReturnType<typeof useLyricSync>;
     performanceScore: PerformanceScore | null;
     setPerformanceScore: (score: PerformanceScore | null) => void;
-    machineState: any; // Using any briefly for brevity in this complex migration
-    send: (event: any) => void;
+    machineState: StateFrom<typeof appMachine>; 
+    send: (event: EventFrom<typeof appMachine>) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -35,9 +36,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
     const [performanceScore, setPerformanceScore] = useState<PerformanceScore | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    
     const separation = useSeparation();
-    const lyricSync = useLyricSync(controller); // Add sync hook to context
+    const lyricSync = useLyricSync(controller as PlaybackController); // Add sync hook to context
     const [machineState, send] = useMachine(appMachine);
     
     const router = useRouter();
@@ -69,7 +69,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 send({ type: 'SYNC_COMPLETE' });
             }
         }
-    }, [machineState.value, lyricSync.result, lyricSync.error, lyricSync.isProcessing, send, activeResult]);
+    }, [machineState, machineState.value, lyricSync.result, lyricSync.error, lyricSync.isProcessing, send, activeResult]);
 
     // 3. Centralized Navigation driven by Machine State
     useEffect(() => {
@@ -91,7 +91,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 router.push('/');
             }
         }
-    }, [machineState.value, machineState.context.fileHash, router, pathname]);
+    }, [machineState, machineState.value, machineState.context.fileHash, router, pathname]);
 
     useEffect(() => {
         return () => {
