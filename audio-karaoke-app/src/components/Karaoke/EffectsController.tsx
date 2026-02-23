@@ -85,6 +85,13 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
     const [showHarmonyGuide, setShowHarmonyGuide] = useState(false);
     const [showThemePanel, setShowThemePanel] = useState(false);
     const [showMixer, setShowMixer] = useState(false);
+    const [adaptiveAssist, setAdaptiveAssist] = useState(controller.isAdaptiveAssistActive());
+
+    const toggleAdaptiveAssist = () => {
+        const newValue = !adaptiveAssist;
+        setAdaptiveAssist(newValue);
+        controller.setAdaptiveAssist(newValue);
+    };
 
     return (
         <div className="flex flex-col gap-4">
@@ -152,16 +159,29 @@ export const EffectsController: React.FC<EffectsControllerProps> = ({
                         Themes
                     </button>
 
+                        <Sliders className="w-4 h-4" />
+                        Studio Mixer
+                    </button>
+
                     <button
-                        onClick={() => setShowMixer(!showMixer)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                            showMixer
-                                ? 'bg-cyan-500/30 text-cyan-300 ring-1 ring-cyan-500/40 shadow-lg shadow-cyan-500/20'
+                        onClick={toggleAdaptiveAssist}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all group relative overflow-hidden ${
+                            adaptiveAssist
+                                ? 'bg-indigo-500/30 text-indigo-300 ring-1 ring-indigo-500/40 shadow-lg shadow-indigo-500/20'
                                 : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 border border-white/10'
                         }`}
                     >
-                        <Sliders className="w-4 h-4" />
-                        Studio Mixer
+                        <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity ${adaptiveAssist ? 'opacity-100' : ''}`} />
+                        <span className="relative z-10 flex items-center gap-2">
+                             {adaptiveAssist ? '✨' : '🪄'} {t('vocalAssist') || 'Vocal Assist'}
+                             {adaptiveAssist && (
+                                 <motion.span
+                                     animate={{ scale: [1, 1.2, 1] }}
+                                     transition={{ repeat: Infinity, duration: 2 }}
+                                     className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"
+                                 />
+                             )}
+                        </span>
                     </button>
 
                     {pitchAnalysis.currentScore > 0 && (

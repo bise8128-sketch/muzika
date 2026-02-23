@@ -420,7 +420,23 @@ export class PlaybackController {
   }
 
   async getFinalPerformance(): Promise<{ overallScore: PerformanceScore; history: PitchAnalysisResult[] } | null> {
-      // ... same implementation ...
+      if (!this.pitchScoringWorker) return null;
+
+      return new Promise((resolve) => {
+          const worker = this.pitchScoringWorker!;
+          
+          const handleMessage = (e: MessageEvent) => {
+              if (e.data.type === 'FINAL_STATE') {
+                  worker.removeEventListener('message', handleMessage);
+                  worker.terminate();
+                  this.pitchScoringWorker = null;
+                  resolve(e.data.payload);
+              }
+          };
+          
+          worker.addEventListener('message', handleMessage);
+          worker.postMessage({ type: 'GET_FINAL_STATE' });
+      });
   }
 
   setAdaptiveAssist(enabled: boolean): void {
