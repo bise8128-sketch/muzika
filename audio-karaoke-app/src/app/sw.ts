@@ -1,6 +1,6 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist, NetworkOnly, CacheFirst } from "serwist";
+import { Serwist, NetworkOnly, CacheFirst, BackgroundSyncPlugin } from "serwist";
 
 // This declares the value of `injectionPoint` to TypeScript.
 // `injectionPoint` is the string that will be replaced by the
@@ -13,6 +13,10 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
+
+const syncPlugin = new BackgroundSyncPlugin("server-processing-queue", {
+  maxRetentionTime: 24 * 60, // Retry for up to 24 hours
+});
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -27,7 +31,14 @@ const serwist = new Serwist({
       handler: new NetworkOnly(),
     },
 
-    // 2. Bypass API backend (FastAPI)
+    // 2. Background Sync for API backend (FastAPI)
+    {
+      matcher: ({ url }) => url.pathname.startsWith("/api/backend-upload") || url.pathname.startsWith("/api/python-processing"),
+      handler: new NetworkOnly({
+        plugins: [syncPlugin],
+      }),
+      method: "POST",
+    },
     {
       matcher: ({ url }) => url.port === "8000" || url.pathname.startsWith("/api/"),
       handler: new NetworkOnly(),

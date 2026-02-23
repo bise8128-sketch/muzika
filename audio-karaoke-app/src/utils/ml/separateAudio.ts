@@ -564,6 +564,12 @@ async function serverSeparateAudio(
 
     } catch (err) {
         console.error('[serverSeparateAudio] Error:', err);
+        
+        // Handle specifically for Background Sync visibility
+        if (err instanceof TypeError && !navigator.onLine) {
+            throw new Error('You are offline. Your request has been queued and will process automatically when your connection is restored.');
+        }
+        
         throw err;
     }
 }
