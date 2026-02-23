@@ -76,7 +76,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const mixRecorder = useMixRecorder();
     const useAutoKeyHook = useAutoKey(controller);
     const harmonyGuide = useHarmonyGuide(useAutoKeyHook.detectedKey);
-    const pitchAnalysis = usePitchAnalysis(controller, harmonyGuide.activeKeyInfo);
+    const pitchAnalysis = usePitchAnalysis(controller);
     
     // Domain Logic Hooks
     const { lyricState, handleCanvasReady } = useKaraokeEngine({

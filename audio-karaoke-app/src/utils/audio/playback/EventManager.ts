@@ -3,7 +3,7 @@
  * Extracted from PlaybackController to isolate the pub/sub concern.
  */
 
-export type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'seeked' | 'pitch-analysis' | 'mic-started' | 'mic-stopped';
+export type EventType = 'play' | 'pause' | 'stop' | 'timeupdate' | 'ended' | 'seeked' | 'pitch-analysis' | 'pitch-analysis-update' | 'mic-started' | 'mic-stopped';
 export type EventCallback = (data?: unknown) => void;
 
 export class EventManager {

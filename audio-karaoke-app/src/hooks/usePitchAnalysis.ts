@@ -11,7 +11,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { PitchAnalysisResult, PerformanceScore } from '@/types/audio';
 import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
-import type { KeyInfo } from '@/utils/audio/keyDetection';
 
 interface PitchAnalysisState {
     isListening: boolean;
@@ -24,7 +23,7 @@ interface PitchAnalysisState {
     error: string | null;
 }
 
-export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyInfo | null) {
+export function usePitchAnalysis(controller: PlaybackController) {
     const [state, setState] = useState<PitchAnalysisState>({
         isListening: false,
         currentPitch: 0,
@@ -36,7 +35,7 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
         error: null,
     });
 
-    const comboRef = useRef<number>(0);
+    const visibleWindowRef = useRef<PitchAnalysisResult[]>([]);
     const pendingUpdateRef = useRef<boolean>(false);
     const animationFrameRef = useRef<number | null>(null);
 
@@ -51,25 +50,32 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
         }
     }, [controller]);
 
-    // Stop analysis delegating to controller
-    const stopAnalysis = useCallback(() => {
+    // Stop analysis delegating to controller (now async to get final score from worker)
+    const stopAnalysis = useCallback(async () => {
         controller.stopMicAnalysis();
-        const score = controller.getPerformanceScore();
 
-        setState(prev => ({
-            ...prev,
-            isListening: false,
-            overallScore: score,
-            pitchHistory: controller.getPerformanceHistory()
-        }));
+        // Wait for worker to return the complete History and Score
+        const finalData = await controller.getFinalPerformance();
+        if (finalData) {
+            setState(prev => ({
+                ...prev,
+                isListening: false,
+                overallScore: finalData.overallScore,
+                pitchHistory: finalData.history
+            }));
+        } else {
+             // Fallback if worker failed or was already stopped
+             setState(prev => ({
+                 ...prev,
+                 isListening: false
+             }));
+        }
     }, [controller]);
 
     // Reset
     const resetAnalysis = useCallback(() => {
-        // controller doesn't have a resetMicAnalysis yet, but we can just stop and clear history if needed
-        // For now, we'll just reset local state if analysis is stopped.
         if (!state.isListening) {
-             comboRef.current = 0;
+             visibleWindowRef.current = [];
              setState({
                  isListening: false,
                  currentPitch: 0,
@@ -85,39 +91,29 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
 
     // Wire up events from controller
     useEffect(() => {
-        const handlePitch = (result: PitchAnalysisResult) => {
-            // Combo Logic
-            const isHit = result.accuracy >= 70 || (result.harmonyInterval !== null && result.harmonyAccuracy >= 60);
-            if (isHit) {
-                comboRef.current++;
-            } else if (result.referencePitch > 0) {
-                comboRef.current = 0;
-            }
+        const handlePitchUpdate = (payload: unknown) => {
+            const { result, currentCombo, lastHitType } = payload as { result: PitchAnalysisResult, currentCombo: number, lastHitType: 'perfect' | 'great' | 'good' | 'miss' | null };
 
-            let hitType: 'perfect' | 'great' | 'good' | 'miss' | null = null;
-            if (isHit) {
-                if (result.accuracy >= 95) hitType = 'perfect';
-                else if (result.accuracy >= 85) hitType = 'great';
-                else hitType = 'good';
-            } else if (result.referencePitch > 0) {
-                hitType = 'miss';
+            // Maintain a small sliding window purely for the visualizer
+            visibleWindowRef.current.push(result);
+            if (visibleWindowRef.current.length > 300) {
+                // Remove oldest elements to keep array length <= 300 without expensive slicing
+                visibleWindowRef.current.splice(0, visibleWindowRef.current.length - 300);
             }
 
             if (!pendingUpdateRef.current) {
                 pendingUpdateRef.current = true;
                 animationFrameRef.current = requestAnimationFrame(() => {
                     pendingUpdateRef.current = false;
-                    const history = controller.getPerformanceHistory();
-                    const visibleWindow = history.slice(-300);
                     
                     setState(prev => ({
                         ...prev,
-                        isListening: true, // Pulse listening state
+                        isListening: true,
                         currentPitch: result.detectedPitch,
                         currentScore: result.accuracy,
-                        currentCombo: comboRef.current,
-                        lastHitType: hitType,
-                        pitchHistory: visibleWindow,
+                        currentCombo: currentCombo,
+                        lastHitType: lastHitType,
+                        pitchHistory: [...visibleWindowRef.current],
                     }));
                 });
             }
@@ -131,12 +127,12 @@ export function usePitchAnalysis(controller: PlaybackController, keyInfo?: KeyIn
             setState(prev => ({ ...prev, isListening: false }));
         };
 
-        controller.on('pitch-analysis', handlePitch as (data: unknown) => void);
+        controller.on('pitch-analysis-update', handlePitchUpdate);
         controller.on('mic-started', handleMicStarted);
         controller.on('mic-stopped', handleMicStopped);
 
         return () => {
-            controller.off('pitch-analysis', handlePitch as (data: unknown) => void);
+            controller.off('pitch-analysis-update', handlePitchUpdate);
             controller.off('mic-started', handleMicStarted);
             controller.off('mic-stopped', handleMicStopped);
             if (animationFrameRef.current !== null) {

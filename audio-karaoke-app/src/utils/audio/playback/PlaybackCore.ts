@@ -68,7 +68,7 @@ export class PlaybackController {
   private micStream: MediaStream | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
   private pitchDetector: AudioWorkletNode | null = null;
-  private performanceHistory: PitchAnalysisResult[] = [];
+  private pitchScoringWorker: Worker | null = null;
   private currentKey: KeyInfo | null = null;
   private isAnalyzing: boolean = false;
 
@@ -333,30 +333,38 @@ export class PlaybackController {
       // Connect mic to detector
       this.micSource.connect(this.pitchDetector);
       
-      this.performanceHistory = [];
+      // Initialize scoring worker
+      this.pitchScoringWorker = new Worker(new URL('../pitchScoring.worker', import.meta.url));
+      this.pitchScoringWorker.postMessage({ type: 'INIT' });
+
+      // Handle updates from worker
+      this.pitchScoringWorker.onmessage = (event) => {
+        if (event.data.type === 'SCORE_UPDATE') {
+           this.events.emit("pitch-analysis-update", event.data.payload);
+        }
+      };
+
       this.isAnalyzing = true;
 
-      // Handle pitch data from worklet
+      // Forward raw pitch data to the scoring worker
       this.pitchDetector.port.onmessage = (event) => {
-        if (event.data.type === 'pitch_data' && this.isPlaying) {
+        if (event.data.type === 'pitch_data' && this.isPlaying && this.pitchScoringWorker) {
           const { frequency, confidence } = event.data;
           const currentTime = this.getCurrentTime();
           
           // Get reference pitch at current time from vocal buffer
           const refVocals = this.getVocalsAtTime(currentTime);
           
-          const result = analyzeDetectedPitch(
-            frequency,
-            confidence,
-            refVocals,
-            currentTime,
-            this.currentKey
-          );
-
-          if (result) {
-            this.performanceHistory.push(result);
-            this.events.emit("pitch-analysis", result);
-          }
+          this.pitchScoringWorker.postMessage({
+             type: 'ADD_FRAME',
+             payload: {
+               frequency,
+               confidence,
+               currentTime,
+               refVocals,
+               keyInfo: this.currentKey
+             }
+          });
         }
       };
 
@@ -385,17 +393,33 @@ export class PlaybackController {
       this.micStream.getTracks().forEach(t => t.stop());
       this.micStream = null;
     }
+    
+    // We intentionally don't terminate the worker here, so the hook can fetch the final state.
+    // The consumer (usePitchAnalysis) will call getFinalPerformance() which will then 
+    // terminate the worker once the promise resolves.
 
     this.isAnalyzing = false;
     this.events.emit("mic-stopped");
   }
 
-  getPerformanceScore(): PerformanceScore {
-    return getPerformanceScore(this.performanceHistory);
-  }
+  async getFinalPerformance(): Promise<{ overallScore: PerformanceScore; history: PitchAnalysisResult[] } | null> {
+      if (!this.pitchScoringWorker) return null;
 
-  getPerformanceHistory(): PitchAnalysisResult[] {
-    return this.performanceHistory;
+      return new Promise((resolve) => {
+          const worker = this.pitchScoringWorker!;
+          
+          const handleMessage = (e: MessageEvent) => {
+              if (e.data.type === 'FINAL_STATE') {
+                  worker.removeEventListener('message', handleMessage);
+                  worker.terminate();
+                  this.pitchScoringWorker = null;
+                  resolve(e.data.payload);
+              }
+          };
+          
+          worker.addEventListener('message', handleMessage);
+          worker.postMessage({ type: 'GET_FINAL_STATE' });
+      });
   }
 
   /**
