@@ -343,7 +343,7 @@ export async function GET(request: NextRequest) {
     if (jobId) {
         // Query job status from Python service
         try {
-            const response = await fetch(`${PYTHON_SERVICE_URL}/api/status/${jobId}`);
+            const response = await circuitBreakerFetch(`${PYTHON_SERVICE_URL}/api/status/${jobId}`);
             if (!response.ok) {
                 return NextResponse.json(
                     { error: 'Job not found' },

@@ -22,7 +22,7 @@ const ScoreSubmissionSchema = z.object({
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const songId = searchParams.get('songId');
-  const limit = parseInt(searchParams.get('limit') || '10');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 100);
 
   try {
     const records = await prisma.leaderboardRecord.findMany({
@@ -54,27 +54,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = ScoreSubmissionSchema.parse(body);
 
-    const record = await prisma.leaderboardRecord.create({
-      data: {
-        songId: validatedData.songId,
-        username: validatedData.username,
-        score: validatedData.score,
-        maxCombo: validatedData.maxCombo || 0,
-        perfectionRate: validatedData.perfectionRate,
-        harmonyBonus: validatedData.harmonyBonus || 0,
-        pitchAdjustment: validatedData.pitchAdjustment || 0,
-        tempoMultiplier: validatedData.tempoMultiplier || 1.0,
-      },
-    });
-
-    // Also update song play count
-    await prisma.songEntry.update({
-      where: { id: validatedData.songId },
-      data: { 
-        playCount: { increment: 1 },
-        lastPlayedAt: new Date(),
-      }
-    });
+    const [record] = await prisma.$transaction([
+      prisma.leaderboardRecord.create({
+        data: {
+          songId: validatedData.songId,
+          username: validatedData.username,
+          score: validatedData.score,
+          maxCombo: validatedData.maxCombo || 0,
+          perfectionRate: validatedData.perfectionRate,
+          harmonyBonus: validatedData.harmonyBonus || 0,
+          pitchAdjustment: validatedData.pitchAdjustment || 0,
+          tempoMultiplier: validatedData.tempoMultiplier || 1.0,
+        },
+      }),
+      // Also update song play count
+      prisma.songEntry.update({
+        where: { id: validatedData.songId },
+        data: {
+          playCount: { increment: 1 },
+          lastPlayedAt: new Date(),
+        }
+      })
+    ]);
 
     return NextResponse.json(record, { status: 201 });
   } catch (error) {
