@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LRCData, LyricLine } from '@/types/karaoke';
-import { formatLRCTimestamp } from '@/utils/karaoke/lrcParser';
+import { formatLRCTimestamp, parseLRCStrict } from '@/utils/karaoke/lrcParser';
 import { generateLRCContent, downloadLRCFile } from '@/utils/karaoke/lrcExport';
 import { useTranslations } from 'next-intl';
 import { useLyricSync } from '@/hooks/useLyricSync';
@@ -22,6 +22,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     const [lines, setLines] = useState<LyricLine[]>([]);
     const [editMode, setEditMode] = useState<'text' | 'sync'>('text');
     const [activeLineIndex, setActiveLineIndex] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { startSync, progress, result, isProcessing } = useLyricSync(controller);
 
@@ -107,6 +108,35 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         }
     };
 
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const text = event.target?.result as string;
+            if (!text) return;
+
+            try {
+                const parsed = parseLRCStrict(text);
+                setRawText(text);
+                setLines(parsed.lines);
+                setEditMode('sync');
+                setActiveLineIndex(0);
+            } catch (err) {
+                console.error('Failed to parse LRC file:', err);
+                alert(t('importError') || 'Failed to parse the LRC file. Please ensure it is a valid format.');
+            }
+        };
+
+        reader.readAsText(file);
+        
+        // Reset the file input so the same file can be selected again
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     const handleClear = () => {
         if (confirm(t('clearConfirm'))) {
             setRawText('');
@@ -119,6 +149,13 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-white">{t('title')}</h2>
                 <div className="flex gap-2">
+                    <input 
+                        type="file" 
+                        accept=".lrc" 
+                        className="hidden" 
+                        ref={fileInputRef} 
+                        onChange={handleFileUpload} 
+                    />
                     {editMode === 'text' && (
                         <>
                             <button
@@ -148,6 +185,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                             </button>
                         </>
                     )}
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-full text-sm font-medium transition-all flex items-center gap-2 border border-white/10"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        {t('importLrc') || 'Import LRC'}
+                    </button>
                     <button
                         onClick={() => setEditMode('text')}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${editMode === 'text' ? 'bg-primary text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
