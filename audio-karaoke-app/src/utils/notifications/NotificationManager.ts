@@ -5,7 +5,7 @@ class NotificationManager {
     private permission: NotificationPermission = 'default';
 
     constructor() {
-        if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (typeof Notification !== 'undefined') {
             this.permission = Notification.permission;
         }
     }
@@ -28,18 +28,28 @@ class NotificationManager {
     /**
      * Send a browser notification
      */
-    async sendNotification(title: string, options?: NotificationOptions): Promise<Notification | null> {
-        if (typeof window === 'undefined' || !('Notification' in window)) {
-            return null;
+    async sendNotification(title: string, options?: NotificationOptions): Promise<void> {
+        if (typeof window === 'undefined') {
+            // If in a Worker/Service Worker context, we use self.registration.showNotification
+            if ('registration' in self && 'showNotification' in (self as unknown as ServiceWorkerGlobalScope).registration) {
+                await (self as unknown as ServiceWorkerGlobalScope).registration.showNotification(title, {
+                    icon: '/icons/icon-192x192.png',
+                    badge: '/icons/icon-192x192.png',
+                    ...options
+                });
+            }
+            return;
         }
+
+        if (!('Notification' in window)) return;
 
         if (this.permission !== 'granted') {
             // Attempt to request if not already denied
-            if (this.permission === 'default') {
+            if (this.permission === 'default' as NotificationPermission) {
                 await this.requestPermission();
             }
             
-            if (this.permission !== 'granted') return null;
+            if (this.permission !== 'granted' as NotificationPermission) return;
         }
 
         const notification = new Notification(title, {
@@ -52,8 +62,6 @@ class NotificationManager {
             window.focus();
             notification.close();
         };
-
-        return notification;
     }
 
     /**
@@ -63,12 +71,16 @@ class NotificationManager {
         await this.sendNotification('Separation Complete!', {
             body: `"${fileName}" is ready for karaoke.`,
             tag: `muzika-job-${fileName}`,
-            renotify: true
-        });
+            renotify: true,
+            data: { url: typeof window !== 'undefined' ? window.location.origin : undefined }
+        } as NotificationOptions);
     }
 
     get isSupported(): boolean {
-        return typeof window !== 'undefined' && 'Notification' in window;
+        if (typeof window !== 'undefined') {
+            return 'Notification' in window;
+        }
+        return typeof self !== 'undefined' && 'registration' in self;
     }
 }
 

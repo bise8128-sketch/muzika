@@ -1,6 +1,7 @@
 import { db } from '../storage/audioDatabase';
 import { separateAudio } from '../ml/separateAudio';
 import { MODELS } from '@/types/model';
+import { notificationManager } from '../notifications/NotificationManager';
 
 class OfflineQueueManager {
     private isProcessing: boolean = false;
@@ -86,6 +87,9 @@ class OfflineQueueManager {
             });
 
             console.log(`[OfflineQueueManager] Completed job ${job.id}`);
+            
+            // Send notification
+            notificationManager.notifyJobComplete(job.fileName).catch(console.error);
             
             // Dispatch a global event so UI components (like the mixer) know to reload
             if (typeof window !== 'undefined') {
