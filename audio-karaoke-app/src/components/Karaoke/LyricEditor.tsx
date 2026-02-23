@@ -87,6 +87,54 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
         }
     }, [activeLineIndex, playbackLineIndex, editMode, lines.length]);
 
+    // Keyboard shortcuts for sync mode
+    useEffect(() => {
+        if (editMode !== 'sync') return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if typing in an input
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (controller.getIsPlaying()) {
+                        controller.pause();
+                    } else {
+                        controller.play();
+                    }
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    setActiveLineIndex(prev => Math.max(0, prev - 1));
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    setActiveLineIndex(prev => Math.min(lines.length - 1, prev + 1));
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (activeLineIndex >= 0 && activeLineIndex < lines.length) {
+                        setLines(prev => {
+                            const newLines = [...prev];
+                            const current = newLines[activeLineIndex];
+                            const delta = e.code === 'ArrowRight' ? 0.1 : -0.1;
+                            newLines[activeLineIndex] = {
+                                ...current,
+                                startTime: Math.max(0, current.startTime + delta)
+                            };
+                            return newLines;
+                        });
+                    }
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editMode, activeLineIndex, lines, controller]);
+
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const text = e.target.value;
         setRawText(text);
@@ -298,8 +346,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
                         disabled={activeLineIndex >= lines.length}
                         className="w-full py-6 bg-primary hover:bg-primary/80 disabled:bg-white/5 disabled:text-white/20 text-white font-bold text-xl rounded-2xl transition-all active:scale-95 shadow-lg shadow-primary/20"
                     >
-                        {t('markLine')}
+                        {t('markLine') || 'Mark Line'}
                     </button>
+                    
+                    <div className="flex justify-center gap-6 text-[10px] text-white/30 uppercase tracking-wider font-semibold pt-1">
+                        <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-white/50 font-sans">Space</kbd> Play / Pause</span>
+                        <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-white/50 font-sans">↑↓</kbd> Navigate Line</span>
+                        <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-white/50 font-sans">←→</kbd> Nudge 0.1s</span>
+                    </div>
                 </div>
             )}
 
