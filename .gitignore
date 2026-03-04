@@ -10,4 +10,6 @@ build/
 .env*.local
 python-audio-cli/output/downloads/
 python-audio-cli/venv/
+__pycache__/
+*.pyc
 
