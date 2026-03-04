@@ -179,7 +179,7 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
                             onClick={handleLaunchKaraoke}
                             disabled={isLaunchingKaraoke || isLoading}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all
-                                bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500
+                                bg-linear-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500
                                 text-white shadow-lg shadow-violet-500/20
                                 ${(isLaunchingKaraoke || isLoading) ? 'opacity-60 cursor-wait' : 'hover:scale-105 active:scale-100'}`}
                         >
