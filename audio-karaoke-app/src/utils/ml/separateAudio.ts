@@ -7,149 +7,15 @@ import { BrowserAudioSegmenter } from '@/utils/audio/BrowserAudioSegmenter';
 import { BrowserFileSource } from '@/utils/io/BrowserFileSource';
 import { ProgressTracker } from '@/utils/progress/ProgressTracker';
 import { StorageManager } from '@/utils/storage/StorageManager';
+import { WorkerPool, AcquiredWorker } from '@/utils/worker/WorkerPool';
 
-/**
- * A lightweight wrapper around a single Web Worker for stateful session messaging.
- * Unlike WorkerPool, this pins ALL messages to one worker instance, which is required
- * by audio.worker.ts since `activeSession` state is per-worker.
- *
- * Sends are serialized via an internal queue since the worker is single-threaded —
- * responses always arrive in FIFO order. Callers can still use Promise.all for
- * concurrency; their promises resolve in order as the worker completes each task.
- */
-class SessionWorker {
-    private worker: Worker;
-    private pendingResolve: ((value: unknown) => void) | null = null;
-    private pendingReject: ((reason: Error) => void) | null = null;
-    private progressHandler: ((progress: number) => void) | null = null;
-    private inFlight = false;
-    private watchdogId: ReturnType<typeof setTimeout> | null = null;
-
-    // Queue of sends waiting for the worker to become free
-    private queue: Array<{
-        type: string;
-        payload: unknown;
-        transferables: Transferable[];
-        onProgress?: (p: number) => void;
-        resolve: (v: unknown) => void;
-        reject: (e: Error) => void;
-    }> = [];
-
-    constructor() {
-        this.worker = new Worker(
-            new URL('./audio.worker.ts', import.meta.url),
-            { type: 'module' }
-        );
-        this.worker.onmessage = (e: MessageEvent) => this.handleMessage(e);
-        this.worker.onerror = (e: ErrorEvent) => this.handleError(e);
-    }
-
-    private resetWatchdog(): void {
-        if (this.watchdogId) clearTimeout(this.watchdogId);
-        // If the worker is completely silent for 60 seconds (no progress, no response), assume it dropped the message.
-        this.watchdogId = setTimeout(() => {
-            if (this.inFlight) {
-                console.warn('[SessionWorker] Watchdog timeout: Worker silently dropped message or hung.');
-                this.pendingReject?.(new Error('Worker timeout: no response or progress for 60 seconds'));
-                this.pendingResolve = null;
-                this.pendingReject = null;
-                this.flushQueue();
-            }
-        }, 60000);
-    }
-
-    private clearWatchdog(): void {
-        if (this.watchdogId) {
-            clearTimeout(this.watchdogId);
-            this.watchdogId = null;
-        }
-    }
-
-    private handleMessage(event: MessageEvent): void {
-        const { type, payload } = event.data;
-        if (type === 'ERROR' || type === 'FAILED') {
-            this.clearWatchdog();
-            this.pendingReject?.(new Error(payload?.message || 'Unknown worker error'));
-            this.pendingResolve = null;
-            this.pendingReject = null;
-            this.flushQueue();
-        } else if (type === 'PROGRESS') {
-            this.resetWatchdog();
-            const value = typeof payload === 'number'
-                ? payload
-                : (payload?.percentage ?? payload?.progress);
-            if (typeof value === 'number') this.progressHandler?.(value);
-            // PROGRESS does NOT complete the task — do NOT flush here
-        } else {
-            // SUCCESS / COMPLETE / STREAM_READY / CHUNK_PROCESSED / etc.
-            this.clearWatchdog();
-            this.pendingResolve?.(payload);
-            this.pendingResolve = null;
-            this.pendingReject = null;
-            this.flushQueue();
-        }
-    }
-
-    private handleError(e: ErrorEvent): void {
-        this.clearWatchdog();
-        this.pendingReject?.(new Error(`Worker error: ${e.message}`));
-        this.pendingResolve = null;
-        this.pendingReject = null;
-        this.flushQueue();
-    }
-
-    private flushQueue(): void {
-        if (this.queue.length > 0) {
-            this.dispatch(this.queue.shift()!);
-        } else {
-            this.inFlight = false;
-        }
-    }
-
-    private dispatch(item: typeof this.queue[number]): void {
-        this.inFlight = true;
-        this.pendingResolve = item.resolve;
-        this.pendingReject = item.reject;
-        this.progressHandler = item.onProgress ?? null;
-        this.resetWatchdog();
-        try {
-            this.worker.postMessage({ type: item.type, payload: item.payload }, item.transferables);
-        } catch (error) {
-            this.clearWatchdog();
-            this.pendingResolve = null;
-            this.pendingReject = null;
-            item.reject(error instanceof Error ? error : new Error(String(error)));
-            this.flushQueue();
-        }
-    }
-
-    send<TResult>(
-        type: string,
-        payload: unknown,
-        transferables: Transferable[] = [],
-        onProgress?: (p: number) => void
-    ): Promise<TResult> {
-        return new Promise<TResult>((resolve, reject) => {
-            const item = {
-                type,
-                payload,
-                transferables,
-                onProgress,
-                resolve: resolve as (v: unknown) => void,
-                reject
-            };
-            if (this.inFlight) {
-                this.queue.push(item);
-            } else {
-                this.dispatch(item);
-            }
-        });
-    }
-
-    terminate(): void {
-        this.worker.terminate();
-    }
-}
+// Global worker pool for audio separation
+const separationWorkerPool = new WorkerPool({
+    workerScript: new URL('./audio.worker.ts', import.meta.url),
+    maxWorkers: typeof navigator !== 'undefined' ? Math.max(1, (navigator.hardwareConcurrency || 4) - 1) : 4,
+    minWorkers: 0,
+    idleTimeout: 60000
+});
 
 export interface SeparationOptions {
     modelInfo: ModelInfo;
@@ -172,18 +38,18 @@ export async function separateAudio(
     file: File,
     options: SeparationOptions
 ): Promise<SeparationResult> {
-    const sessionWorker = new SessionWorker();
+    const sessionWorker = await separationWorkerPool.acquire();
     try {
         return await separateAudioInternal(file, options, sessionWorker);
     } finally {
-        sessionWorker.terminate();
+        sessionWorker.release();
     }
 }
 
 async function separateAudioInternal(
     file: File,
     options: SeparationOptions,
-    sessionWorker: SessionWorker
+    sessionWorker: AcquiredWorker
 ): Promise<SeparationResult> {
     console.log('[separateAudioInternal] Executing fresh version');
     if (typeof window === 'undefined') {
