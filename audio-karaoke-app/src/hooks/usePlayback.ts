@@ -1,8 +1,9 @@
 import { useAudioStore } from '@/store/audioStore';
+import { useShallow } from 'zustand/react/shallow';
 
 export function usePlayback() {
     // We ignore the controller prop and only use the global store to prevent mismatches
-    return useAudioStore((state) => ({
+    return useAudioStore(useShallow((state) => ({
         isPlaying: state.isPlaying,
         currentTime: state.currentTime,
         duration: state.duration,
@@ -17,5 +18,5 @@ export function usePlayback() {
         seek: state.seek,
         setVolume: state.setVolume,
         setEQ: state.setEQ
-    }));
+    })));
 }
