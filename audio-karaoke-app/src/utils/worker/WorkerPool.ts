@@ -419,10 +419,33 @@ export class WorkerPool {
         }
     }
 
-    private onWorkerError(worker: WorkerWrapper, error: Error): void {
+    private onWorkerError(worker: WorkerWrapper, error: Error, failedTask?: WorkerTask | null, failedQueue?: WorkerTask[]): void {
         console.error(`WorkerPool received error from worker ${worker.id}:`, error);
         worker.terminate();
         this.workers.delete(worker.id);
+
+        // Enter Safe Mode on worker crash
+        if (!this.safeMode) {
+            console.warn(`[WorkerPool] Entering Safe Mode due to worker crash. Reducing concurrency limits.`);
+            this.safeMode = true;
+            this.maxWorkers = Math.max(1, Math.floor(this.maxWorkers / 2));
+        }
+
+        // Re-queue tasks for seamless job migration
+        const allTasks: WorkerTask[] = [];
+        if (failedTask) allTasks.push(failedTask as WorkerTask);
+        if (failedQueue && failedQueue.length > 0) allTasks.push(...failedQueue as WorkerTask[]);
+
+        allTasks.forEach(task => {
+            const retries = task.retries ?? 0;
+            if (retries < 3) {
+                console.warn(`[WorkerPool] Retrying task ${task.id} (attempt ${retries + 1}/3) in Safe Mode`);
+                task.retries = retries + 1;
+                this.enqueueTask(task);
+            } else {
+                task.reject(new Error(`Task failed after 3 retries. Last error: ${error.message}`));
+            }
+        });
 
         this.processQueue();
         this.ensureMinWorkers();
