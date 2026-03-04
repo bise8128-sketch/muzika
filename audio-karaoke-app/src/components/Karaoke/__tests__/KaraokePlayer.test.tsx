@@ -15,6 +15,13 @@ jest.mock('next/navigation', () => ({
     useSearchParams: () => new URLSearchParams(),
 }));
 
+jest.mock('@/context/AudioProvider', () => ({
+    useAudio: () => ({
+        setPerformanceScore: jest.fn(),
+        send: jest.fn()
+    })
+}));
+
 jest.mock('@/hooks/usePlayback', () => ({
     usePlayback: () => ({
         isPlaying: false,
@@ -182,6 +189,7 @@ jest.mock('@/utils/audio/playbackController', () => {
             pause: jest.fn(),
             stop: jest.fn(),
             seek: jest.fn(),
+            getAudioBuffers: jest.fn().mockReturnValue([]),
             context: new MockAudioContext(),
             vocalsVolume: 1,
             instrumentalVolume: 1,
