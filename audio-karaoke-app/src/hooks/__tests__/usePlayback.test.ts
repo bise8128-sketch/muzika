@@ -1,9 +1,8 @@
-
 import { renderHook, act } from '@testing-library/react';
 import { usePlayback } from '../usePlayback';
+import { useAudioStore } from '@/store/audioStore';
 import { PlaybackController } from '@/utils/audio/playbackController';
 
-// Mock PlaybackController
 jest.mock('@/utils/audio/playbackController', () => {
     return {
         PlaybackController: jest.fn().mockImplementation(() => {
@@ -26,7 +25,6 @@ jest.mock('@/utils/audio/playbackController', () => {
                 getIsPlaying: jest.fn().mockReturnValue(false),
                 getCurrentTime: jest.fn().mockReturnValue(0),
                 getDuration: jest.fn().mockReturnValue(0),
-                // Helper for tests to trigger events
                 _trigger: (event: string, data?: any) => {
                     if (listeners[event]) {
                         listeners[event].forEach((cb: any) => cb(data));
@@ -42,10 +40,18 @@ describe('usePlayback', () => {
 
     beforeEach(() => {
         mockController = new PlaybackController();
+        useAudioStore.setState({
+            controller: mockController,
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+            vocalsVolume: 1,
+            instrumentalVolume: 1
+        });
     });
 
     it('initializes with default values', () => {
-        const { result } = renderHook(() => usePlayback(mockController));
+        const { result } = renderHook(() => usePlayback());
 
         expect(result.current.isPlaying).toBe(false);
         expect(result.current.currentTime).toBe(0);
@@ -54,25 +60,26 @@ describe('usePlayback', () => {
         expect(result.current.instrumentalVolume).toBe(1);
     });
 
-    it('updates isPlaying when controller emits play/pause', () => {
-        const { result } = renderHook(() => usePlayback(mockController));
+    it('sync calls update state when triggered', () => {
+        // since usePlayback just maps state, simulate the store sync
+        const { result } = renderHook(() => usePlayback());
 
         act(() => {
-            mockController._trigger('play');
+            useAudioStore.getState().syncPlaybackState({ isPlaying: true });
         });
         expect(result.current.isPlaying).toBe(true);
 
         act(() => {
-            mockController._trigger('pause');
+            useAudioStore.getState().syncPlaybackState({ isPlaying: false });
         });
         expect(result.current.isPlaying).toBe(false);
     });
 
-    it('updates currentTime when controller emits timeupdate', () => {
-        const { result } = renderHook(() => usePlayback(mockController));
+    it('updates currentTime when sync handles it', () => {
+        const { result } = renderHook(() => usePlayback());
 
         act(() => {
-            mockController._trigger('timeupdate', { currentTime: 10, duration: 100 });
+            useAudioStore.getState().syncPlaybackState({ currentTime: 10, duration: 100 });
         });
 
         expect(result.current.currentTime).toBe(10);
@@ -80,7 +87,7 @@ describe('usePlayback', () => {
     });
 
     it('calls controller methods when hook methods are called', () => {
-        const { result } = renderHook(() => usePlayback(mockController));
+        const { result } = renderHook(() => usePlayback());
 
         act(() => {
             result.current.play();
