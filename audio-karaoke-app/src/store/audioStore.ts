@@ -19,9 +19,18 @@ export interface AudioState {
     mid: number;
     treble: number;
 
+    // Performance Metrics
+    metrics: {
+        timeToFirstAudio: number | null;
+        processingLatency: number | null;
+        gpuActive: boolean;
+        fps: number;
+    };
+
     // Actions
     setController: (controller: PlaybackController | null) => void;
     setActiveResult: (result: SeparationResult | null) => void;
+    updateMetrics: (metricsUpdate: Partial<AudioState['metrics']>) => void;
     
     // Sync actions (called by hook/listeners to sync from controller)
     syncPlaybackState: (state: Partial<AudioState>) => void;
@@ -49,9 +58,20 @@ export const useAudioStore = create<AudioState>()((set, get) => ({
     mid: 0,
     treble: 0,
 
+    metrics: {
+        timeToFirstAudio: null,
+        processingLatency: null,
+        gpuActive: false,
+        fps: 0
+    },
+
     setController: (controller) => set({ controller }),
     
     setActiveResult: (result) => set({ activeResult: result }),
+
+    updateMetrics: (update) => set((state) => ({
+        metrics: { ...state.metrics, ...update }
+    })),
     
     syncPlaybackState: (state) => set((prev) => ({ ...prev, ...state })),
 
