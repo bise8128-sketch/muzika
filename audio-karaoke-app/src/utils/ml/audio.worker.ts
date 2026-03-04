@@ -45,7 +45,7 @@ export type WorkerResponse =
     | { type: 'CHUNK_PLAYBACK'; payload: { vocals: Float32Array; instrumentals: Float32Array; position: number } }
     | { type: 'COMPLETE'; payload: { vocals: ArrayBuffer; instrumentals: ArrayBuffer; fileHash: string; timestamp: number; metrics?: SeparationMetrics } }
     | { type: 'STREAM_READY'; payload: { sessionId: string; backend?: ExecutionBackend } }
-    | { type: 'CHUNK_PROCESSED'; payload: { vocals: Float32Array; instrumentals: Float32Array; chunkIndex: number; sessionId: string } }
+    | { type: 'CHUNK_PROCESSED'; payload: { vocals: Float32Array; instrumentals: Float32Array; chunkIndex: number; sessionId: string; processingLatency?: number } }
     | { type: 'SESSION_ENDED'; payload: { sessionId: string } }
     | { type: 'ERROR'; payload: { message: string } };
 
@@ -137,8 +137,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
         try {
             console.log(`[audio.worker] Calling engine.processChunk for chunk ${chunkIndex}...`);
+            const start = performance.now();
             const result = await loadedEngine.engine.processChunk(chunk, channels, sampleRate);
-            console.log(`[audio.worker] Chunk ${chunkIndex} processed successfully`);
+            const processingLatency = performance.now() - start;
+            console.log(`[audio.worker] Chunk ${chunkIndex} processed successfully in ${processingLatency.toFixed(2)}ms`);
 
             ctx.postMessage({
                 type: 'CHUNK_PROCESSED',
@@ -146,7 +148,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     vocals: result.vocals,
                     instrumentals: result.instrumentals,
                     chunkIndex,
-                    sessionId
+                    sessionId,
+                    processingLatency
                 }
             }, [result.vocals.buffer as ArrayBuffer, result.instrumentals.buffer as ArrayBuffer]); // Transfer buffers
             console.log(`[audio.worker] Sent CHUNK_PROCESSED message for chunk ${chunkIndex}`);
@@ -232,6 +235,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             }
 
             performance.mark('start-separation');
+            
+            let totalInferenceLatency = 0;
+            let inferenceChunksCount = 0;
 
             // Phase 5: Inference with Dynamic Chunking and Overlap-Add
             const result = await pipeline.process(
@@ -249,7 +255,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                         message: `Separating audio... ${Math.round(percentage)}%`
                     });
                 },
-                (vChunk, iChunk, idx) => {
+                (vChunk, iChunk, idx, inferenceLatency) => {
+                    totalInferenceLatency += inferenceLatency;
+                    inferenceChunksCount++;
                     if (idx === 0) {
                         performance.mark('ttfa');
                         try {
@@ -268,7 +276,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             const metrics: SeparationMetrics = {
                 ttfa: ttfaEntry?.duration || 0,
                 totalTime: performance.now() - performance.getEntriesByName('start-separation')[0].startTime,
-                numSegments: Math.ceil(length / (sampleRate * 30)) // Rough estimate
+                numSegments: inferenceChunksCount > 0 ? inferenceChunksCount : Math.ceil(length / (sampleRate * 30)),
+                averageInferenceTime: inferenceChunksCount > 0 ? (totalInferenceLatency / inferenceChunksCount) : 0
             };
 
             // Prepare results (de-interleaving for storage/output if necessary, or just send interleaved)

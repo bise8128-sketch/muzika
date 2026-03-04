@@ -20,7 +20,7 @@ const separationWorkerPool = new WorkerPool({
 export interface SeparationOptions {
     modelInfo: ModelInfo;
     onProgress?: (progress: ProcessingProgress) => void;
-    onChunk?: (chunk: { vocals: Float32Array; instrumentals: Float32Array; position: number; sampleRate: number }) => void;
+    onChunk?: (chunk: { vocals: Float32Array; instrumentals: Float32Array; position: number; sampleRate: number; processingLatency?: number }) => void;
     skipCache?: boolean;
     signal?: AbortSignal;
 }
@@ -213,7 +213,8 @@ async function separateAudioInternal(
             const taskPromise = sessionWorker.send<{ 
                 vocals: Float32Array; 
                 instrumentals: Float32Array; 
-                chunkIndex: number 
+                chunkIndex: number;
+                processingLatency?: number;
             }>(
                 'PROCESS_STREAM_CHUNK',
                 {
@@ -249,7 +250,8 @@ async function separateAudioInternal(
                             vocals: chunkData.vocals,
                             instrumentals: chunkData.instrumentals,
                             position: chunkData.startTime,
-                            sampleRate: chunkData.sampleRate
+                            sampleRate: chunkData.sampleRate,
+                            processingLatency: result.processingLatency
                         });
                     }
                     nextChunkToPlay++;
