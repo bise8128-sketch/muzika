@@ -9,6 +9,12 @@ jest.mock('next-intl', () => ({
     useTranslations: () => (key: string) => key,
 }));
 
+jest.mock('next/navigation', () => ({
+    useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
+    useParams: () => ({ id: 'test-id' }),
+    useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock('@/hooks/usePlayback', () => ({
     usePlayback: () => ({
         isPlaying: false,
@@ -166,6 +172,7 @@ jest.mock('../KaraokeOverlay', () => ({
 }));
 
 jest.mock('@/utils/audio/playbackController', () => {
+    const { MockAudioContext } = require('../../../__mocks__/audioContextMock');
     return {
         PlaybackController: jest.fn().mockImplementation(() => ({
             setVoiceBuffer: jest.fn(),
