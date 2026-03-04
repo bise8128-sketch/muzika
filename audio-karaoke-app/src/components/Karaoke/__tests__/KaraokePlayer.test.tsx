@@ -189,6 +189,8 @@ jest.mock('@/utils/audio/playbackController', () => {
             pause: jest.fn(),
             stop: jest.fn(),
             seek: jest.fn(),
+            on: jest.fn(),
+            off: jest.fn(),
             getAudioBuffers: jest.fn().mockReturnValue([]),
             context: new MockAudioContext(),
             vocalsVolume: 1,
