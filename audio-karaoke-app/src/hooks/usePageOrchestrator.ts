@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useAudio } from '@/context/AudioProvider';
+import { useAudioStore } from '@/store/audioStore';
 
 import { getSettings, saveSettings } from '@/utils/storage/settingsStore';
 import { songsStorage } from '@/utils/storage/songsStorage';
@@ -19,12 +20,12 @@ export function usePageOrchestrator() {
   const { models: AVAILABLE_MODELS } = useModels();
 
   const {
-    controller,
     setActiveResult,
     separation,
     machineState,
     send
   } = useAudio();
+  const { controller } = useAudioStore();
 
   // UI state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

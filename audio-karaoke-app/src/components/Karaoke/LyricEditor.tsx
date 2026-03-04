@@ -25,7 +25,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({ currentTime, onSave, i
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const { startSync, progress, result, isProcessing } = useLyricSync(controller);
+    const { startSync, progress, result, isProcessing } = useLyricSync();
 
     useEffect(() => {
         if (initialLRC) {

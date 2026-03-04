@@ -115,6 +115,10 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
         enableCpuMemArena: true,
         enableMemPattern: true,
         executionMode: 'sequential',
+        // Optimizes individual operator execution across available cores
+        intraOpNumThreads: (ort as any).env.wasm.numThreads, 
+        // Minimize inter-op threads to reduce context switching overhead and memory consumption
+        interOpNumThreads: 1,
         // Optimize memory for fixed batch size of 1
         freeDimensionOverrides: {
             // Override symbolic dimensions for better optimization

@@ -23,6 +23,7 @@ import { db } from '@/utils/storage/audioDatabase';
 import { offlineQueueManager } from '@/utils/processing/OfflineQueueManager';
 import { audioCache } from '@/utils/storage/audioCache';
 import { StorageManager } from '@/utils/storage/StorageManager';
+import { decodeArrayBuffer } from '@/utils/audio/audioDecoder';
 
 interface KaraokeOverlayProps {
     uiState: KaraokeUIState;
@@ -138,7 +139,9 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
                 // Job finished for our CURRENT song! Load from cache!
                 const cached = await audioCache.getCachedAudio(currentHash, MODELS[ModelType.DEMUCS].id);
                 if (cached) {
-                    controller.setAudioBuffers([cached.vocals.slice(0), cached.instrumentals.slice(0)]);
+                    const vBuf = await decodeArrayBuffer(cached.vocals);
+                    const iBuf = await decodeArrayBuffer(cached.instrumentals);
+                    controller.setAudioBuffers([vBuf, iBuf]);
                     console.log('Hot-swapped separated audio from background job!');
                 }
             }
@@ -165,9 +168,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
 
             // Add job to the OfflineQueueManager
             await offlineQueueManager.addJob(
-                fileId,
-                file.name,
-                fileHash,
+                file,
                 MODELS[ModelType.DEMUCS].id
             );
             

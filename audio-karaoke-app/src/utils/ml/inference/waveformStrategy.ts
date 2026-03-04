@@ -94,16 +94,9 @@ export class WaveformInferenceStrategy extends BaseInferenceStrategy implements 
             const vocalsInterleaved = interleave(vocalsTensor);
             const instrumentalsInterleaved = interleave(instrumentalTensor);
 
-            // Copy to buffer pool
-            const vocalsPooled = bufferPool.acquire(vocalsInterleaved.length);
-            const instrumentalsPooled = bufferPool.acquire(instrumentalsInterleaved.length);
-
-            vocalsPooled.set(vocalsInterleaved);
-            instrumentalsPooled.set(instrumentalsInterleaved);
-
             return {
-                vocals: vocalsPooled,
-                instrumentals: instrumentalsPooled,
+                vocals: vocalsInterleaved,
+                instrumentals: instrumentalsInterleaved,
             };
 
         } finally {

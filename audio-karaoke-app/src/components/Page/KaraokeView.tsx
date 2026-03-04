@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import type { PlaybackController } from '@/utils/audio/playbackController';
+
 
 const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer').then(mod => mod.KaraokePlayer), {
   loading: () => <div className="h-64 flex items-center justify-center text-muted-foreground">Loading Karaoke Player...</div>,
@@ -11,11 +11,10 @@ const KaraokePlayer = dynamic(() => import('@/components/Karaoke/KaraokePlayer')
 });
 
 interface KaraokeViewProps {
-  controller: PlaybackController;
   onBack: () => void;
 }
 
-export function KaraokeView({ controller, onBack }: KaraokeViewProps) {
+export function KaraokeView({ onBack }: KaraokeViewProps) {
   const t = useTranslations('HomePage');
 
   return (
@@ -29,7 +28,7 @@ export function KaraokeView({ controller, onBack }: KaraokeViewProps) {
         </svg>
         {t('backToResults')}
       </button>
-      <KaraokePlayer controller={controller} />
+      <KaraokePlayer />
     </div>
   );
 }

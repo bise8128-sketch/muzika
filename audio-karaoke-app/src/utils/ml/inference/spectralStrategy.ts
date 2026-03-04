@@ -249,16 +249,9 @@ export class SpectralInferenceStrategy extends BaseInferenceStrategy implements 
             const vocalsAudio = reconstruct(vocalsTensor);
             const instAudio = reconstruct(instTensor);
 
-            // Copy to buffer pool
-            const vocalsPooled = bufferPool.acquire(vocalsAudio.length);
-            const instPooled = bufferPool.acquire(instAudio.length);
-
-            vocalsPooled.set(vocalsAudio);
-            instPooled.set(instAudio);
-
             return {
-                vocals: vocalsPooled,
-                instrumentals: instPooled
+                vocals: vocalsAudio,
+                instrumentals: instAudio
             };
 
         } finally {

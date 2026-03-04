@@ -64,6 +64,9 @@ export interface SongEntry {
     type: 'ai_separated' | 'direct_karaoke';
     title: string;
     artist?: string;
+    album?: string;
+    genre?: string;
+    year?: number | string;
     versionName?: string; // e.g. "Original", "Live", "Remix"
     
     // Performance stats
@@ -75,8 +78,8 @@ export interface SongEntry {
     modelUsed?: string;   // e.g. "htdemucs"
     
     // Decoupled Storage references (OPFS or IndexedDB IDs)
-    vocalFileId?: string;
-    instrumentalFileId?: string;
+    vocalPath?: string;
+    instrumentalPath?: string;
     
     // Legacy / Buffer Data (Deprecated for new entries)
     instrumentalData?: ArrayBuffer;

@@ -92,7 +92,7 @@ export class SongsStorage {
             title: metadata.common.title || file.name.replace(/\.[^/.]+$/, ""),
             artist: metadata.common.artist,
             album: metadata.common.album,
-            genre: metadata.common.genre,
+            genre: metadata.common.genre?.join(', '),
             year: metadata.common.year,
             versionName: 'Original Upload',
             instrumentalPath,

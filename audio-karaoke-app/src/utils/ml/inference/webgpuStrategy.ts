@@ -146,16 +146,9 @@ export class WebGPUInferenceStrategy extends BaseInferenceStrategy implements In
             const vocalsData = processOutput(vocalsTensor);
             const instData = processOutput(instrumentalTensor);
 
-            // Use buffer pool for memory efficiency
-            const vocals = bufferPool.acquire(vocalsData.length);
-            vocals.set(vocalsData);
-
-            const instrumentals = bufferPool.acquire(instData.length);
-            instrumentals.set(instData);
-
             return {
-                vocals,
-                instrumentals
+                vocals: vocalsData,
+                instrumentals: instData
             };
 
         } catch (e) {

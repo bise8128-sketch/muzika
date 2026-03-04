@@ -8,9 +8,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SyncProgress, SyncResult } from '@/utils/ml/lyricSync';
-import type { PlaybackController } from '@/utils/audio/playback/PlaybackCore';
 import { audioCache } from '@/utils/storage/audioCache';
 import { lyricSyncCache } from '@/utils/storage/lyricSyncCache';
+import { useAudioStore } from '@/store/audioStore';
 
 interface LyricSyncState {
     isProcessing: boolean;
@@ -19,7 +19,10 @@ interface LyricSyncState {
     error: string | null;
 }
 
-export function useLyricSync(controller: PlaybackController) {
+export function useLyricSync() {
+    // Rely on the global audio store controller instead of prop
+    const controller = useAudioStore(state => state.controller);
+
     const [state, setState] = useState<LyricSyncState>({
         isProcessing: false,
         progress: null,
@@ -41,6 +44,11 @@ export function useLyricSync(controller: PlaybackController) {
 
     // Start synchronisation
     const startSync = useCallback((lyrics: string[]) => {
+        if (!controller) {
+            setState(prev => ({ ...prev, error: 'No playback controller available.' }));
+            return;
+        }
+
         const buffers = controller.getAudioBuffers();
         if (buffers.length === 0) {
             setState(prev => ({ ...prev, error: 'No audio loaded.' }));
@@ -81,38 +89,38 @@ export function useLyricSync(controller: PlaybackController) {
 
             const worker = getWorker();
 
-        worker.onmessage = async (e: MessageEvent) => {
-            const { type, payload } = e.data;
+            worker.onmessage = async (e: MessageEvent) => {
+                const { type, payload } = e.data;
 
-            if (type === 'PROGRESS') {
-                setState(prev => ({ ...prev, progress: payload as SyncProgress }));
-            } else if (type === 'RESULT') {
-                const syncResult = payload as SyncResult;
-                if (fileHash) {
-                    // Fire and forget cache save
-                    lyricSyncCache.cacheSyncResult(fileHash, modelUsed, syncResult).catch(() => {});
+                if (type === 'PROGRESS') {
+                    setState(prev => ({ ...prev, progress: payload as SyncProgress }));
+                } else if (type === 'RESULT') {
+                    const syncResult = payload as SyncResult;
+                    if (fileHash) {
+                        // Fire and forget cache save
+                        lyricSyncCache.cacheSyncResult(fileHash, modelUsed, syncResult).catch(() => {});
+                    }
+                    
+                    setState(prev => ({
+                        ...prev,
+                        isProcessing: false,
+                        result: syncResult,
+                        progress: { stage: 'done', progress: 1, message: 'Done!' },
+                    }));
+                } else if (type === 'ERROR') {
+                    setState(prev => ({
+                        ...prev,
+                        isProcessing: false,
+                        error: payload.message,
+                        progress: { stage: 'error', progress: 0, message: payload.message },
+                    }));
                 }
-                
-                setState(prev => ({
-                    ...prev,
-                    isProcessing: false,
-                    result: syncResult,
-                    progress: { stage: 'done', progress: 1, message: 'Done!' },
-                }));
-            } else if (type === 'ERROR') {
-                setState(prev => ({
-                    ...prev,
-                    isProcessing: false,
-                    error: payload.message,
-                    progress: { stage: 'error', progress: 0, message: payload.message },
-                }));
-            }
-        };
+            };
 
-        worker.postMessage({
-            type: 'TRANSCRIBE',
-            payload: { audioData, sampleRate, lyrics },
-        });
+            worker.postMessage({
+                type: 'TRANSCRIBE',
+                payload: { audioData, sampleRate, lyrics },
+            });
         };
 
         runSync();

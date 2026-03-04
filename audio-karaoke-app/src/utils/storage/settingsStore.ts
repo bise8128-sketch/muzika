@@ -14,6 +14,7 @@ export interface UserSettings {
     stageModeEnabled: boolean;
     showVisualizer: boolean;
     preferredVocalRange: VocalRangeType;
+    micNoiseFloor: number;
 }
 
 const STORAGE_KEY = 'muzika_user_settings';
@@ -24,7 +25,8 @@ const DEFAULT_SETTINGS: UserSettings = {
     defaultVolumeBalance: 0.5,
     stageModeEnabled: false,
     showVisualizer: true,
-    preferredVocalRange: 'tenor'
+    preferredVocalRange: 'tenor',
+    micNoiseFloor: 0.05
 };
 
 export function getSettings(): UserSettings {

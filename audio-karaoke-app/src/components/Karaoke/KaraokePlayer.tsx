@@ -21,6 +21,7 @@ import { useMixRecorder } from '@/hooks/useMixRecorder';
 import { parseLRC } from '@/utils/karaoke/lrcParser';
 import { generatePitchTargets } from '@/utils/audio/pitchAnalysis';
 import { useKaraokeUI } from '@/hooks/useKaraokeUI';
+import { useAudioStore } from '@/store/audioStore';
 
 // Custom Hooks
 import { useKaraokeExport } from '@/hooks/useKaraokeExport';
@@ -42,23 +43,20 @@ import { ErrorBoundary } from '../UI/ErrorBoundary';
 import { useMachine } from '@xstate/react';
 import { karaokeMachine } from '@/machines/karaokeMachine';
 
-interface KaraokePlayerProps {
-    controller: PlaybackController;
-}
-
-export const KaraokePlayer: React.FC<KaraokePlayerProps> = ({ controller }) => {
+export const KaraokePlayer: React.FC = () => {
     return (
         <ErrorBoundary>
-            <KaraokePlayerContent controller={controller} />
+            <KaraokePlayerContent />
         </ErrorBoundary>
     );
 };
 
-const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
+const KaraokePlayerContent: React.FC = () => {
     const router = useRouter();
     const { id } = useParams();
     const searchParams = useSearchParams();
     const { setPerformanceScore, send: appSend } = useAudio();
+    const controller = useAudioStore(state => state.controller);
 
     // UI State Management
     const { state: uiState, actions: uiActions } = useKaraokeUI();
@@ -71,16 +69,16 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     const [cdgData, setCdgData] = useState<Uint8Array | null>(null);
 
     // Audio Hooks
-    const playback = usePlayback(controller);
+    const playback = usePlayback();
     const recorder = useVoiceRecorder();
     const mixRecorder = useMixRecorder();
-    const useAutoKeyHook = useAutoKey(controller);
+    const useAutoKeyHook = useAutoKey(controller!);
     const harmonyGuide = useHarmonyGuide(useAutoKeyHook.detectedKey);
-    const pitchAnalysis = usePitchAnalysis(controller);
+    const pitchAnalysis = usePitchAnalysis(controller!);
     
     // Domain Logic Hooks
     const { lyricState, handleCanvasReady } = useKaraokeEngine({
-        controller,
+        controller: controller!,
         lyrics,
         visualSettings: uiState.visualSettings,
         cdgData
@@ -96,7 +94,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         handleReverbChange,
         handleEchoChange,
         resetEffects
-    } = useKaraokeEffects(controller);
+    } = useKaraokeEffects(controller!);
 
     const {
         isExportingVideo,
@@ -105,22 +103,22 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         handleVideoExport,
         handleAudioDownload
     } = useKaraokeExport({
-        controller,
+        controller: controller!,
         lyrics,
         recordedBuffer: recorder.recordedBuffer
     });
 
     // Other Feature Hooks
-    const usePracticeHook = usePractice(controller);
-    const useRoomHook = useKaraokeRoom(controller);
+    const usePracticeHook = usePractice(controller!);
+    const useRoomHook = useKaraokeRoom(controller!);
     const useVoiceHook = useVoiceTransform();
-    const lyricSync = useLyricSync(controller);
-    const { pitchMap } = useReferencePitchMap(controller);
+    const lyricSync = useLyricSync();
+    const { pitchMap } = useReferencePitchMap(controller!);
 
     // Visualizer Setup
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerInstance = useVisualizerOrchestrator({
-        controller,
+        controller: controller!,
         visualSettings: uiState.visualSettings,
         canvasRef,
         vocalsVolume: playback.vocalsVolume,
@@ -141,13 +139,15 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Cleanup and Sync
     useEffect(() => {
-        if (recorder.recordedBuffer) {
+        if (recorder.recordedBuffer && controller) {
             controller.setVoiceBuffer(recorder.recordedBuffer);
         }
     }, [recorder.recordedBuffer, controller]);
     
     // Sync machine with playback events
     useEffect(() => {
+        if (!controller) return;
+
         const handlePlay = () => send({ type: 'PLAY' });
         const handlePause = () => send({ type: 'PAUSE' });
         const handleStop = () => send({ type: 'STOP' });
@@ -172,6 +172,8 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Handle song end to show performance score
     useEffect(() => {
+        if (!controller) return;
+
         const handleEnded = () => {
             if (pitchAnalysis.overallScore) {
                 // Dispatch event to app machine instead of routing directly
@@ -187,10 +189,12 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
 
     // Mix Bus Routing Setup
     useEffect(() => {
+        if (!controller) return;
+
         const dest = mixRecorder.getMixDestination();
         
         // Internal hack/bypass or expose explicitly
-        const systemDest = controller['effects']?.getDestination?.(); 
+        const systemDest = (controller as any)['effects']?.getDestination?.(); 
         if (systemDest) {
             systemDest.connect(dest);
         }
@@ -198,8 +202,8 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const voiceStream = useVoiceHook.getProcessedStream();
         let micSource: MediaStreamAudioSourceNode | null = null;
         if (voiceStream) {
-            const ctx = controller['audioContext'];
-            micSource = ctx.createMediaStreamSource(voiceStream);
+            const ctx = (controller as any)['audioContext'];
+            micSource = ctx.createMediaStreamSource(voiceStream) as MediaStreamAudioSourceNode;
             micSource.connect(dest);
         }
 
@@ -240,7 +244,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
     }, [visualizerInstance, pitchMap]);
 
     useEffect(() => {
-        if (visualizerInstance && pitchAnalysis.isListening && lyrics) {
+        if (visualizerInstance && pitchAnalysis.isListening && lyrics && controller) {
             const vocalBuffer = controller.getAudioBuffers()[0] || null;
             const startIndex = Math.max(0, lyricState.lineIndex);
             
@@ -276,7 +280,7 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         const iVol = Math.min(1, (1 - bal) * 2);
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
-    }, [playback]);
+    }, [playback.setVolume]);
 
     // Shortcuts
     useKaraokeShortcuts({
@@ -313,7 +317,11 @@ const KaraokePlayerContent: React.FC<KaraokePlayerProps> = ({ controller }) => {
         playback.setVolume(vVol, 0); 
         playback.setVolume(iVol, 1); 
         saveSettings({ defaultVolumeBalance: balance });
-    }, [playback]);
+    }, [playback.setVolume]);
+
+    if (!controller) {
+        return null; // Or a loading spinner
+    }
 
     return (
         <ErrorBoundary onReset={() => recorder.clearRecording()}>

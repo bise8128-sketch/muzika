@@ -313,8 +313,8 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
                                 engine={engine}
                                 originalHash={currentPlayingSong.originalHash}
                                 fileName={currentPlayingSong.title}
-                                vocals={loadedBuffers.vocals}
-                                instrumentals={loadedBuffers.instrumentals}
+                                vocals={loadedBuffers!.vocals}
+                                instrumentals={loadedBuffers!.instrumentals}
                                 duration={currentPlayingSong.duration}
                             />
                         </div>

@@ -4,7 +4,8 @@ import { MODELS } from '@/types/model';
 import { notificationManager } from '../notifications/NotificationManager';
 import { LyricService } from '../karaoke/LyricService';
 import { audioCache } from '../storage/audioCache';
-import { ProcessingJob, ExtractedMetadata } from '@/types/storage';
+import { ProcessingJob } from '@/types/storage';
+import { ExtractedMetadata } from '@/types/schema';
 
 class OfflineQueueManager {
     private isProcessing: boolean = false;

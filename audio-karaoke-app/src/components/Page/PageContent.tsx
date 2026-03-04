@@ -50,7 +50,6 @@ interface PageContentProps {
   batch: BatchState;
   history: HistoryState;
   activeResult: SeparationResult | null;
-  controller: PlaybackController | null;
   selectedModelId: string;
   availableModels: ModelInfo[];
   autoStartKaraoke: boolean;
@@ -75,7 +74,6 @@ export function PageContent({
   batch,
   history,
   activeResult,
-  controller,
   selectedModelId,
   availableModels,
   autoStartKaraoke,
@@ -133,12 +131,11 @@ export function PageContent({
   }
 
   if (machineState.matches('karaoke')) {
-    return controller ? (
+    return (
       <KaraokeView
-        controller={controller}
         onBack={onExitKaraoke}
       />
-    ) : null;
+    );
   }
 
   if (machineState.matches('models')) {

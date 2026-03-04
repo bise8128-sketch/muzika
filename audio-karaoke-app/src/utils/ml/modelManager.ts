@@ -127,6 +127,7 @@ export function unloadModel(modelId: string): void {
     const session = sessionCache.get(modelId);
     if (session) {
         try {
+            console.log(`[modelManager] Explicitly releasing session for ${modelId}`);
             session.release();
         } catch (e) {
             console.warn(`[modelManager] Failed to release session for ${modelId}:`, e);

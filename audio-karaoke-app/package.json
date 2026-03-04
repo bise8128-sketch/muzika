@@ -52,10 +52,11 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
-    "@huggingface/hub": "^2.10.3",
+    "@huggingface/hub": "^2.10.5",
     "@next/bundle-analyzer": "^16.1.6",
     "@playwright/test": "^1.58.2",
     "@prisma/client": "^5.22.0",
+    "@prisma/config": "^7.4.2",
     "@serwist/cli": "^9.5.6",
     "@storybook/addon-a11y": "^10.2.8",
     "@storybook/addon-docs": "^10.2.8",

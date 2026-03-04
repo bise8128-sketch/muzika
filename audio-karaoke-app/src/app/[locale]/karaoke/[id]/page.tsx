@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 export default function KaraokePage() {
     const params = useParams();
     const id = params.id as string;
-    const { controller, activeResult, loadResultFromStorage } = useAudio();
+    const { activeResult, loadResultFromStorage } = useAudio();
     const router = useRouter();
     const t = useTranslations('HomePage');
     const [isRestoring, setIsRestoring] = useState(false);
@@ -40,7 +40,7 @@ export default function KaraokePage() {
         );
     }
 
-    if (!controller || (!activeResult && !isRestoring)) {
+    if (!activeResult && !isRestoring) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
                 <div className="p-4 bg-red-500/10 rounded-full text-red-400">
@@ -73,7 +73,7 @@ export default function KaraokePage() {
                 </div>
                 <span className="text-sm font-bold uppercase tracking-widest">{t('backToResults')}</span>
             </button>
-            <KaraokePlayer controller={controller} />
+            <KaraokePlayer />
         </div>
     );
 }

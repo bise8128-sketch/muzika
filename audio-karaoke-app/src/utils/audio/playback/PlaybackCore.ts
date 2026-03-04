@@ -461,11 +461,11 @@ export class PlaybackController {
 
   setAdaptiveAssist(enabled: boolean): void {
       this.isAdaptiveAssistEnabled = enabled;
-      this.effectsChain.setPitchCorrectionAdaptiveMode(enabled);
+      this.effects.setPitchCorrectionAdaptiveMode(enabled);
       
       // If we're disabling it, reset to the default correction amount
       if (!enabled) {
-          this.effectsChain.setPitchCorrectionAmount(0.8);
+          this.effects.setPitchCorrectionAmount(0.8);
       }
   }
 

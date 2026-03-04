@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { PlaybackController } from '@/utils/audio/playbackController';
 import { SeparationResult, PerformanceScore } from '@/types/audio';
 import { useSeparation } from '@/hooks/useSeparation';
 import { useRouter, usePathname } from '@/i18n/routing';
@@ -14,8 +13,9 @@ import { fileSystem } from '@/utils/storage/fileSystem';
 import { songsStorage } from '@/utils/storage/songsStorage';
 import { decodeArrayBuffer } from '@/utils/audio/audioDecoder';
 
+import { useAudioStore } from '@/store/audioStore';
+
 interface AudioContextType {
-    controller: PlaybackController | null;
     activeResult: SeparationResult | null;
     setActiveResult: (result: SeparationResult | null) => void;
     loadResultFromStorage: (fileHash: string) => Promise<boolean>;
@@ -32,15 +32,46 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [controller] = useState<PlaybackController | null>(() => {
-        if (typeof window === 'undefined') return null;
-        return new PlaybackController();
-    });
+    const { controller, activeResult, setActiveResult, syncPlaybackState } = useAudioStore();
 
-    const [activeResult, setActiveResult] = useState<SeparationResult | null>(null);
+    // Hook up controller event listeners to push visual state updates into Zustand
+    useEffect(() => {
+        if (!controller) return;
+
+        const handlePlay = () => syncPlaybackState({ isPlaying: true });
+        const handlePause = () => syncPlaybackState({ isPlaying: false });
+        const handleStop = () => syncPlaybackState({ isPlaying: false, currentTime: 0 });
+        const handleEnded = () => syncPlaybackState({ isPlaying: false });
+        const handleTimeUpdate = (data: unknown) => {
+            const { currentTime, duration } = data as { currentTime: number, duration: number };
+            syncPlaybackState({ currentTime, duration });
+        };
+
+        controller.on('play', handlePlay);
+        controller.on('pause', handlePause);
+        controller.on('stop', handleStop);
+        controller.on('timeupdate', handleTimeUpdate);
+        controller.on('ended', handleEnded);
+
+        // Sync initial state
+        syncPlaybackState({
+            isPlaying: controller.getIsPlaying(),
+            currentTime: controller.getCurrentTime(),
+            duration: controller.getDuration(),
+        });
+
+        return () => {
+            controller.off('play', handlePlay);
+            controller.off('pause', handlePause);
+            controller.off('stop', handleStop);
+            controller.off('timeupdate', handleTimeUpdate);
+            controller.off('ended', handleEnded);
+        };
+    }, [controller, syncPlaybackState]);
+
     const [isLoading, setIsLoading] = useState(false);
     const separation = useSeparation();
-    const lyricSync = useLyricSync(controller as PlaybackController); // Add sync hook to context
+    const lyricSync = useLyricSync(); // No longer takes controller as an argument
     const [machineState, send] = useMachine(appMachine);
     
     const router = useRouter();
@@ -170,7 +201,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } finally {
             setIsLoading(false);
         }
-    }, [controller, activeResult, send]);
+    }, [controller, activeResult, send, setActiveResult]);
 
     const loadLibrarySongForKaraoke = useCallback(async (song: SongEntry) => {
         if (!song.instrumentalPath && !song.vocalPath) {
@@ -212,7 +243,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // We no longer manage performanceScore locally, it's owned by appMachine
     const performanceScore = machineState.context.performanceScore;
-    const setPerformanceScore = useCallback((_score: PerformanceScore | null) => {
+    const setPerformanceScore = useCallback(() => {
         // Keeping this function signature for backwards compatibility but we shouldn't use it directly anymore
         // It's preferred to use send({ type: 'FINISH_SONG', score })
         console.warn('Deprecated: Use send({ type: "FINISH_SONG", score }) instead of setPerformanceScore');
@@ -220,7 +251,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return (
         <AudioContext.Provider value={{ 
-            controller, 
             activeResult, 
             setActiveResult, 
             loadResultFromStorage,

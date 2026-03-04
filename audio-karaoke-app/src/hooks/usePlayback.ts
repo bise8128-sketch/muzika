@@ -1,96 +1,21 @@
-/**
- * usePlayback Hook
- * Manages playback state and provides controls for the UI
- */
+import { useAudioStore } from '@/store/audioStore';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlaybackController } from '@/utils/audio/playbackController';
-
-export function usePlayback(controller: PlaybackController | null) {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [vocalsVolume, setVocalsVolume] = useState(1);
-    const [instrumentalVolume, setInstrumentalVolume] = useState(1);
-
-    // EQ State
-    const [bass, setBass] = useState(0);
-    const [mid, setMid] = useState(0);
-    const [treble, setTreble] = useState(0);
-
-    useEffect(() => {
-        if (!controller) return;
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-        const handleStop = () => {
-            setIsPlaying(false);
-            setCurrentTime(0);
-        };
-        const handleTimeUpdate = (data: any) => {
-            setCurrentTime(data.currentTime);
-            setDuration(data.duration);
-        };
-        const handleEnded = () => setIsPlaying(false);
-
-        controller.on('play', handlePlay);
-        controller.on('pause', handlePause);
-        controller.on('stop', handleStop);
-        controller.on('timeupdate', handleTimeUpdate);
-        controller.on('ended', handleEnded);
-
-        // Sync initial state
-        setIsPlaying(controller.getIsPlaying());
-        setCurrentTime(controller.getCurrentTime());
-        setDuration(controller.getDuration());
-
-        return () => {
-            controller.off('play', handlePlay);
-            controller.off('pause', handlePause);
-            controller.off('stop', handleStop);
-            controller.off('timeupdate', handleTimeUpdate);
-            controller.off('ended', handleEnded);
-        };
-    }, [controller]);
-
-    const play = useCallback(() => controller?.play(), [controller]);
-    const pause = useCallback(() => controller?.pause(), [controller]);
-    const stop = useCallback(() => controller?.stop(), [controller]);
-    const seek = useCallback((time: number) => controller?.setCurrentTime(time), [controller]);
-
-    const setVolume = useCallback((volume: number, trackIndex?: number) => {
-        if (!controller) return;
-        controller.setVolume(volume, trackIndex);
-        if (trackIndex === 0) setVocalsVolume(volume);
-        if (trackIndex === 1) setInstrumentalVolume(volume);
-        if (trackIndex === undefined) {
-            setVocalsVolume(volume);
-            setInstrumentalVolume(volume);
-        }
-    }, [controller]);
-
-    const setEQ = useCallback((b: number, m: number, t: number) => {
-        if (!controller) return;
-        controller.setEQ(b, m, t);
-        setBass(b);
-        setMid(m);
-        setTreble(t);
-    }, [controller]);
-
-    return {
-        isPlaying,
-        currentTime,
-        duration,
-        vocalsVolume,
-        instrumentalVolume,
-        bass,
-        mid,
-        treble,
-        play,
-        pause,
-        stop,
-        seek,
-        setVolume,
-        setEQ
-    };
+export function usePlayback() {
+    // We ignore the controller prop and only use the global store to prevent mismatches
+    return useAudioStore((state) => ({
+        isPlaying: state.isPlaying,
+        currentTime: state.currentTime,
+        duration: state.duration,
+        vocalsVolume: state.vocalsVolume,
+        instrumentalVolume: state.instrumentalVolume,
+        bass: state.bass,
+        mid: state.mid,
+        treble: state.treble,
+        play: state.play,
+        pause: state.pause,
+        stop: state.stop,
+        seek: state.seek,
+        setVolume: state.setVolume,
+        setEQ: state.setEQ
+    }));
 }

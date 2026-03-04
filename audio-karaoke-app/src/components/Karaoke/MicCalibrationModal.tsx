@@ -128,7 +128,7 @@ export const MicCalibrationModal: React.FC<MicCalibrationModalProps> = ({
 
         if (!analyserRef.current || !rmsBuffer.current) return;
 
-        analyserRef.current.getFloatTimeDomainData(rmsBuffer.current);
+        analyserRef.current.getFloatTimeDomainData(rmsBuffer.current as any);
         const rms = computeRms(rmsBuffer.current);
         peakSamples.current.push(rms);
 
