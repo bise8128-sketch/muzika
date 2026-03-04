@@ -7,6 +7,7 @@ import { StudioController } from '@/components/Karaoke/StudioController';
 import { QueuePanel } from './QueuePanel';
 import { SongEntry } from '@/types/storage';
 import { fileSystem } from '@/utils/storage/fileSystem';
+import { useAudio } from '@/context/AudioProvider';
 
 interface LibraryPlayerProps {
     song: SongEntry;
@@ -15,10 +16,12 @@ interface LibraryPlayerProps {
 
 export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) => {
     const engine = useAudioEngine();
+    const { loadLibrarySongForKaraoke } = useAudio();
     const [isLoading, setIsLoading] = useState(true);
+    const [isLaunchingKaraoke, setIsLaunchingKaraoke] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
     const [currentPlayingSong, setCurrentPlayingSong] = useState<SongEntry>(song);
-    const [loadedBuffers, setLoadedBuffers] = useState<{ vocals?: ArrayBuffer, instrumentals?: ArrayBuffer }>({});
+    const [loadedBuffers, setLoadedBuffers] = useState<{ vocals?: ArrayBuffer, instrumentals?: ArrayBuffer }>();
     const {
         queue,
         songs: queueSongs,
@@ -147,24 +150,65 @@ export const LibraryPlayer: React.FC<LibraryPlayerProps> = ({ song, onClose }) =
         }
     };
 
+    const handleLaunchKaraoke = async () => {
+        setIsLaunchingKaraoke(true);
+        try {
+            engine.stop();
+            await loadLibrarySongForKaraoke(currentPlayingSong);
+            onClose(); // Navigation handled by machine
+        } catch (err) {
+            console.error('[LibraryPlayer] Failed to launch karaoke:', err);
+            setIsLaunchingKaraoke(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
             <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-4xl flex flex-col gap-6 relative shadow-2xl">
-                <button
-                    onClick={() => { engine.stop(); onClose(); }}
-                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors z-10"
-                >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-
-                <div className="text-center mt-2">
-                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-purple-400">
-                        {currentPlayingSong.title}
-                    </h2>
-                    <p className="text-muted-foreground">{currentPlayingSong.artist || 'Unknown Artist'}</p>
-                    {currentPlayingSong.versionName && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mt-1 inline-block">{currentPlayingSong.versionName}</span>}
+                {/* Header row: close + karaoke button */}
+                <div className="flex items-center justify-between mt-2 px-2">
+                    <div className="text-center flex-1">
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-purple-400">
+                            {currentPlayingSong.title}
+                        </h2>
+                        <p className="text-muted-foreground">{currentPlayingSong.artist || 'Unknown Artist'}</p>
+                        {currentPlayingSong.versionName && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mt-1 inline-block">{currentPlayingSong.versionName}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={handleLaunchKaraoke}
+                            disabled={isLaunchingKaraoke || isLoading}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all
+                                bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500
+                                text-white shadow-lg shadow-violet-500/20
+                                ${(isLaunchingKaraoke || isLoading) ? 'opacity-60 cursor-wait' : 'hover:scale-105 active:scale-100'}`}
+                        >
+                            {isLaunchingKaraoke ? (
+                                <>
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Loading…
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                    </svg>
+                                    Karaoke Mode
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => { engine.stop(); onClose(); }}
+                            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 {isLoading ? (

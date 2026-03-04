@@ -8,13 +8,17 @@ import { useRouter, usePathname } from '@/i18n/routing';
 import { useMachine } from '@xstate/react';
 import { appMachine } from '@/state/appMachine';
 import { StateFrom, EventFrom } from 'xstate';
-import { useLyricSync } from '@/hooks/useLyricSync'; // Added to allow Syncing
+import { useLyricSync } from '@/hooks/useLyricSync';
+import { SongEntry } from '@/types/storage';
+import { fileSystem } from '@/utils/storage/fileSystem';
+import { decodeArrayBuffer } from '@/utils/audio/audioDecoder';
 
 interface AudioContextType {
     controller: PlaybackController | null;
     activeResult: SeparationResult | null;
     setActiveResult: (result: SeparationResult | null) => void;
     loadResultFromStorage: (fileHash: string) => Promise<boolean>;
+    loadLibrarySongForKaraoke: (song: SongEntry) => Promise<void>;
     isLoading: boolean;
     separation: ReturnType<typeof useSeparation>;
     lyricSync: ReturnType<typeof useLyricSync>;
@@ -122,6 +126,44 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     }, [controller, activeResult]);
 
+    const loadLibrarySongForKaraoke = useCallback(async (song: SongEntry) => {
+        if (!song.instrumentalPath && !song.vocalPath) {
+            throw new Error('No audio data found for this song.');
+        }
+
+        // Load buffers from OPFS
+        const [instBuffer, vocalBuffer] = await Promise.all([
+            song.instrumentalPath
+                ? fileSystem.getFile(song.instrumentalPath).then(b => b.arrayBuffer())
+                : Promise.resolve(null),
+            song.vocalPath
+                ? fileSystem.getFile(song.vocalPath).then(b => b.arrayBuffer())
+                : Promise.resolve(null),
+        ]);
+
+        if (!instBuffer) throw new Error('Failed to load instrumental audio.');
+
+        // Decode ArrayBuffers to AudioBuffers
+        const instAudioBuffer = await decodeArrayBuffer(instBuffer);
+        const vocalAudioBuffer = vocalBuffer ? await decodeArrayBuffer(vocalBuffer) : instAudioBuffer;
+
+        // Construct a SeparationResult to populate the karaoke engine
+        const result: SeparationResult = {
+            vocals: vocalAudioBuffer,
+            instrumentals: instAudioBuffer,
+            fileHash: song.originalHash,
+            timestamp: Date.now(),
+            lyrics: song.lyrics,
+        };
+
+        setActiveResult(result);
+
+        // Drive the state machine to karaoke state
+        send({ type: 'SET_FILE_HASH', fileHash: song.originalHash });
+        send({ type: 'RESTORE_SESSION', fileHash: song.originalHash });
+        send({ type: 'START_KARAOKE' });
+    }, [send, setActiveResult]);
+
     // We no longer manage performanceScore locally, it's owned by appMachine
     const performanceScore = machineState.context.performanceScore;
     const setPerformanceScore = useCallback((_score: PerformanceScore | null) => {
@@ -136,6 +178,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeResult, 
             setActiveResult, 
             loadResultFromStorage,
+            loadLibrarySongForKaraoke,
             isLoading,
             separation,
             lyricSync,

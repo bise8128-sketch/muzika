@@ -71,6 +71,8 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
     const [exportingId, setExportingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingTitle, setEditingTitle] = useState('');
     const router = useRouter();
 
     // Use LiveQuery for reactive, performant data fetching
@@ -139,6 +141,26 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
 
         return songs;
     }, [allSongs, searchQuery, filterType, sortOption, sortOrder]);
+
+    const handleRenameStart = (e: React.MouseEvent, song: SongEntry) => {
+        e.stopPropagation();
+        setEditingId(song.id!);
+        setEditingTitle(song.title);
+    };
+
+    const handleRenameCommit = async (id: number) => {
+        const trimmed = editingTitle.trim();
+        if (trimmed && trimmed !== '') {
+            await db.songs.update(id, { title: trimmed });
+        }
+        setEditingId(null);
+        setEditingTitle('');
+    };
+
+    const handleRenameCancel = () => {
+        setEditingId(null);
+        setEditingTitle('');
+    };
 
     const handleDelete = async (e: React.MouseEvent, id?: number) => {
         e.stopPropagation();
@@ -400,9 +422,36 @@ export const LibraryGrid: React.FC<LibraryGridProps> = ({
                                                 <div className="flex-1 min-w-0 flex flex-col gap-1">
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex-1 min-w-0">
-                                                            <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
-                                                                {song.title}
-                                                            </h3>
+                                                            {editingId === song.id ? (
+                                                                <input
+                                                                    autoFocus
+                                                                    value={editingTitle}
+                                                                    onChange={e => setEditingTitle(e.target.value)}
+                                                                    onBlur={() => handleRenameCommit(song.id!)}
+                                                                    onKeyDown={e => {
+                                                                        if (e.key === 'Enter') handleRenameCommit(song.id!);
+                                                                        if (e.key === 'Escape') handleRenameCancel();
+                                                                    }}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                    className="w-full font-bold text-lg bg-white/10 border border-primary/50 rounded-lg px-2 py-0.5 text-white focus:outline-none focus:border-primary"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex items-center gap-1.5 group/title">
+                                                                    <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
+                                                                        {song.title}
+                                                                    </h3>
+                                                                    <button
+                                                                        onClick={(e) => handleRenameStart(e, song)}
+                                                                        className="opacity-0 group-hover/title:opacity-100 transition-opacity p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white shrink-0"
+                                                                        aria-label="Rename song"
+                                                                        title="Rename"
+                                                                    >
+                                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                             <p className="text-sm text-muted-foreground truncate">
                                                                 {song.artist || 'Unknown Artist'}
                                                             </p>
