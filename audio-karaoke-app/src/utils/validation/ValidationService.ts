@@ -4,7 +4,7 @@ import { StorageQuotaService, QuotaCheckResult } from './StorageQuotaService';
 export interface TelemetryEvent {
     type: 'validation_error' | 'validation_warning' | 'quota_error' | 'sanitization_event';
     component: string;
-    details: any;
+    details: Record<string, unknown>;
     timestamp: number;
 }
 
@@ -116,13 +116,14 @@ export class ValidationService {
                 });
             }
 
-        } catch (error: any) {
+        } catch (error) {
+            const err = error as Error;
             result.isValid = false;
-            result.errors.push(error?.message || 'Unknown validation error occurred.');
+            result.errors.push(err.message || 'Unknown validation error occurred.');
             result.telemetryEvents.push({
                 type: 'validation_error',
                 component,
-                details: { error: error?.message || String(error) },
+                details: { error: err.message || String(error) },
                 timestamp: Date.now()
             });
         }
