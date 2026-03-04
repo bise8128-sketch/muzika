@@ -11,6 +11,7 @@ import { StateFrom, EventFrom } from 'xstate';
 import { useLyricSync } from '@/hooks/useLyricSync';
 import { SongEntry } from '@/types/storage';
 import { fileSystem } from '@/utils/storage/fileSystem';
+import { songsStorage } from '@/utils/storage/songsStorage';
 import { decodeArrayBuffer } from '@/utils/audio/audioDecoder';
 
 interface AudioContextType {
@@ -117,6 +118,51 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (activeResult?.fileHash === fileHash) {
                 return true;
             }
+
+            // Look up the file hash in our local songs store
+            const songs = await songsStorage.getSongsForFile(fileHash);
+            if (!songs || songs.length === 0) {
+                console.warn('[AudioProvider] No stored song found for hash:', fileHash);
+                return false;
+            }
+
+            // Take the most recently created version
+            const latestSong = songs.sort((a, b) => b.createdAt - a.createdAt)[0];
+            
+            if (!latestSong.instrumentalPath && !latestSong.vocalPath) {
+                console.warn('[AudioProvider] Stored song missing audio paths');
+                return false;
+            }
+
+            // Load buffers from OPFS
+            const [instBuffer, vocalBuffer] = await Promise.all([
+                latestSong.instrumentalPath
+                    ? fileSystem.getFile(latestSong.instrumentalPath).then(b => b.arrayBuffer())
+                    : Promise.resolve(null),
+                latestSong.vocalPath
+                    ? fileSystem.getFile(latestSong.vocalPath).then(b => b.arrayBuffer())
+                    : Promise.resolve(null),
+            ]);
+
+            if (!instBuffer) throw new Error('Failed to load instrumental audio.');
+
+            // Decode ArrayBuffers to AudioBuffers
+            const instAudioBuffer = await decodeArrayBuffer(instBuffer);
+            const vocalAudioBuffer = vocalBuffer ? await decodeArrayBuffer(vocalBuffer) : instAudioBuffer;
+
+            // Apply to active session
+            const result: SeparationResult = {
+                vocals: vocalAudioBuffer,
+                instrumentals: instAudioBuffer,
+                fileHash: latestSong.originalHash,
+                timestamp: Date.now(),
+                lyrics: latestSong.lyrics,
+            };
+
+            setActiveResult(result);
+            send({ type: 'SET_FILE_HASH', fileHash });
+            send({ type: 'RESTORE_SESSION', fileHash });
+
             return true; 
         } catch (error) {
             console.error('Failed to load result from storage:', error);
@@ -124,7 +170,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } finally {
             setIsLoading(false);
         }
-    }, [controller, activeResult]);
+    }, [controller, activeResult, send]);
 
     const loadLibrarySongForKaraoke = useCallback(async (song: SongEntry) => {
         if (!song.instrumentalPath && !song.vocalPath) {
