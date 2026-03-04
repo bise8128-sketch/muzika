@@ -14,6 +14,7 @@ import { PanelsOverlay } from './Visualizer/PanelsOverlay';
 import { SmartTransposeSuggestion } from './SmartTransposeSuggestion';
 import { SettingsPanel } from '../UI/SettingsPanel';
 import { StemSeparationPanel } from './StemSeparationPanel';
+import { PerformanceOverlay } from '../common/PerformanceOverlay';
 import { ModelType, MODELS } from '@/types/model';
 import { ProcessingProgress } from '@/types/audio';
 import { StateFrom } from 'xstate';
@@ -197,6 +198,7 @@ export const KaraokeOverlay: React.FC<KaraokeOverlayProps> = ({
 
     return (
         <>
+            <PerformanceOverlay />
             <LyricsContainer
                 cdgData={cdgData}
                 lyrics={lyrics}

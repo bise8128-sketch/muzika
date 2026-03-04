@@ -4,6 +4,7 @@ import type { SeparationResult, ProcessingProgress } from '@/types/audio';
 import { separateAudio } from '@/utils/ml/separateAudio';
 import { db } from '@/utils/storage/audioDatabase';
 import { LyricService } from '@/utils/karaoke/LyricService';
+import { useAudioStore } from '@/store/audioStore';
 
 export interface SeparationState {
     isProcessing: boolean;
@@ -59,7 +60,23 @@ export function useSeparation() {
                 modelInfo,
                 skipCache,
                 signal: abortControllerRef.current.signal,
+                onChunk: (chunk) => {
+                    const store = useAudioStore.getState();
+                    if (chunk.processingLatency) {
+                        store.updateMetrics({ processingLatency: chunk.processingLatency });
+                        
+                        // Set TTFA if not set yet (we just got our first chunk)
+                        if (store.metrics.timeToFirstAudio === 0 && !skipCache) { // if cached it doesn't really matter
+                            // This depends on when the original play command happened.
+                            // We will approximate it or handle TTFA explicitly when play is pressed.
+                            // Actually, processing latency of first chunk is a good proxy for TTFA from process start.
+                        }
+                    }
+                },
                 onProgress: (p) => {
+                    if (p.executionBackend) {
+                        useAudioStore.getState().updateMetrics({ gpuActive: p.executionBackend === 'webgpu' });
+                    }
                     setState(s => ({
                         ...s,
                         progress: p.percentage,

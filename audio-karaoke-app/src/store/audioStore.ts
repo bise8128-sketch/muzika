@@ -25,6 +25,8 @@ export interface AudioState {
         processingLatency: number | null;
         gpuActive: boolean;
         fps: number;
+        cacheHits: number;
+        cacheMisses: number;
     };
 
     // Actions
@@ -62,7 +64,9 @@ export const useAudioStore = create<AudioState>()((set, get) => ({
         timeToFirstAudio: null,
         processingLatency: null,
         gpuActive: false,
-        fps: 0
+        fps: 0,
+        cacheHits: 0,
+        cacheMisses: 0
     },
 
     setController: (controller) => set({ controller }),
