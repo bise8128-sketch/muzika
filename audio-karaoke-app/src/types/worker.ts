@@ -72,6 +72,7 @@ export interface WorkerTask<TPayload = any, TResult = any> {
     onProgress?: (progress: number) => void;
     resolve: (result: TResult) => void;
     reject: (error: Error) => void;
+    retries?: number;
 }
 
 export interface WorkerPoolConfig {

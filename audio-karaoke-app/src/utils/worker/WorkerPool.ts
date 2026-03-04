@@ -20,7 +20,7 @@ class WorkerWrapper {
     private currentTask: WorkerTask | null = null;
     private readonly factoryOrScript: string | URL | (() => Worker);
     private readonly onTaskComplete: (wrapper: WorkerWrapper) => void;
-    private readonly onError: (wrapper: WorkerWrapper, error: Error) => void;
+    private readonly onError: (wrapper: WorkerWrapper, error: Error, failedTask?: WorkerTask | null, failedQueue?: WorkerTask[]) => void;
 
     // For stateful session routing
     private taskQueue: WorkerTask[] = [];
