@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModels } from '@/hooks/useModels';
-import { FileValidator, ValidationConfig } from '@/utils/validation/FileValidator';
+import { ValidationService } from '@/utils/validation/ValidationService';
 import { DirectKaraokeUpload } from './DirectKaraokeUpload';
 import { ExtractedMetadata } from '@/types/schema';
 import { ErrorBoundary } from '@/components/UI/ErrorBoundary';
@@ -54,34 +54,37 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
         setMounted(true);
     }, []);
 
-    const validateFiles = useCallback(async (files: File[]): Promise<boolean> => {
-        const config: ValidationConfig = {
-            maxFileSize: 100 * 1024 * 1024, // Increased to 100MB
-            allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/m4a'],
-            minFreeStorage: 200 * 1024 * 1024, // Require at least 200MB free
-            audioConstraints: {
-                minDuration: 1, // 1 second
-                maxDuration: 1200, // 20 minutes
-            }
-        };
-
-        const validator = new FileValidator(config);
+    const validateFiles = useCallback(async (files: File[]): Promise<File[]> => {
+        const validationService = ValidationService.getInstance();
         setError(null);
 
+        const validatedFiles: File[] = [];
+
         for (const file of files) {
-            const result = await validator.validate(file);
+            const result = await validationService.validateAudioFile(file, 'AudioUpload');
+
+            // Log telemetry events if any
+            if (result.telemetryEvents.length > 0) {
+                console.log('Validation Telemetry:', result.telemetryEvents);
+            }
 
             if (!result.isValid) {
                 setError(result.errors[0] || t('errorFormat', { name: file.name }));
-                return false;
+                return []; // Return empty array on validation failure
             }
 
             if (result.warnings.length > 0) {
                 console.warn(`Validation warnings for ${file.name}:`, result.warnings);
             }
+
+            if (result.sanitizedFile) {
+                validatedFiles.push(result.sanitizedFile);
+            } else {
+                validatedFiles.push(file);
+            }
         }
 
-        return true;
+        return validatedFiles;
     }, [t]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -115,9 +118,9 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
 
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
-            const isValid = await validateFiles(files);
-            if (isValid) {
-                onUpload(files, isKaraokeMode);
+            const validFiles = await validateFiles(files);
+            if (validFiles.length > 0) {
+                onUpload(validFiles, isKaraokeMode);
             }
             return;
         }
@@ -132,10 +135,10 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files ? Array.from(e.target.files) : [];
         if (files.length > 0) {
-            const isValid = await validateFiles(files);
-            if (isValid) {
+            const validFiles = await validateFiles(files);
+            if (validFiles.length > 0) {
                 // Extract metadata and fetch lyrics in background
-                const metadataPromises = files.map(async (file) => {
+                const metadataPromises = validFiles.map(async (file) => {
                     try {
                         const tags = await mm.parseBlob(file);
                         const metadata: ExtractedMetadata = {
@@ -155,7 +158,7 @@ const AudioUploadContent: React.FC<AudioUploadProps> = ({
                 });
 
                 const metadataResults = await Promise.all(metadataPromises);
-                onUpload(files, isKaraokeMode, metadataResults);
+                onUpload(validFiles, isKaraokeMode, metadataResults);
             }
         }
     };
