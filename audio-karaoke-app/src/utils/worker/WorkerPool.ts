@@ -216,13 +216,14 @@ export class WorkerPool {
     private workers: Map<string, WorkerWrapper> = new Map();
     private taskQueue: WorkerTask[] = [];
     private acquisitionQueue: Array<{ resolve: (worker: AcquiredWorker) => void; reject: (err: Error) => void }> = [];
-    private readonly maxWorkers: number;
+    private maxWorkers: number;
     private readonly minWorkers: number;
     private readonly idleTimeout: number;
     private readonly scriptPath?: string | URL;
     private readonly workerFactory?: () => Worker;
     private idleTimer: ReturnType<typeof setTimeout> | null = null;
     private isDestroyed = false;
+    private safeMode = false;
 
     constructor(config: WorkerPoolConfig) {
         if (!config.workerScript && !config.workerFactory) {
