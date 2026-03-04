@@ -125,7 +125,8 @@ export async function setupONNX(): Promise<ort.InferenceSession.SessionOptions> 
             // Common names for batch dimension
             batch_size: 1,
             batch: 1,
-        }
+        },
+        enableProfiling: isDev ? true : false
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
