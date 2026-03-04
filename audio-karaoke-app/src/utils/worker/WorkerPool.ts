@@ -1,5 +1,17 @@
 import { WorkerTask, WorkerPoolConfig, TaskPriority } from '../../types/worker';
 
+export interface AcquiredWorker {
+    id: string;
+    send<TResult>(
+        type: string,
+        payload: unknown,
+        transferables?: Transferable[],
+        onProgress?: (p: number) => void
+    ): Promise<TResult>;
+    release(): void;
+    terminate(): void;
+}
+
 /**
  * Wrapper around a standard Web Worker to manage its state and task execution.
  */
@@ -10,8 +22,14 @@ class WorkerWrapper {
     private readonly onTaskComplete: (wrapper: WorkerWrapper) => void;
     private readonly onError: (wrapper: WorkerWrapper, error: Error) => void;
 
+    // For stateful session routing
+    private taskQueue: WorkerTask[] = [];
+    private inFlight = false;
+    private watchdogId: ReturnType<typeof setTimeout> | null = null;
+
     public id: string;
     public isBusy: boolean = false;
+    public isAcquired: boolean = false; // If true, pool shouldn't assign random tasks to it
 
     constructor(
         id: string,
@@ -62,18 +80,44 @@ class WorkerWrapper {
         return worker;
     }
 
+    private resetWatchdog(): void {
+        if (this.watchdogId) clearTimeout(this.watchdogId);
+        this.watchdogId = setTimeout(() => {
+            if (this.inFlight) {
+                console.warn(`[WorkerWrapper ${this.id}] Watchdog timeout`);
+                this.handleError(new Error('Worker timeout: no response for 60 seconds'));
+            }
+        }, 60000);
+    }
+
+    private clearWatchdog(): void {
+        if (this.watchdogId) {
+            clearTimeout(this.watchdogId);
+            this.watchdogId = null;
+        }
+    }
+
     public execute(task: WorkerTask): void {
-        if (this.isBusy) {
+        if (!this.isAcquired && this.isBusy && !this.inFlight) {
+            // Should not happen, but safeguard
             throw new Error(`Worker ${this.id} is already busy`);
         }
 
         this.isBusy = true;
+        
+        if (this.inFlight) {
+            this.taskQueue.push(task);
+        } else {
+            this.dispatch(task);
+        }
+    }
+
+    private dispatch(task: WorkerTask): void {
+        this.inFlight = true;
         this.currentTask = task;
+        this.resetWatchdog();
 
         try {
-            // Wrap the payload with the task ID for correlation if the worker supports it
-            // For now, we assume the worker accepts the raw payload structure defined in the task
-            // but we might need to send { type, payload, id }
             this.worker.postMessage({
                 type: task.type,
                 payload: task.payload,
@@ -84,27 +128,36 @@ class WorkerWrapper {
         }
     }
 
+    private flushQueue(): void {
+        if (this.taskQueue.length > 0) {
+            this.dispatch(this.taskQueue.shift()!);
+        } else {
+            this.inFlight = false;
+            this.currentTask = null;
+            if (!this.isAcquired) {
+                this.isBusy = false;
+                this.onTaskComplete(this);
+            }
+        }
+    }
+
     private handleMessage(event: MessageEvent): void {
         if (!this.currentTask) return;
 
         const { type, payload, id } = event.data;
 
         // Validation: Ensure response matches current task
-        // If the worker supports IDs, we check. If not, we assume it's for the current task.
         if (id && id !== this.currentTask.id) {
             console.warn(`Worker ${this.id} received message for unknown task ID: ${id}`);
             return;
         }
 
-        // Handle error/progress first, then treat any other message as a success response.
-        // This accommodates workers that use domain-specific response types
-        // (e.g. STREAM_READY, CHUNK_PROCESSED, COMPLETE) without needing an exhaustive list.
         if (type === 'ERROR' || type === 'FAILED') {
+            this.clearWatchdog();
             this.currentTask.reject(new Error(payload?.message || 'Unknown worker error'));
-            this.completeTask();
+            this.flushQueue();
         } else if (type === 'PROGRESS') {
-            // Progress is a pass-through notification — do NOT resolve or complete the task.
-            // The worker sends progress as { type: 'PROGRESS', payload: { percentage, ... } }
+            this.resetWatchdog();
             if (this.currentTask.onProgress) {
                 const progressValue = typeof payload === 'number'
                     ? payload
@@ -114,34 +167,45 @@ class WorkerWrapper {
                 }
             }
         } else {
-            // SUCCESS, COMPLETED, DONE, STREAM_READY, CHUNK_PROCESSED, etc.
+            this.clearWatchdog();
             this.currentTask.resolve(payload);
-            this.completeTask();
+            this.flushQueue();
         }
     }
 
     private handleError(error: Error): void {
         console.error(`Worker ${this.id} error:`, error);
+        this.clearWatchdog();
 
         if (this.currentTask) {
             this.currentTask.reject(error);
         }
+        
+        // Reject all queued tasks
+        while (this.taskQueue.length > 0) {
+            this.taskQueue.shift()?.reject(error);
+        }
 
-        // If the worker crashes, we might need to recreate it
-        this.completeTask(); // Mark as free so pool can handle it (or terminate it)
+        this.inFlight = false;
+        this.currentTask = null;
+        
+        if (!this.isAcquired) {
+            this.isBusy = false;
+            this.onTaskComplete(this);
+        }
 
-        // Notify pool of error (which might decide to terminate this wrapper)
         this.onError(this, error);
     }
 
-    private completeTask(): void {
-        this.isBusy = false;
-        this.currentTask = null;
-        this.onTaskComplete(this);
-    }
-
     public terminate(): void {
+        this.clearWatchdog();
         this.worker.terminate();
+        if (this.currentTask) {
+            this.currentTask.reject(new Error('Worker terminated'));
+        }
+        while (this.taskQueue.length > 0) {
+            this.taskQueue.shift()?.reject(new Error('Worker terminated'));
+        }
     }
 }
 
@@ -151,6 +215,7 @@ class WorkerWrapper {
 export class WorkerPool {
     private workers: Map<string, WorkerWrapper> = new Map();
     private taskQueue: WorkerTask[] = [];
+    private acquisitionQueue: Array<{ resolve: (worker: AcquiredWorker) => void; reject: (err: Error) => void }> = [];
     private readonly maxWorkers: number;
     private readonly minWorkers: number;
     private readonly idleTimeout: number;
@@ -166,10 +231,9 @@ export class WorkerPool {
         this.scriptPath = config.workerScript;
         this.workerFactory = config.workerFactory;
         this.maxWorkers = config.maxWorkers ?? (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4);
-        this.minWorkers = config.minWorkers ?? 0; // Default to 0 to allow full pruning
-        this.idleTimeout = config.idleTimeout ?? 30000; // 30s default
+        this.minWorkers = config.minWorkers ?? 0;
+        this.idleTimeout = config.idleTimeout ?? 30000;
 
-        // Only pre-create workers if minWorkers is explicitly > 0
         if (this.minWorkers > 0) {
             this.ensureMinWorkers();
         }
@@ -201,11 +265,73 @@ export class WorkerPool {
 
     private getIdleWorker(): WorkerWrapper | undefined {
         for (const worker of this.workers.values()) {
-            if (!worker.isBusy) {
+            if (!worker.isBusy && !worker.isAcquired) {
                 return worker;
             }
         }
         return undefined;
+    }
+
+    public async acquire(): Promise<AcquiredWorker> {
+        if (this.isDestroyed) {
+            throw new Error('WorkerPool is destroyed');
+        }
+
+        return new Promise<AcquiredWorker>((resolve, reject) => {
+            let worker = this.getIdleWorker();
+
+            if (!worker && this.workers.size < this.maxWorkers) {
+                worker = this.createWorker();
+            }
+
+            if (worker) {
+                this.startIdleTimer();
+                this.grantWorker(worker, resolve);
+            } else {
+                // Queue the acquisition request
+                this.acquisitionQueue.push({ resolve, reject });
+            }
+        });
+    }
+
+    private grantWorker(worker: WorkerWrapper, resolve: (w: AcquiredWorker) => void) {
+        worker.isAcquired = true;
+        worker.isBusy = true;
+        
+        resolve({
+            id: worker.id,
+            send: <TResult>(
+                type: string,
+                payload: unknown,
+                transferables?: Transferable[],
+                onProgress?: (p: number) => void
+            ): Promise<TResult> => {
+                return new Promise<TResult>((res, rej) => {
+                    const task: WorkerTask<unknown, TResult> = {
+                        id: crypto.randomUUID(),
+                        type,
+                        priority: 'NORMAL',
+                        payload,
+                        transferables,
+                        onProgress,
+                        resolve: res,
+                        reject: rej
+                    };
+                    worker.execute(task);
+                });
+            },
+            release: () => {
+                worker.isAcquired = false;
+                worker.isBusy = false;
+                this.onWorkerTaskComplete(worker);
+            },
+            terminate: () => {
+                worker.terminate();
+                this.workers.delete(worker.id);
+                this.processQueue();
+                this.ensureMinWorkers();
+            }
+        });
     }
 
     public addTask<TPayload, TResult>(
@@ -237,8 +363,6 @@ export class WorkerPool {
     }
 
     private enqueueTask(task: WorkerTask): void {
-        // Simple priority handling: HIGH > NORMAL > LOW
-        // We could use a proper priority queue data structure, but array sort is fine for small queues
         this.taskQueue.push(task);
         this.sortQueue();
     }
@@ -249,28 +373,46 @@ export class WorkerPool {
     }
 
     private processQueue(): void {
+        if (this.acquisitionQueue.length > 0) {
+            let worker = this.getIdleWorker();
+            if (!worker && this.workers.size < this.maxWorkers) {
+                worker = this.createWorker();
+            }
+            if (worker) {
+                this.startIdleTimer();
+                const deferred = this.acquisitionQueue.shift();
+                if (deferred) {
+                    this.grantWorker(worker, deferred.resolve);
+                    // Process next in queue if possible
+                    this.processQueue();
+                    return;
+                }
+            }
+        }
+
         if (this.taskQueue.length === 0) return;
 
-        // Try to get an idle worker
         let worker = this.getIdleWorker();
 
-        // If no idle worker, check if we can spawn a new one
-        if (!worker && this.workers.size < (this.maxWorkers || 4)) {
+        if (!worker && this.workers.size < this.maxWorkers) {
             worker = this.createWorker();
         }
 
         if (worker) {
             const task = this.taskQueue.shift();
             if (task) {
-                this.startIdleTimer(); // Reset timer
+                this.startIdleTimer();
                 worker.execute(task);
+                // Process next in queue if possible
+                this.processQueue();
             }
         }
     }
 
     private onWorkerTaskComplete(worker: WorkerWrapper): void {
-        // Worker is now free. Check if there are more tasks.
-        if (this.taskQueue.length > 0) {
+        if (worker.isAcquired) return;
+        
+        if (this.acquisitionQueue.length > 0 || this.taskQueue.length > 0) {
             this.processQueue();
         } else {
             this.startIdleTimer();
@@ -279,16 +421,9 @@ export class WorkerPool {
 
     private onWorkerError(worker: WorkerWrapper, error: Error): void {
         console.error(`WorkerPool received error from worker ${worker.id}:`, error);
-        // If the worker is in a bad state, we might want to replace it.
-        // For now, `WorkerWrapper` handles its own termination/reset if needed?
-        // Actually, if `WorkerWrapper.initializeWorker` throws or `onerror` is fatal, we might want to remove it.
-        // But `handleError` in wrapper already called `completeTask`, so it's "free" but maybe broken.
-
-        // Let's assume for now we just terminate and replace if it fails unexpectedly
         worker.terminate();
         this.workers.delete(worker.id);
 
-        // Trigger queue processing to replace the worker if needed
         this.processQueue();
         this.ensureMinWorkers();
     }
@@ -310,7 +445,7 @@ export class WorkerPool {
         const toRemove: string[] = [];
 
         for (const [id, worker] of this.workers.entries()) {
-            if (!worker.isBusy && this.workers.size - toRemove.length > min) {
+            if (!worker.isBusy && !worker.isAcquired && this.workers.size - toRemove.length > min) {
                 worker.terminate();
                 toRemove.push(id);
             }
@@ -329,15 +464,17 @@ export class WorkerPool {
         }
         this.workers.clear();
         this.taskQueue = [];
+        this.acquisitionQueue.forEach(deferred => deferred.reject(new Error('WorkerPool terminated')));
+        this.acquisitionQueue = [];
     }
 
-    // Diagnostics
     public getStats() {
         return {
             totalWorkers: this.workers.size,
-            busyWorkers: Array.from(this.workers.values()).filter(w => w.isBusy).length,
-            idleWorkers: Array.from(this.workers.values()).filter(w => !w.isBusy).length,
-            queueLength: this.taskQueue.length
+            busyWorkers: Array.from(this.workers.values()).filter(w => w.isBusy || w.isAcquired).length,
+            idleWorkers: Array.from(this.workers.values()).filter(w => !w.isBusy && !w.isAcquired).length,
+            queueLength: this.taskQueue.length,
+            acquisitionQueueLength: this.acquisitionQueue.length
         };
     }
 }

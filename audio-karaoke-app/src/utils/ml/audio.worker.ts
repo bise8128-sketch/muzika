@@ -61,7 +61,8 @@ const sendProgress = (progress: ProcessingProgress) => {
 
 let abortController: AbortController | null = null;
 let isAborted = false;
-let activeSession: { id: string; engine: InferenceEngine } | null = null;
+let loadedEngine: { modelId: string; engine: InferenceEngine } | null = null;
+let activeSessionId: string | null = null;
 
 // Interface for SimpleAudioBuffer used in segmentAudio
 interface SimpleAudioBuffer {
@@ -82,9 +83,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         if (abortController) {
             abortController.abort();
         }
-        if (activeSession) {
-            activeSession.engine.dispose();
-            activeSession = null;
+        if (loadedEngine) {
+            // We shouldn't necessarily dispose it if we want to reuse it later,
+            // but aborting might leave the engine in a bad state? 
+            // Better not to dispose to allow reuse, just clear the active session.
+            activeSessionId = null;
         }
         return;
     }
@@ -94,15 +97,25 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         console.log('[audio.worker] Initializing stream session:', sessionId, 'Model:', modelInfo.id);
 
         try {
-            console.log('[audio.worker] Loading model...');
-            const engine = await loadModel(modelInfo);
-            console.log('[audio.worker] Model loaded successfully');
-            
-            activeSession = { id: sessionId, engine };
-            const backend = engine.backendInfo?.backend;
-            
-            console.log('[audio.worker] Session initialized, sending STREAM_READY with backend:', backend);
-            ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId, backend } });
+            if (loadedEngine && loadedEngine.modelId === modelInfo.id) {
+                console.log('[audio.worker] Reusing loaded model...');
+                activeSessionId = sessionId;
+                const backend = loadedEngine.engine.backendInfo?.backend;
+                ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId, backend } });
+            } else {
+                console.log('[audio.worker] Loading model...');
+                // If there's an existing model, we might want to let modelManager handle caching,
+                // but we should update our local reference.
+                const engine = await loadModel(modelInfo);
+                console.log('[audio.worker] Model loaded successfully');
+                
+                loadedEngine = { modelId: modelInfo.id, engine };
+                activeSessionId = sessionId;
+                const backend = engine.backendInfo?.backend;
+                
+                console.log('[audio.worker] Session initialized, sending STREAM_READY with backend:', backend);
+                ctx.postMessage({ type: 'STREAM_READY', payload: { sessionId, backend } });
+            }
         } catch (err) {
             const errorMsg = `Failed to load model: ${(err as Error).message}`;
             console.error('[audio.worker]', errorMsg, err);
@@ -115,8 +128,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         const { chunk, chunkIndex, sessionId, channels, sampleRate } = e.data.payload;
         console.log(`[audio.worker] Processing chunk ${chunkIndex} for session ${sessionId}`);
 
-        if (!activeSession || activeSession.id !== sessionId) {
-            const errorMsg = `Session not initialized or mismatch. Active: ${activeSession?.id}, Requested: ${sessionId}`;
+        if (!activeSessionId || activeSessionId !== sessionId || !loadedEngine) {
+            const errorMsg = `Session not initialized or mismatch. Active: ${activeSessionId}, Requested: ${sessionId}`;
             console.error(`[audio.worker] ${errorMsg}`);
             ctx.postMessage({ type: 'ERROR', payload: { message: errorMsg } });
             return;
@@ -124,7 +137,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
         try {
             console.log(`[audio.worker] Calling engine.processChunk for chunk ${chunkIndex}...`);
-            const result = await activeSession.engine.processChunk(chunk, channels, sampleRate);
+            const result = await loadedEngine.engine.processChunk(chunk, channels, sampleRate);
             console.log(`[audio.worker] Chunk ${chunkIndex} processed successfully`);
 
             ctx.postMessage({
@@ -147,9 +160,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     if (type === 'END_STREAM_SESSION') {
         const { sessionId } = e.data.payload;
-        if (activeSession && activeSession.id === sessionId) {
-            activeSession.engine.dispose();
-            activeSession = null;
+        if (activeSessionId === sessionId) {
+            activeSessionId = null;
+            // We intentionally DO NOT dispose loadedEngine here so it can be reused
+            // for the next file using the same model!
         }
         ctx.postMessage({ type: 'SESSION_ENDED', payload: { sessionId } });
         return;
