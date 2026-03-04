@@ -71,7 +71,11 @@ export class CircuitBreaker {
         }
     }
 
-    private reset(): void {
+    /**
+     * Resets the circuit breaker to closed state.
+     * Can be called externally for manual recovery.
+     */
+    public reset(): void {
         this.state = CircuitState.CLOSED;
         this.failureCount = 0;
         this.lastFailureTime = null;
@@ -79,5 +83,23 @@ export class CircuitBreaker {
 
     public getState(): CircuitState {
         return this.state;
+    }
+
+    /**
+     * Returns the current state as a string for logging/debugging.
+     */
+    public getStateString(): string {
+        return this.state;
+    }
+
+    /**
+     * Returns statistics about the circuit breaker.
+     */
+    public getStats(): { state: CircuitState; failureCount: number; lastFailureTime: number | null } {
+        return {
+            state: this.state,
+            failureCount: this.failureCount,
+            lastFailureTime: this.lastFailureTime
+        };
     }
 }

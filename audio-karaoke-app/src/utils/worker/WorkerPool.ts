@@ -35,7 +35,7 @@ class WorkerWrapper {
         id: string,
         factoryOrScript: string | URL | (() => Worker),
         onTaskComplete: (wrapper: WorkerWrapper) => void,
-        onError: (wrapper: WorkerWrapper, error: Error) => void
+        onError: (wrapper: WorkerWrapper, error: Error, failedTask?: WorkerTask | null, failedQueue?: WorkerTask[]) => void
     ) {
         this.id = id;
         this.factoryOrScript = factoryOrScript;
@@ -177,24 +177,21 @@ class WorkerWrapper {
         console.error(`Worker ${this.id} error:`, error);
         this.clearWatchdog();
 
-        if (this.currentTask) {
-            this.currentTask.reject(error);
-        }
+        // Capture failed task and queue for potential retry by the pool
+        const failedTask = this.currentTask;
+        const failedQueue = [...this.taskQueue];
         
-        // Reject all queued tasks
-        while (this.taskQueue.length > 0) {
-            this.taskQueue.shift()?.reject(error);
-        }
-
+        // Clear local state
+        this.taskQueue = [];
         this.inFlight = false;
         this.currentTask = null;
         
         if (!this.isAcquired) {
             this.isBusy = false;
-            this.onTaskComplete(this);
         }
 
-        this.onError(this, error);
+        // Pass failed tasks to the pool for Safe Mode retry handling
+        this.onError(this, error, failedTask, failedQueue);
     }
 
     public terminate(): void {
@@ -258,7 +255,7 @@ export class WorkerPool {
             id,
             source,
             (w) => this.onWorkerTaskComplete(w),
-            (w, err) => this.onWorkerError(w, err)
+            (w, err, failedTask, failedQueue) => this.onWorkerError(w, err, failedTask, failedQueue)
         );
         this.workers.set(id, wrapper);
         return wrapper;
